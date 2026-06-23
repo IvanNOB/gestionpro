@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión Pro - Tu Negocio Completo</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
+</head>
+<body>
+    <div class="app-layout">
+        <!-- Sidebar / Navegación -->
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h1>📦 GestiónPro</h1>
+                <button class="sidebar-toggle" id="sidebar-toggle">☰</button>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="#" class="nav-link active" data-section="dashboard">📊 Dashboard</a></li>
+                <li><a href="#" class="nav-link" data-section="inventory">📋 Inventario</a></li>
+                <li><a href="#" class="nav-link" data-section="sales">💰 Ventas</a></li>
+                <li><a href="#" class="nav-link" data-section="calculator">🧮 Calculadora</a></li>
+                <li><a href="#" class="nav-link" data-section="reports">📈 Reportes</a></li>
+                <li><a href="#" class="nav-link" data-section="alerts">🔔 Alertas</a></li>
+                <li><a href="#" class="nav-link" data-section="history">📜 Historial</a></li>
+                <li><a href="#" class="nav-link" data-section="settings">⚙️ Ajustes</a></li>
+            </ul>
+            <div class="sidebar-footer">
+                <button class="btn-theme" id="btn-theme" title="Cambiar tema">🌙 Modo Oscuro</button>
+            </div>
+        </nav>
+
+        <!-- Contenido Principal -->
+        <main class="main-content">
+            <!-- ALERTAS FLOTANTES -->
+            <div class="alerts-bar" id="alerts-bar" style="display:none;"></div>
+
+            <!-- ======================== DASHBOARD ======================== -->
+            <section class="page active" id="page-dashboard">
+                <div class="page-header">
+                    <h2>📊 Dashboard</h2>
+                    <span class="date-display" id="current-date"></span>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">📦</div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="dash-total-products">0</span>
+                            <span class="stat-label">Productos</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🏷️</div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="dash-total-stock">0</span>
+                            <span class="stat-label">Unidades</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">💵</div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="dash-investment">$0</span>
+                            <span class="stat-label">Inversión</span>
+                        </div>
+                    </div>
+                    <div class="stat-card highlight">
+                        <div class="stat-icon">📈</div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="dash-profit">$0</span>
+                            <span class="stat-label">Ganancia Potencial</span>
+                        </div>
+                    </div>
+                    <div class="stat-card sales">
+                        <div class="stat-icon">💰</div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="dash-sales-today">$0</span>
+                            <span class="stat-label">Ventas Hoy</span>
+                        </div>
+                    </div>
+                    <div class="stat-card sales">
+                        <div class="stat-icon">📅</div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="dash-sales-month">$0</span>
+                            <span class="stat-label">Ventas del Mes</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <h3>Ventas - Últimos 7 días</h3>
+                        <canvas id="chart-sales-week"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Productos más vendidos</h3>
+                        <canvas id="chart-top-products"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Distribución por Categoría</h3>
+                        <canvas id="chart-categories"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Ganancia por Categoría</h3>
+                        <canvas id="chart-profit-category"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ======================== INVENTARIO ======================== -->
+            <section class="page" id="page-inventory">
+                <div class="page-header">
+                    <h2>📋 Inventario</h2>
+                    <div class="header-actions">
+                        <button class="btn btn-sm btn-success" id="btn-export-csv">📥 Exportar CSV</button>
+                        <button class="btn btn-sm btn-outline" id="btn-import-csv">📤 Importar CSV</button>
+                        <input type="file" id="file-import" accept=".csv" style="display:none;">
+                    </div>
+                </div>
+
+                <!-- Formulario -->
+                <div class="card">
+                    <h3 id="form-title">➕ Agregar Producto</h3>
+                    <form id="product-form">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="product-name">Nombre del Producto</label>
+                                <input type="text" id="product-name" placeholder="Ej: Camiseta básica" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="product-category">Categoría</label>
+                                <select id="product-category" required>
+                                    <option value="">Seleccionar...</option>
+                                    <option value="Ropa">👕 Ropa</option>
+                                    <option value="Electrónica">📱 Electrónica</option>
+                                    <option value="Alimentos">🍔 Alimentos</option>
+                                    <option value="Hogar">🏠 Hogar</option>
+                                    <option value="Belleza">💄 Belleza</option>
+                                    <option value="Deportes">⚽ Deportes</option>
+                                    <option value="Accesorios">💍 Accesorios</option>
+                                    <option value="Tecnología">💻 Tecnología</option>
+                                    <option value="Salud">💊 Salud</option>
+                                    <option value="Mascotas">🐾 Mascotas</option>
+                                    <option value="Papelería">📝 Papelería</option>
+                                    <option value="Otro">📦 Otro</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="product-quantity">Cantidad en Stock</label>
+                                <input type="number" id="product-quantity" min="0" placeholder="0" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="product-cost">Costo Unitario ($)</label>
+                                <input type="number" id="product-cost" min="0" step="0.01" placeholder="0.00" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="profit-margin">Margen de Ganancia (%)</label>
+                                <input type="number" id="profit-margin" min="0" max="500" value="30" placeholder="30">
+                                <small>Para precio sugerido</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="product-price">Precio al Público ($)</label>
+                                <input type="number" id="product-price" min="0" step="0.01" placeholder="Auto-calculado">
+                                <small>Vacío = precio sugerido</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="product-min-stock">Stock Mínimo</label>
+                                <input type="number" id="product-min-stock" min="0" value="5" placeholder="5">
+                                <small>Alerta cuando baje de este número</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="product-supplier">Proveedor</label>
+                                <input type="text" id="product-supplier" placeholder="Ej: Distribuidora X">
+                            </div>
+                        </div>
+
+                        <!-- Precio sugerido -->
+                        <div class="suggested-price-box" id="suggested-price-box" style="display:none;">
+                            <span class="label">💡 Precio Sugerido:</span>
+                            <span class="value" id="suggested-price-value">$0.00</span>
+                            <button type="button" class="btn-use-suggested" id="btn-use-suggested">Usar este precio</button>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary" id="btn-submit">Agregar Producto</button>
+                            <button type="button" class="btn btn-secondary" id="btn-cancel" style="display:none;">Cancelar</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Filtros -->
+                <div class="card filters-card">
+                    <div class="filters-row">
+                        <div class="search-box">
+                            <input type="text" id="search-input" placeholder="🔍 Buscar producto o categoría...">
+                        </div>
+                        <select id="filter-category" class="filter-select">
+                            <option value="">Todas las categorías</option>
+                        </select>
+                        <select id="filter-stock" class="filter-select">
+                            <option value="">Todo el stock</option>
+                            <option value="low">⚠️ Stock bajo</option>
+                            <option value="out">❌ Sin stock</option>
+                            <option value="ok">✅ Stock normal</option>
+                        </select>
+                        <select id="sort-by" class="filter-select">
+                            <option value="name">Ordenar: Nombre</option>
+                            <option value="price-asc">Precio: Menor a Mayor</option>
+                            <option value="price-desc">Precio: Mayor a Menor</option>
+                            <option value="stock-asc">Stock: Menor a Mayor</option>
+                            <option value="margin-desc">Margen: Mayor a Menor</option>
+                            <option value="recent">Más recientes</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Tabla -->
+                <div class="card">
+                    <div class="table-container">
+                        <table id="inventory-table">
+                            <thead>
+                                <tr>
+                                    <th>Producto</th>
+                                    <th>Categoría</th>
+                                    <th>Stock</th>
+                                    <th>Costo</th>
+                                    <th>Precio</th>
+                                    <th>Sugerido</th>
+                                    <th>Ganancia</th>
+                                    <th>Margen</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inventory-body"></tbody>
+                        </table>
+                    </div>
+                    <p class="empty-message" id="empty-message">No hay productos. ¡Agrega el primero!</p>
+                </div>
+            </section>
+
+            <!-- ======================== VENTAS ======================== -->
+            <section class="page" id="page-sales">
+                <div class="page-header">
+                    <h2>💰 Registrar Venta</h2>
+                    <button class="btn btn-sm btn-success" id="btn-export-sales">📥 Exportar Ventas</button>
+                </div>
+
+                <div class="card">
+                    <h3>🛒 Nueva Venta</h3>
+                    <form id="sale-form">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="sale-product">Producto</label>
+                                <select id="sale-product" required>
+                                    <option value="">Seleccionar producto...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="sale-quantity">Cantidad</label>
+                                <input type="number" id="sale-quantity" min="1" value="1" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="sale-price">Precio de Venta ($)</label>
+                                <input type="number" id="sale-price" min="0" step="0.01" placeholder="Precio registrado">
+                                <small>Vacío = precio guardado del producto</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="sale-client">Cliente (opcional)</label>
+                                <input type="text" id="sale-client" placeholder="Nombre del cliente">
+                            </div>
+                            <div class="form-group">
+                                <label for="sale-method">Método de Pago</label>
+                                <select id="sale-method">
+                                    <option value="Efectivo">💵 Efectivo</option>
+                                    <option value="Tarjeta">💳 Tarjeta</option>
+                                    <option value="Transferencia">🏦 Transferencia</option>
+                                    <option value="Otro">📋 Otro</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="sale-notes">Notas</label>
+                                <input type="text" id="sale-notes" placeholder="Comentarios opcionales">
+                            </div>
+                        </div>
+
+                        <div class="sale-summary" id="sale-summary" style="display:none;">
+                            <div class="summary-row"><span>Subtotal:</span><span id="sale-subtotal">$0.00</span></div>
+                            <div class="summary-row"><span>Ganancia:</span><span id="sale-profit-preview" class="profit-positive">$0.00</span></div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">💰 Registrar Venta</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Historial de ventas recientes -->
+                <div class="card">
+                    <h3>📋 Ventas Recientes</h3>
+                    <div class="sales-filters">
+                        <input type="date" id="sales-date-from" class="filter-select">
+                        <input type="date" id="sales-date-to" class="filter-select">
+                        <button class="btn btn-sm btn-outline" id="btn-filter-sales">Filtrar</button>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Producto</th>
+                                    <th>Cant.</th>
+                                    <th>Precio</th>
+                                    <th>Total</th>
+                                    <th>Ganancia</th>
+                                    <th>Pago</th>
+                                    <th>Cliente</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sales-body"></tbody>
+                        </table>
+                    </div>
+                    <p class="empty-message" id="empty-sales">No hay ventas registradas aún.</p>
+                </div>
+            </section>
+
+            <!-- ======================== CALCULADORA ======================== -->
+            <section class="page" id="page-calculator">
+                <div class="page-header">
+                    <h2>🧮 Calculadora de Costos</h2>
+                </div>
+
+                <div class="calculator-grid">
+                    <div class="card">
+                        <h3>💰 Calculadora de Precio Final</h3>
+                        <p class="card-description">Calcula el precio final incluyendo todos los costos adicionales.</p>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Costo del Producto ($)</label>
+                                <input type="number" id="calc-cost" min="0" step="0.01" placeholder="0.00">
+                            </div>
+                            <div class="form-group">
+                                <label>Costo de Envío ($)</label>
+                                <input type="number" id="calc-shipping" min="0" step="0.01" value="0" placeholder="0.00">
+                            </div>
+                            <div class="form-group">
+                                <label>Costo de Empaque ($)</label>
+                                <input type="number" id="calc-packaging" min="0" step="0.01" value="0" placeholder="0.00">
+                            </div>
+                            <div class="form-group">
+                                <label>Impuestos (%)</label>
+                                <input type="number" id="calc-tax" min="0" max="100" value="16" placeholder="16">
+                            </div>
+                            <div class="form-group">
+                                <label>Comisión Plataforma (%)</label>
+                                <input type="number" id="calc-commission" min="0" max="100" value="0" placeholder="0">
+                                <small>Ej: MercadoLibre, Amazon</small>
+                            </div>
+                            <div class="form-group">
+                                <label>Margen Deseado (%)</label>
+                                <input type="number" id="calc-margin" min="0" max="500" value="30" placeholder="30">
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" id="btn-calculate">🧮 Calcular</button>
+
+                        <div class="calc-results" id="calc-results" style="display:none;">
+                            <div class="calc-result-item">
+                                <span>Costo Total:</span>
+                                <span id="calc-total-cost">$0.00</span>
+                            </div>
+                            <div class="calc-result-item">
+                                <span>+ Impuestos:</span>
+                                <span id="calc-tax-amount">$0.00</span>
+                            </div>
+                            <div class="calc-result-item">
+                                <span>+ Comisión:</span>
+                                <span id="calc-commission-amount">$0.00</span>
+                            </div>
+                            <div class="calc-result-item highlight">
+                                <span>Precio Mínimo (sin ganancia):</span>
+                                <span id="calc-min-price">$0.00</span>
+                            </div>
+                            <div class="calc-result-item success">
+                                <span>💰 Precio Sugerido con Margen:</span>
+                                <span id="calc-suggested">$0.00</span>
+                            </div>
+                            <div class="calc-result-item success">
+                                <span>📈 Ganancia por Unidad:</span>
+                                <span id="calc-profit-unit">$0.00</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>📊 Simulador de Ganancias</h3>
+                        <p class="card-description">Simula cuánto ganarías vendiendo X unidades.</p>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Precio de Venta ($)</label>
+                                <input type="number" id="sim-price" min="0" step="0.01" placeholder="0.00">
+                            </div>
+                            <div class="form-group">
+                                <label>Costo Total por Unidad ($)</label>
+                                <input type="number" id="sim-cost" min="0" step="0.01" placeholder="0.00">
+                            </div>
+                            <div class="form-group">
+                                <label>Unidades a Vender</label>
+                                <input type="number" id="sim-units" min="1" value="10" placeholder="10">
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" id="btn-simulate">📈 Simular</button>
+                        <div class="calc-results" id="sim-results" style="display:none;">
+                            <div class="calc-result-item">
+                                <span>Ingreso Total:</span>
+                                <span id="sim-revenue">$0.00</span>
+                            </div>
+                            <div class="calc-result-item">
+                                <span>Costo Total:</span>
+                                <span id="sim-total-cost">$0.00</span>
+                            </div>
+                            <div class="calc-result-item success">
+                                <span>💰 Ganancia Neta:</span>
+                                <span id="sim-profit">$0.00</span>
+                            </div>
+                            <div class="calc-result-item">
+                                <span>Margen Real:</span>
+                                <span id="sim-margin">0%</span>
+                            </div>
+                            <div class="calc-result-item">
+                                <span>ROI (Retorno de Inversión):</span>
+                                <span id="sim-roi">0%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ======================== REPORTES ======================== -->
+            <section class="page" id="page-reports">
+                <div class="page-header">
+                    <h2>📈 Reportes</h2>
+                    <button class="btn btn-sm btn-success" id="btn-export-report">📥 Exportar Reporte</button>
+                </div>
+
+                <div class="reports-grid">
+                    <div class="card">
+                        <h3>🏆 Top Productos por Rentabilidad</h3>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Producto</th>
+                                        <th>Margen</th>
+                                        <th>Ganancia/Unidad</th>
+                                        <th>Vendidos</th>
+                                        <th>Ganancia Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="report-top-products"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>📂 Rentabilidad por Categoría</h3>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Categoría</th>
+                                        <th>Productos</th>
+                                        <th>Inversión</th>
+                                        <th>Ventas</th>
+                                        <th>Ganancia</th>
+                                        <th>Margen Prom.</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="report-categories"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>📅 Resumen Mensual</h3>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Mes</th>
+                                        <th>Ventas</th>
+                                        <th>Ingresos</th>
+                                        <th>Costos</th>
+                                        <th>Ganancia</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="report-monthly"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ======================== ALERTAS ======================== -->
+            <section class="page" id="page-alerts">
+                <div class="page-header">
+                    <h2>🔔 Alertas Inteligentes</h2>
+                </div>
+
+                <div class="alerts-grid" id="alerts-grid">
+                    <!-- Se llena dinámicamente -->
+                </div>
+                <p class="empty-message" id="empty-alerts" style="display:none;">¡Todo en orden! No hay alertas pendientes. 🎉</p>
+            </section>
+
+            <!-- ======================== HISTORIAL ======================== -->
+            <section class="page" id="page-history">
+                <div class="page-header">
+                    <h2>📜 Historial de Movimientos</h2>
+                    <button class="btn btn-sm btn-danger" id="btn-clear-history">🗑️ Limpiar</button>
+                </div>
+
+                <div class="card">
+                    <div class="history-list" id="history-list">
+                        <!-- Se llena dinámicamente -->
+                    </div>
+                    <p class="empty-message" id="empty-history">No hay movimientos registrados.</p>
+                </div>
+            </section>
+
+            <!-- ======================== AJUSTES ======================== -->
+            <section class="page" id="page-settings">
+                <div class="page-header">
+                    <h2>⚙️ Ajustes</h2>
+                </div>
+
+                <div class="settings-grid">
+                    <div class="card">
+                        <h3>🏪 Datos del Negocio</h3>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Nombre del Negocio</label>
+                                <input type="text" id="setting-business-name" placeholder="Mi Negocio">
+                            </div>
+                            <div class="form-group">
+                                <label>Moneda</label>
+                                <select id="setting-currency">
+                                    <option value="$">$ (Peso/Dólar)</option>
+                                    <option value="€">€ (Euro)</option>
+                                    <option value="£">£ (Libra)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Impuesto por Defecto (%)</label>
+                                <input type="number" id="setting-default-tax" value="16" min="0" max="100">
+                            </div>
+                            <div class="form-group">
+                                <label>Margen por Defecto (%)</label>
+                                <input type="number" id="setting-default-margin" value="30" min="0" max="500">
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" id="btn-save-settings">💾 Guardar Ajustes</button>
+                    </div>
+
+                    <div class="card">
+                        <h3>💾 Backup y Restauración</h3>
+                        <p class="card-description">Guarda una copia de seguridad de todos tus datos o restaura una anterior.</p>
+                        <div class="form-actions">
+                            <button class="btn btn-success" id="btn-backup">📥 Descargar Backup</button>
+                            <button class="btn btn-outline" id="btn-restore">📤 Restaurar Backup</button>
+                            <input type="file" id="file-restore" accept=".json" style="display:none;">
+                        </div>
+                        <div class="backup-info" id="backup-info">
+                            <small>Último backup: <span id="last-backup">Nunca</span></small>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>⚠️ Zona de Peligro</h3>
+                        <p class="card-description">Estas acciones no se pueden deshacer.</p>
+                        <div class="form-actions">
+                            <button class="btn btn-danger" id="btn-clear-all">🗑️ Borrar Todos los Datos</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>
