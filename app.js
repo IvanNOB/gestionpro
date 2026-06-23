@@ -6,6 +6,11 @@
 let products = [];
 let sales = [];
 let history = [];
+let clients = [];
+let suppliers = [];
+let expenses = [];
+let businesses = [];
+let currentBusinessId = null;
 let settings = {
     businessName: 'Mi Negocio',
     currency: 'COP',
@@ -15,6 +20,9 @@ let settings = {
     monthlyGoal: 0
 };
 let editingId = null;
+let editingClientId = null;
+let editingSupplierId = null;
+let editingExpenseId = null;
 let charts = {};
 
 // ==========================================
@@ -22,6 +30,7 @@ let charts = {};
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
     loadAllData();
+    initBusinesses();
     initNavigation();
     initTheme();
     initForms();
@@ -29,8 +38,14 @@ document.addEventListener('DOMContentLoaded', () => {
     initSettings();
     initBackup();
     initCalculator();
+    initClients();
+    initSuppliers();
+    initExpenses();
     renderAll();
     renderGoalProgress();
+    renderClients();
+    renderSuppliers();
+    renderExpenses();
     initCashClose();
     showDate();
 });
@@ -58,6 +73,9 @@ function initNavigation() {
             if (section === 'alerts') renderAlerts();
             if (section === 'sales') updateSaleProductList();
             if (section === 'cashclose') renderCashClose();
+            if (section === 'clients') renderClients();
+            if (section === 'suppliers') renderSuppliers();
+            if (section === 'expenses') renderExpenses();
         });
     });
 
@@ -529,12 +547,21 @@ function updateDashboardStats() {
     const salesMonth = sales.filter(s => s.date.startsWith(thisMonth));
     const salesMonthTotal = salesMonth.reduce((s,v) => s + v.total, 0);
 
+    // Ganancia real del mes = ganancia de ventas del mes - gastos del mes
+    const profitMonth = salesMonth.reduce((s,v) => s + v.profit, 0);
+    const expensesMonth = expenses.filter(e => e.date.startsWith(thisMonth)).reduce((s,e) => s + e.amount, 0);
+    const netProfitMonth = profitMonth - expensesMonth;
+
     setText('dash-total-products', totalProducts);
     setText('dash-total-stock', totalStock);
     setText('dash-investment', formatCurrency(investment));
     setText('dash-profit', formatCurrency(profit));
     setText('dash-sales-today', formatCurrency(salesTodayTotal));
     setText('dash-sales-month', formatCurrency(salesMonthTotal));
+    setText('dash-expenses-month', formatCurrency(expensesMonth));
+    setText('dash-net-profit', formatCurrency(netProfitMonth));
+    const netEl = document.getElementById('dash-net-profit');
+    if (netEl) netEl.style.color = netProfitMonth >= 0 ? 'var(--success)' : 'var(--danger)';
 }
 
 function setText(id, value) {
@@ -971,18 +998,16 @@ function downloadBlob(blob, filename) {
 function initSettings() {
     document.getElementById('btn-save-settings').addEventListener('click', saveSettingsForm);
     document.getElementById('btn-clear-all').addEventListener('click', clearAllData);
-
-    // Aplicar settings guardados
-    document.getElementById('setting-business-name').value = settings.businessName;
-    document.getElementById('setting-currency').value = settings.currency;
-    document.getElementById('setting-default-tax').value = settings.defaultTax;
-    document.getElementById('setting-default-margin').value = settings.defaultMargin;
-    document.getElementById('setting-monthly-goal').value = settings.monthlyGoal || '';
-    document.getElementById('profit-margin').value = settings.defaultMargin;
+    document.getElementById('btn-rename-business').addEventListener('click', renameBusiness);
+    document.getElementById('btn-delete-business').addEventListener('click', deleteBusiness);
+    fillSettingsForm();
 }
 
 function saveSettingsForm() {
     settings.businessName = document.getElementById('setting-business-name').value || 'Mi Negocio';
+    // Sincronizar el nombre con la lista de negocios
+    const biz = getCurrentBusiness();
+    if (biz) { biz.name = settings.businessName; saveBusinesses(); refreshBusinessSelector(); }
     settings.currency = document.getElementById('setting-currency').value;
     settings.defaultTax = parseFloat(document.getElementById('setting-default-tax').value) || 19;
     settings.defaultMargin = parseFloat(document.getElementById('setting-default-margin').value) || 30;
@@ -999,12 +1024,12 @@ function applyCurrencyEverywhere() {
 }
 
 function clearAllData() {
-    if (confirm('⚠️ ¿BORRAR TODOS los datos? Esta acción NO se puede deshacer.')) {
+    if (confirm('⚠️ ¿BORRAR TODOS los datos de "' + getCurrentBusiness().name + '"? Esta acción NO se puede deshacer.')) {
         if (confirm('¿Estás REALMENTE seguro?')) {
-            products = []; sales = []; history = [];
-            saveProducts(); saveSales(); saveHistory();
+            products = []; sales = []; history = []; clients = []; suppliers = []; expenses = [];
+            saveProducts(); saveSales(); saveHistory(); saveClients(); saveSuppliers(); saveExpenses();
             renderAll(); renderHistory();
-            showToast('Todos los datos han sido borrados', 'warning');
+            showToast('Todos los datos del negocio han sido borrados', 'warning');
         }
     }
 }
@@ -1028,14 +1053,15 @@ function initBackup() {
 
 function createBackup() {
     const backup = {
-        version: '2.0',
+        version: '3.0',
         date: new Date().toISOString(),
-        products, sales, history, settings
+        businessName: getCurrentBusiness().name,
+        products, sales, history, clients, suppliers, expenses, settings
     };
     const blob = new Blob([JSON.stringify(backup, null, 2)], {type:'application/json'});
-    downloadBlob(blob, `backup-negocio-${new Date().toISOString().split('T')[0]}.json`);
+    downloadBlob(blob, `backup-${getCurrentBusiness().name.replace(/\s+/g,'-')}-${new Date().toISOString().split('T')[0]}.json`);
     localStorage.setItem('gestion-last-backup', new Date().toISOString());
-    document.getElementById('last-backup').textContent = new Date().toLocaleString('es-MX');
+    document.getElementById('last-backup').textContent = new Date().toLocaleString('es-CO');
     showToast('Backup creado exitosamente', 'success');
 }
 
@@ -1049,12 +1075,15 @@ function restoreBackup(e) {
             if (!data.products || !Array.isArray(data.products)) {
                 showToast('Archivo de backup inválido', 'error'); return;
             }
-            if (confirm(`Restaurar backup del ${new Date(data.date).toLocaleString('es-MX')}? Esto reemplazará todos tus datos actuales.`)) {
+            if (confirm(`Restaurar backup del ${new Date(data.date).toLocaleString('es-CO')}? Esto reemplazará los datos del negocio actual.`)) {
                 products = data.products || [];
                 sales = data.sales || [];
                 history = data.history || [];
+                clients = data.clients || [];
+                suppliers = data.suppliers || [];
+                expenses = data.expenses || [];
                 if (data.settings) settings = { ...settings, ...data.settings };
-                saveProducts(); saveSales(); saveHistory(); saveSettings();
+                saveProducts(); saveSales(); saveHistory(); saveClients(); saveSuppliers(); saveExpenses(); saveSettings();
                 renderAll(); renderHistory();
                 addHistory('add', 'Datos restaurados desde backup');
                 showToast('Backup restaurado exitosamente', 'success');
@@ -1069,21 +1098,76 @@ function restoreBackup(e) {
 
 
 // ==========================================
-// ALMACENAMIENTO
+// ALMACENAMIENTO (multi-negocio)
 // ==========================================
-function saveProducts() { localStorage.setItem('gp-products', JSON.stringify(products)); }
-function saveSales() { localStorage.setItem('gp-sales', JSON.stringify(sales)); }
-function saveHistory() { localStorage.setItem('gp-history', JSON.stringify(history)); }
-function saveSettings() { localStorage.setItem('gp-settings', JSON.stringify(settings)); }
+function defaultSettings() {
+    return { businessName: 'Mi Negocio', currency: 'COP', defaultTax: 19, defaultMargin: 30, theme: 'light', monthlyGoal: 0 };
+}
+
+function bizKey(suffix) { return `gp-${currentBusinessId}-${suffix}`; }
+
+function saveProducts() { localStorage.setItem(bizKey('products'), JSON.stringify(products)); }
+function saveSales() { localStorage.setItem(bizKey('sales'), JSON.stringify(sales)); }
+function saveHistory() { localStorage.setItem(bizKey('history'), JSON.stringify(history)); }
+function saveClients() { localStorage.setItem(bizKey('clients'), JSON.stringify(clients)); }
+function saveSuppliers() { localStorage.setItem(bizKey('suppliers'), JSON.stringify(suppliers)); }
+function saveExpenses() { localStorage.setItem(bizKey('expenses'), JSON.stringify(expenses)); }
+function saveSettings() { localStorage.setItem(bizKey('settings'), JSON.stringify(settings)); }
+function saveBusinesses() {
+    localStorage.setItem('gp-businesses', JSON.stringify(businesses));
+    localStorage.setItem('gp-current-business', currentBusinessId);
+}
 
 function loadAllData() {
-    try { products = JSON.parse(localStorage.getItem('gp-products')) || []; } catch(e) { products = []; }
-    try { sales = JSON.parse(localStorage.getItem('gp-sales')) || []; } catch(e) { sales = []; }
-    try { history = JSON.parse(localStorage.getItem('gp-history')) || []; } catch(e) { history = []; }
+    loadBusinesses();
+    loadBusinessData();
+}
+
+function loadBusinesses() {
+    try { businesses = JSON.parse(localStorage.getItem('gp-businesses')) || []; } catch(e) { businesses = []; }
+    currentBusinessId = localStorage.getItem('gp-current-business');
+
+    // Primera vez o migración desde la versión sin multi-negocio
+    if (businesses.length === 0) {
+        const firstId = generateId();
+        let firstName = 'Mi Negocio';
+        const oldSettings = localStorage.getItem('gp-settings');
+        if (oldSettings) {
+            try { firstName = (JSON.parse(oldSettings).businessName) || 'Mi Negocio'; } catch(e) {}
+        }
+        businesses = [{ id: firstId, name: firstName }];
+        currentBusinessId = firstId;
+        // Migrar datos antiguos al primer negocio
+        const map = { 'gp-products': 'products', 'gp-sales': 'sales', 'gp-history': 'history', 'gp-settings': 'settings' };
+        Object.keys(map).forEach(oldKey => {
+            const data = localStorage.getItem(oldKey);
+            if (data) {
+                localStorage.setItem(`gp-${firstId}-${map[oldKey]}`, data);
+                localStorage.removeItem(oldKey);
+            }
+        });
+        saveBusinesses();
+    }
+    if (!currentBusinessId || !businesses.find(b => b.id === currentBusinessId)) {
+        currentBusinessId = businesses[0].id;
+    }
+}
+
+function loadBusinessData() {
+    try { products = JSON.parse(localStorage.getItem(bizKey('products'))) || []; } catch(e) { products = []; }
+    try { sales = JSON.parse(localStorage.getItem(bizKey('sales'))) || []; } catch(e) { sales = []; }
+    try { history = JSON.parse(localStorage.getItem(bizKey('history'))) || []; } catch(e) { history = []; }
+    try { clients = JSON.parse(localStorage.getItem(bizKey('clients'))) || []; } catch(e) { clients = []; }
+    try { suppliers = JSON.parse(localStorage.getItem(bizKey('suppliers'))) || []; } catch(e) { suppliers = []; }
+    try { expenses = JSON.parse(localStorage.getItem(bizKey('expenses'))) || []; } catch(e) { expenses = []; }
+    settings = defaultSettings();
     try {
-        const s = JSON.parse(localStorage.getItem('gp-settings'));
+        const s = JSON.parse(localStorage.getItem(bizKey('settings')));
         if (s) settings = { ...settings, ...s };
     } catch(e) {}
+    // El nombre del negocio siempre refleja el de la lista
+    const biz = businesses.find(b => b.id === currentBusinessId);
+    if (biz) settings.businessName = biz.name;
 }
 
 // ==========================================
@@ -1264,4 +1348,376 @@ function printCashClose() {
         </body></html>
     `);
     win.document.close();
+}
+
+
+// ==========================================
+// GESTIÓN DE NEGOCIOS (multi-negocio)
+// ==========================================
+function getCurrentBusiness() {
+    return businesses.find(b => b.id === currentBusinessId) || businesses[0];
+}
+
+function initBusinesses() {
+    refreshBusinessSelector();
+    document.getElementById('business-selector').addEventListener('change', (e) => {
+        switchBusiness(e.target.value);
+    });
+    document.getElementById('btn-new-business').addEventListener('click', addBusinessPrompt);
+}
+
+function refreshBusinessSelector() {
+    const sel = document.getElementById('business-selector');
+    if (!sel) return;
+    sel.innerHTML = businesses.map(b =>
+        `<option value="${b.id}" ${b.id === currentBusinessId ? 'selected' : ''}>${esc(b.name)}</option>`
+    ).join('');
+}
+
+function switchBusiness(id) {
+    currentBusinessId = id;
+    saveBusinesses();
+    loadBusinessData();
+    applyTheme(settings.theme);
+    fillSettingsForm();
+    renderAll();
+    renderGoalProgress();
+    renderClients();
+    renderSuppliers();
+    renderExpenses();
+    showToast('Negocio activo: ' + getCurrentBusiness().name, 'info');
+}
+
+function addBusinessPrompt() {
+    const name = prompt('Nombre del nuevo negocio:');
+    if (!name || !name.trim()) return;
+    const id = generateId();
+    businesses.push({ id, name: name.trim() });
+    saveBusinesses();
+    refreshBusinessSelector();
+    document.getElementById('business-selector').value = id;
+    switchBusiness(id);
+    showToast(`Negocio "${name.trim()}" creado`, 'success');
+}
+
+function renameBusiness() {
+    const biz = getCurrentBusiness();
+    const name = prompt('Nuevo nombre del negocio:', biz.name);
+    if (!name || !name.trim()) return;
+    biz.name = name.trim();
+    settings.businessName = name.trim();
+    saveBusinesses();
+    saveSettings();
+    refreshBusinessSelector();
+    showToast('Negocio renombrado', 'success');
+}
+
+function deleteBusiness() {
+    if (businesses.length <= 1) {
+        showToast('Debe existir al menos un negocio', 'error');
+        return;
+    }
+    const biz = getCurrentBusiness();
+    if (!confirm(`¿Eliminar el negocio "${biz.name}" y TODOS sus datos? Esta acción no se puede deshacer.`)) return;
+    // Borrar datos del negocio
+    ['products','sales','history','clients','suppliers','expenses','settings'].forEach(s => {
+        localStorage.removeItem(`gp-${biz.id}-${s}`);
+    });
+    businesses = businesses.filter(b => b.id !== biz.id);
+    currentBusinessId = businesses[0].id;
+    saveBusinesses();
+    refreshBusinessSelector();
+    switchBusiness(currentBusinessId);
+    showToast('Negocio eliminado', 'warning');
+}
+
+function fillSettingsForm() {
+    const el = (id) => document.getElementById(id);
+    if (el('setting-business-name')) el('setting-business-name').value = settings.businessName;
+    if (el('setting-currency')) el('setting-currency').value = settings.currency;
+    if (el('setting-default-tax')) el('setting-default-tax').value = settings.defaultTax;
+    if (el('setting-default-margin')) el('setting-default-margin').value = settings.defaultMargin;
+    if (el('setting-monthly-goal')) el('setting-monthly-goal').value = settings.monthlyGoal || '';
+    if (el('profit-margin')) el('profit-margin').value = settings.defaultMargin;
+}
+
+
+// ==========================================
+// MÓDULO DE CLIENTES
+// ==========================================
+function initClients() {
+    document.getElementById('client-form').addEventListener('submit', handleClientSubmit);
+    document.getElementById('btn-cancel-client').addEventListener('click', cancelClientEdit);
+    document.getElementById('client-search').addEventListener('input', renderClients);
+}
+
+function handleClientSubmit(e) {
+    e.preventDefault();
+    const name = document.getElementById('client-name').value.trim();
+    const phone = document.getElementById('client-phone').value.trim();
+    const email = document.getElementById('client-email').value.trim();
+    const notes = document.getElementById('client-notes').value.trim();
+    if (!name) { showToast('El nombre es obligatorio', 'error'); return; }
+
+    if (editingClientId) {
+        const idx = clients.findIndex(c => c.id === editingClientId);
+        clients[idx] = { ...clients[idx], name, phone, email, notes };
+        showToast('Cliente actualizado', 'success');
+        cancelClientEdit();
+    } else {
+        clients.push({ id: generateId(), name, phone, email, notes, createdAt: new Date().toISOString() });
+        showToast(`Cliente "${name}" agregado`, 'success');
+    }
+    saveClients();
+    renderClients();
+    e.target.reset();
+}
+
+function editClient(id) {
+    const c = clients.find(x => x.id === id);
+    if (!c) return;
+    editingClientId = id;
+    document.getElementById('client-name').value = c.name;
+    document.getElementById('client-phone').value = c.phone || '';
+    document.getElementById('client-email').value = c.email || '';
+    document.getElementById('client-notes').value = c.notes || '';
+    document.getElementById('btn-client-submit').textContent = 'Actualizar Cliente';
+    document.getElementById('btn-cancel-client').style.display = 'inline-block';
+    document.getElementById('client-form').scrollIntoView({ behavior: 'smooth' });
+}
+
+function cancelClientEdit() {
+    editingClientId = null;
+    document.getElementById('client-form').reset();
+    document.getElementById('btn-client-submit').textContent = 'Agregar Cliente';
+    document.getElementById('btn-cancel-client').style.display = 'none';
+}
+
+function deleteClient(id) {
+    const c = clients.find(x => x.id === id);
+    if (!c) return;
+    if (confirm(`¿Eliminar al cliente "${c.name}"?`)) {
+        clients = clients.filter(x => x.id !== id);
+        saveClients();
+        renderClients();
+        showToast('Cliente eliminado', 'warning');
+    }
+}
+
+function renderClients() {
+    const tbody = document.getElementById('clients-body');
+    const empty = document.getElementById('empty-clients');
+    if (!tbody) return;
+    const search = (document.getElementById('client-search').value || '').toLowerCase().trim();
+    let list = [...clients];
+    if (search) list = list.filter(c => c.name.toLowerCase().includes(search) || (c.phone||'').includes(search));
+
+    if (list.length === 0) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
+    empty.style.display = 'none';
+
+    tbody.innerHTML = list.map(c => {
+        const clientSales = sales.filter(s => (s.client||'').toLowerCase() === c.name.toLowerCase());
+        const totalCompras = clientSales.reduce((sum, s) => sum + s.total, 0);
+        const numCompras = clientSales.length;
+        return `<tr>
+            <td><strong>${esc(c.name)}</strong></td>
+            <td>${esc(c.phone || '-')}</td>
+            <td>${esc(c.email || '-')}</td>
+            <td>${numCompras}</td>
+            <td class="profit-positive">${formatCurrency(totalCompras)}</td>
+            <td>
+                <button class="action-btn" onclick="editClient('${c.id}')" title="Editar">✏️</button>
+                <button class="action-btn" onclick="deleteClient('${c.id}')" title="Eliminar">🗑️</button>
+            </td>
+        </tr>`;
+    }).join('');
+
+    // Actualizar datalist para el formulario de ventas
+    const dl = document.getElementById('clients-datalist');
+    if (dl) dl.innerHTML = clients.map(c => `<option value="${esc(c.name)}">`).join('');
+}
+
+
+// ==========================================
+// MÓDULO DE PROVEEDORES
+// ==========================================
+function initSuppliers() {
+    document.getElementById('supplier-form').addEventListener('submit', handleSupplierSubmit);
+    document.getElementById('btn-cancel-supplier').addEventListener('click', cancelSupplierEdit);
+    document.getElementById('supplier-search').addEventListener('input', renderSuppliers);
+}
+
+function handleSupplierSubmit(e) {
+    e.preventDefault();
+    const name = document.getElementById('supplier-name').value.trim();
+    const contact = document.getElementById('supplier-contact').value.trim();
+    const phone = document.getElementById('supplier-phone').value.trim();
+    const products_ = document.getElementById('supplier-products').value.trim();
+    if (!name) { showToast('El nombre es obligatorio', 'error'); return; }
+
+    if (editingSupplierId) {
+        const idx = suppliers.findIndex(s => s.id === editingSupplierId);
+        suppliers[idx] = { ...suppliers[idx], name, contact, phone, products: products_ };
+        showToast('Proveedor actualizado', 'success');
+        cancelSupplierEdit();
+    } else {
+        suppliers.push({ id: generateId(), name, contact, phone, products: products_, createdAt: new Date().toISOString() });
+        showToast(`Proveedor "${name}" agregado`, 'success');
+    }
+    saveSuppliers();
+    renderSuppliers();
+    e.target.reset();
+}
+
+function editSupplier(id) {
+    const s = suppliers.find(x => x.id === id);
+    if (!s) return;
+    editingSupplierId = id;
+    document.getElementById('supplier-name').value = s.name;
+    document.getElementById('supplier-contact').value = s.contact || '';
+    document.getElementById('supplier-phone').value = s.phone || '';
+    document.getElementById('supplier-products').value = s.products || '';
+    document.getElementById('btn-supplier-submit').textContent = 'Actualizar Proveedor';
+    document.getElementById('btn-cancel-supplier').style.display = 'inline-block';
+    document.getElementById('supplier-form').scrollIntoView({ behavior: 'smooth' });
+}
+
+function cancelSupplierEdit() {
+    editingSupplierId = null;
+    document.getElementById('supplier-form').reset();
+    document.getElementById('btn-supplier-submit').textContent = 'Agregar Proveedor';
+    document.getElementById('btn-cancel-supplier').style.display = 'none';
+}
+
+function deleteSupplier(id) {
+    const s = suppliers.find(x => x.id === id);
+    if (!s) return;
+    if (confirm(`¿Eliminar al proveedor "${s.name}"?`)) {
+        suppliers = suppliers.filter(x => x.id !== id);
+        saveSuppliers();
+        renderSuppliers();
+        showToast('Proveedor eliminado', 'warning');
+    }
+}
+
+function renderSuppliers() {
+    const tbody = document.getElementById('suppliers-body');
+    const empty = document.getElementById('empty-suppliers');
+    if (!tbody) return;
+    const search = (document.getElementById('supplier-search').value || '').toLowerCase().trim();
+    let list = [...suppliers];
+    if (search) list = list.filter(s => s.name.toLowerCase().includes(search) || (s.products||'').toLowerCase().includes(search));
+
+    if (list.length === 0) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
+    empty.style.display = 'none';
+
+    tbody.innerHTML = list.map(s => `<tr>
+        <td><strong>${esc(s.name)}</strong></td>
+        <td>${esc(s.contact || '-')}</td>
+        <td>${esc(s.phone || '-')}</td>
+        <td>${esc(s.products || '-')}</td>
+        <td>
+            <button class="action-btn" onclick="editSupplier('${s.id}')" title="Editar">✏️</button>
+            <button class="action-btn" onclick="deleteSupplier('${s.id}')" title="Eliminar">🗑️</button>
+        </td>
+    </tr>`).join('');
+}
+
+
+// ==========================================
+// MÓDULO DE GASTOS
+// ==========================================
+function initExpenses() {
+    document.getElementById('expense-form').addEventListener('submit', handleExpenseSubmit);
+    document.getElementById('btn-cancel-expense').addEventListener('click', cancelExpenseEdit);
+    // Fecha por defecto = hoy
+    const dateField = document.getElementById('expense-date');
+    if (dateField) dateField.value = new Date().toISOString().split('T')[0];
+}
+
+function handleExpenseSubmit(e) {
+    e.preventDefault();
+    const concept = document.getElementById('expense-concept').value.trim();
+    const category = document.getElementById('expense-category').value;
+    const amount = parseFloat(document.getElementById('expense-amount').value) || 0;
+    const date = document.getElementById('expense-date').value || new Date().toISOString().split('T')[0];
+    if (!concept || amount <= 0) { showToast('Completa concepto y monto', 'error'); return; }
+
+    if (editingExpenseId) {
+        const idx = expenses.findIndex(x => x.id === editingExpenseId);
+        expenses[idx] = { ...expenses[idx], concept, category, amount, date };
+        showToast('Gasto actualizado', 'success');
+        cancelExpenseEdit();
+    } else {
+        expenses.push({ id: generateId(), concept, category, amount, date });
+        addHistory('add', `Gasto registrado: ${concept} (${formatCurrency(amount)})`);
+        showToast('Gasto registrado', 'success');
+    }
+    saveExpenses();
+    renderExpenses();
+    updateDashboardStats();
+    e.target.reset();
+    document.getElementById('expense-date').value = new Date().toISOString().split('T')[0];
+}
+
+function editExpense(id) {
+    const x = expenses.find(e => e.id === id);
+    if (!x) return;
+    editingExpenseId = id;
+    document.getElementById('expense-concept').value = x.concept;
+    document.getElementById('expense-category').value = x.category;
+    document.getElementById('expense-amount').value = x.amount;
+    document.getElementById('expense-date').value = x.date;
+    document.getElementById('btn-expense-submit').textContent = 'Actualizar Gasto';
+    document.getElementById('btn-cancel-expense').style.display = 'inline-block';
+    document.getElementById('expense-form').scrollIntoView({ behavior: 'smooth' });
+}
+
+function cancelExpenseEdit() {
+    editingExpenseId = null;
+    document.getElementById('expense-form').reset();
+    document.getElementById('expense-date').value = new Date().toISOString().split('T')[0];
+    document.getElementById('btn-expense-submit').textContent = 'Registrar Gasto';
+    document.getElementById('btn-cancel-expense').style.display = 'none';
+}
+
+function deleteExpense(id) {
+    const x = expenses.find(e => e.id === id);
+    if (!x) return;
+    if (confirm(`¿Eliminar el gasto "${x.concept}"?`)) {
+        expenses = expenses.filter(e => e.id !== id);
+        saveExpenses();
+        renderExpenses();
+        updateDashboardStats();
+        showToast('Gasto eliminado', 'warning');
+    }
+}
+
+function renderExpenses() {
+    const tbody = document.getElementById('expenses-body');
+    const empty = document.getElementById('empty-expenses');
+    if (!tbody) return;
+
+    // Total del mes actual
+    const thisMonth = new Date().toISOString().slice(0, 7);
+    const monthTotal = expenses.filter(e => e.date.startsWith(thisMonth)).reduce((s, e) => s + e.amount, 0);
+    const allTotal = expenses.reduce((s, e) => s + e.amount, 0);
+    setText('expenses-month-total', formatCurrency(monthTotal));
+    setText('expenses-all-total', formatCurrency(allTotal));
+
+    const list = [...expenses].sort((a, b) => b.date.localeCompare(a.date));
+    if (list.length === 0) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
+    empty.style.display = 'none';
+
+    const catIcons = { 'Arriendo':'🏠','Servicios':'💡','Sueldos':'👷','Transporte':'🚗','Marketing':'📣','Insumos':'📦','Impuestos':'🏛️','Otro':'📋' };
+    tbody.innerHTML = list.map(x => `<tr>
+        <td>${new Date(x.date + 'T12:00:00').toLocaleDateString('es-CO')}</td>
+        <td><strong>${esc(x.concept)}</strong></td>
+        <td>${catIcons[x.category] || ''} ${esc(x.category)}</td>
+        <td class="profit-negative">${formatCurrency(x.amount)}</td>
+        <td>
+            <button class="action-btn" onclick="editExpense('${x.id}')" title="Editar">✏️</button>
+            <button class="action-btn" onclick="deleteExpense('${x.id}')" title="Eliminar">🗑️</button>
+        </td>
+    </tr>`).join('');
 }

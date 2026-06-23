@@ -15,11 +15,21 @@
                 <h1>📦 GestiónPro</h1>
                 <button class="sidebar-toggle" id="sidebar-toggle">☰</button>
             </div>
+            <div class="business-switcher">
+                <label for="business-selector">🏪 Negocio activo</label>
+                <div class="business-switcher-row">
+                    <select id="business-selector"></select>
+                    <button id="btn-new-business" title="Nuevo negocio">＋</button>
+                </div>
+            </div>
             <ul class="nav-menu">
                 <li><a href="#" class="nav-link active" data-section="dashboard">📊 Dashboard</a></li>
                 <li><a href="#" class="nav-link" data-section="inventory">📋 Inventario</a></li>
                 <li><a href="#" class="nav-link" data-section="sales">💰 Ventas</a></li>
                 <li><a href="#" class="nav-link" data-section="cashclose">🧾 Cierre de Caja</a></li>
+                <li><a href="#" class="nav-link" data-section="clients">👥 Clientes</a></li>
+                <li><a href="#" class="nav-link" data-section="suppliers">🚚 Proveedores</a></li>
+                <li><a href="#" class="nav-link" data-section="expenses">💸 Gastos</a></li>
                 <li><a href="#" class="nav-link" data-section="calculator">🧮 Calculadora</a></li>
                 <li><a href="#" class="nav-link" data-section="reports">📈 Reportes</a></li>
                 <li><a href="#" class="nav-link" data-section="alerts">🔔 Alertas</a></li>
@@ -84,6 +94,20 @@
                         <div class="stat-info">
                             <span class="stat-value" id="dash-sales-month">$0</span>
                             <span class="stat-label">Ventas del Mes</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">💸</div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="dash-expenses-month">$0</span>
+                            <span class="stat-label">Gastos del Mes</span>
+                        </div>
+                    </div>
+                    <div class="stat-card highlight">
+                        <div class="stat-icon">🏦</div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="dash-net-profit">$0</span>
+                            <span class="stat-label">Ganancia Neta del Mes</span>
                         </div>
                     </div>
                 </div>
@@ -285,7 +309,8 @@
                             </div>
                             <div class="form-group">
                                 <label for="sale-client">Cliente (opcional)</label>
-                                <input type="text" id="sale-client" placeholder="Nombre del cliente">
+                                <input type="text" id="sale-client" list="clients-datalist" placeholder="Nombre del cliente">
+                                <datalist id="clients-datalist"></datalist>
                             </div>
                             <div class="form-group">
                                 <label for="sale-method">Método de Pago</label>
@@ -392,6 +417,195 @@
                         <div class="calc-result-item"><span>🏦 Transferencia:</span><span id="cash-transferencia">$0</span></div>
                         <div class="calc-result-item"><span>📋 Otro:</span><span id="cash-otro">$0</span></div>
                     </div>
+                </div>
+            </section>
+
+            <!-- ======================== CLIENTES ======================== -->
+            <section class="page" id="page-clients">
+                <div class="page-header">
+                    <h2>👥 Clientes</h2>
+                </div>
+                <div class="card">
+                    <h3>➕ Agregar Cliente</h3>
+                    <form id="client-form">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="client-name">Nombre</label>
+                                <input type="text" id="client-name" placeholder="Ej: María González" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="client-phone">Teléfono</label>
+                                <input type="text" id="client-phone" placeholder="Ej: 300 123 4567">
+                            </div>
+                            <div class="form-group">
+                                <label for="client-email">Correo</label>
+                                <input type="email" id="client-email" placeholder="cliente@correo.com">
+                            </div>
+                            <div class="form-group">
+                                <label for="client-notes">Notas</label>
+                                <input type="text" id="client-notes" placeholder="Cliente frecuente, etc.">
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary" id="btn-client-submit">Agregar Cliente</button>
+                            <button type="button" class="btn btn-secondary" id="btn-cancel-client" style="display:none;">Cancelar</button>
+                        </div>
+                    </form>
+                </div>
+                <div class="card filters-card">
+                    <div class="search-box">
+                        <input type="text" id="client-search" placeholder="🔍 Buscar cliente...">
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th>Teléfono</th>
+                                    <th>Correo</th>
+                                    <th>Compras</th>
+                                    <th>Total Gastado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="clients-body"></tbody>
+                        </table>
+                    </div>
+                    <p class="empty-message" id="empty-clients">No hay clientes registrados aún.</p>
+                </div>
+            </section>
+
+            <!-- ======================== PROVEEDORES ======================== -->
+            <section class="page" id="page-suppliers">
+                <div class="page-header">
+                    <h2>🚚 Proveedores</h2>
+                </div>
+                <div class="card">
+                    <h3>➕ Agregar Proveedor</h3>
+                    <form id="supplier-form">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="supplier-name">Nombre / Empresa</label>
+                                <input type="text" id="supplier-name" placeholder="Ej: Distribuidora XYZ" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="supplier-contact">Persona de Contacto</label>
+                                <input type="text" id="supplier-contact" placeholder="Ej: Juan Pérez">
+                            </div>
+                            <div class="form-group">
+                                <label for="supplier-phone">Teléfono</label>
+                                <input type="text" id="supplier-phone" placeholder="Ej: 310 987 6543">
+                            </div>
+                            <div class="form-group">
+                                <label for="supplier-products">Productos que Surte</label>
+                                <input type="text" id="supplier-products" placeholder="Ej: Bebidas, snacks">
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary" id="btn-supplier-submit">Agregar Proveedor</button>
+                            <button type="button" class="btn btn-secondary" id="btn-cancel-supplier" style="display:none;">Cancelar</button>
+                        </div>
+                    </form>
+                </div>
+                <div class="card filters-card">
+                    <div class="search-box">
+                        <input type="text" id="supplier-search" placeholder="🔍 Buscar proveedor...">
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th>Contacto</th>
+                                    <th>Teléfono</th>
+                                    <th>Productos</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="suppliers-body"></tbody>
+                        </table>
+                    </div>
+                    <p class="empty-message" id="empty-suppliers">No hay proveedores registrados aún.</p>
+                </div>
+            </section>
+
+            <!-- ======================== GASTOS ======================== -->
+            <section class="page" id="page-expenses">
+                <div class="page-header">
+                    <h2>💸 Gastos del Negocio</h2>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">📅</div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="expenses-month-total">$0</span>
+                            <span class="stat-label">Gastos del Mes</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">💸</div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="expenses-all-total">$0</span>
+                            <span class="stat-label">Gastos Totales</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3>➕ Registrar Gasto</h3>
+                    <form id="expense-form">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="expense-concept">Concepto</label>
+                                <input type="text" id="expense-concept" placeholder="Ej: Pago de arriendo" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="expense-category">Categoría</label>
+                                <select id="expense-category">
+                                    <option value="Arriendo">🏠 Arriendo</option>
+                                    <option value="Servicios">💡 Servicios (luz, agua, internet)</option>
+                                    <option value="Sueldos">👷 Sueldos</option>
+                                    <option value="Transporte">🚗 Transporte</option>
+                                    <option value="Marketing">📣 Marketing/Publicidad</option>
+                                    <option value="Insumos">📦 Insumos</option>
+                                    <option value="Impuestos">🏛️ Impuestos</option>
+                                    <option value="Otro">📋 Otro</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="expense-amount">Monto ($)</label>
+                                <input type="number" id="expense-amount" min="0" step="0.01" placeholder="0" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="expense-date">Fecha</label>
+                                <input type="date" id="expense-date">
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary" id="btn-expense-submit">Registrar Gasto</button>
+                            <button type="button" class="btn btn-secondary" id="btn-cancel-expense" style="display:none;">Cancelar</button>
+                        </div>
+                    </form>
+                </div>
+                <div class="card">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Concepto</th>
+                                    <th>Categoría</th>
+                                    <th>Monto</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="expenses-body"></tbody>
+                        </table>
+                    </div>
+                    <p class="empty-message" id="empty-expenses">No hay gastos registrados aún.</p>
                 </div>
             </section>
 
@@ -674,6 +888,15 @@
                             </div>
                         </div>
                         <button class="btn btn-primary" id="btn-save-settings">💾 Guardar Ajustes</button>
+                    </div>
+
+                    <div class="card">
+                        <h3>🏪 Gestión de Negocios</h3>
+                        <p class="card-description">Crea, renombra o elimina negocios. Cada negocio tiene su propio inventario, ventas, clientes y gastos por separado. Cambia entre ellos con el selector de arriba a la izquierda.</p>
+                        <div class="form-actions">
+                            <button class="btn btn-outline" id="btn-rename-business">✏️ Renombrar Negocio Actual</button>
+                            <button class="btn btn-danger" id="btn-delete-business">🗑️ Eliminar Negocio Actual</button>
+                        </div>
                     </div>
 
                     <div class="card">
