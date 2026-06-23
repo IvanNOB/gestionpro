@@ -273,6 +273,8 @@ body {
     box-shadow: var(--shadow);
     border: 1px solid var(--border);
     transition: all var(--transition);
+    min-width: 0;
+    overflow: hidden;
 }
 
 .stat-card:hover {
@@ -292,17 +294,23 @@ body {
 
 .stat-icon {
     font-size: 2rem;
+    flex-shrink: 0;
 }
 
 .stat-info {
     display: flex;
     flex-direction: column;
+    min-width: 0;
+    flex: 1;
 }
 
 .stat-value {
-    font-size: 1.4rem;
+    font-size: 1.35rem;
     font-weight: 700;
     color: var(--text);
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .stat-label {
@@ -628,8 +636,16 @@ tbody tr:hover {
 .summary-row {
     display: flex;
     justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
     padding: 6px 0;
     font-weight: 500;
+}
+
+.summary-row span:last-child {
+    text-align: right;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .sales-filters {
@@ -660,9 +676,18 @@ tbody tr:hover {
 .calc-result-item {
     display: flex;
     justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
     padding: 8px 0;
     border-bottom: 1px solid var(--border);
     font-size: 0.9rem;
+}
+
+.calc-result-item span:last-child {
+    text-align: right;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    font-variant-numeric: tabular-nums;
 }
 
 .calc-result-item:last-child { border-bottom: none; }
