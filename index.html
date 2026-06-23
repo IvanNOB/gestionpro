@@ -19,6 +19,7 @@
                 <li><a href="#" class="nav-link active" data-section="dashboard">📊 Dashboard</a></li>
                 <li><a href="#" class="nav-link" data-section="inventory">📋 Inventario</a></li>
                 <li><a href="#" class="nav-link" data-section="sales">💰 Ventas</a></li>
+                <li><a href="#" class="nav-link" data-section="cashclose">🧾 Cierre de Caja</a></li>
                 <li><a href="#" class="nav-link" data-section="calculator">🧮 Calculadora</a></li>
                 <li><a href="#" class="nav-link" data-section="reports">📈 Reportes</a></li>
                 <li><a href="#" class="nav-link" data-section="alerts">🔔 Alertas</a></li>
@@ -85,6 +86,19 @@
                             <span class="stat-label">Ventas del Mes</span>
                         </div>
                     </div>
+                </div>
+
+                <!-- Meta de ventas del mes -->
+                <div class="card" id="goal-progress-card" style="display:none;">
+                    <h3>🎯 Meta de Ventas del Mes</h3>
+                    <div class="goal-header">
+                        <span><strong id="goal-current">$0</strong> de <strong id="goal-target">$0</strong></span>
+                        <span class="goal-pct" id="goal-pct">0%</span>
+                    </div>
+                    <div class="goal-bar-bg">
+                        <div class="goal-bar-fill" id="goal-bar"></div>
+                    </div>
+                    <p class="goal-message" id="goal-message"></p>
                 </div>
 
                 <div class="charts-grid">
@@ -265,6 +279,11 @@
                                 <small>Vacío = precio guardado del producto</small>
                             </div>
                             <div class="form-group">
+                                <label for="sale-discount">Descuento (%)</label>
+                                <input type="number" id="sale-discount" min="0" max="100" value="0" placeholder="0">
+                                <small>Descuento aplicado a esta venta</small>
+                            </div>
+                            <div class="form-group">
                                 <label for="sale-client">Cliente (opcional)</label>
                                 <input type="text" id="sale-client" placeholder="Nombre del cliente">
                             </div>
@@ -284,8 +303,9 @@
                         </div>
 
                         <div class="sale-summary" id="sale-summary" style="display:none;">
-                            <div class="summary-row"><span>Subtotal:</span><span id="sale-subtotal">$0.00</span></div>
-                            <div class="summary-row"><span>Ganancia:</span><span id="sale-profit-preview" class="profit-positive">$0.00</span></div>
+                            <div class="summary-row" id="sale-discount-row" style="display:none;"><span>Descuento:</span><span id="sale-discount-amount">- $0</span></div>
+                            <div class="summary-row"><span>Total:</span><span id="sale-subtotal">$0</span></div>
+                            <div class="summary-row"><span>Ganancia:</span><span id="sale-profit-preview" class="profit-positive">$0</span></div>
                         </div>
 
                         <div class="form-actions">
@@ -323,6 +343,58 @@
                 </div>
             </section>
 
+            <!-- ======================== CIERRE DE CAJA ======================== -->
+            <section class="page" id="page-cashclose">
+                <div class="page-header">
+                    <h2>🧾 Cierre de Caja</h2>
+                    <div class="header-actions">
+                        <input type="date" id="cash-date" class="filter-select">
+                        <button class="btn btn-sm btn-success" id="btn-print-cash">🖨️ Imprimir</button>
+                    </div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card sales">
+                        <div class="stat-icon">💰</div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="cash-total">$0</span>
+                            <span class="stat-label">Total Vendido</span>
+                        </div>
+                    </div>
+                    <div class="stat-card highlight">
+                        <div class="stat-icon">📈</div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="cash-profit">$0</span>
+                            <span class="stat-label">Ganancia</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🧾</div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="cash-count">0</span>
+                            <span class="stat-label">N° de Ventas</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">📦</div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="cash-units">0</span>
+                            <span class="stat-label">Unidades</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>💳 Desglose por Método de Pago</h3>
+                    <div class="calc-results" style="display:block;">
+                        <div class="calc-result-item"><span>💵 Efectivo:</span><span id="cash-efectivo">$0</span></div>
+                        <div class="calc-result-item"><span>💳 Tarjeta:</span><span id="cash-tarjeta">$0</span></div>
+                        <div class="calc-result-item"><span>🏦 Transferencia:</span><span id="cash-transferencia">$0</span></div>
+                        <div class="calc-result-item"><span>📋 Otro:</span><span id="cash-otro">$0</span></div>
+                    </div>
+                </div>
+            </section>
+
             <!-- ======================== CALCULADORA ======================== -->
             <section class="page" id="page-calculator">
                 <div class="page-header">
@@ -347,8 +419,9 @@
                                 <input type="number" id="calc-packaging" min="0" step="0.01" value="0" placeholder="0.00">
                             </div>
                             <div class="form-group">
-                                <label>Impuestos (%)</label>
-                                <input type="number" id="calc-tax" min="0" max="100" value="16" placeholder="16">
+                                <label>Impuestos / IVA (%)</label>
+                                <input type="number" id="calc-tax" min="0" max="100" value="19" placeholder="19">
+                                <small>IVA Colombia: 19%</small>
                             </div>
                             <div class="form-group">
                                 <label>Comisión Plataforma (%)</label>
@@ -428,6 +501,41 @@
                             <div class="calc-result-item">
                                 <span>ROI (Retorno de Inversión):</span>
                                 <span id="sim-roi">0%</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3>⚖️ Punto de Equilibrio</h3>
+                        <p class="card-description">¿Cuántas unidades debes vender para no perder dinero?</p>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Costos Fijos Mensuales ($)</label>
+                                <input type="number" id="be-fixed" min="0" step="0.01" placeholder="Arriendo, servicios, etc.">
+                                <small>Renta, sueldos, servicios, etc.</small>
+                            </div>
+                            <div class="form-group">
+                                <label>Precio de Venta por Unidad ($)</label>
+                                <input type="number" id="be-price" min="0" step="0.01" placeholder="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Costo Variable por Unidad ($)</label>
+                                <input type="number" id="be-varcost" min="0" step="0.01" placeholder="0">
+                                <small>Lo que te cuesta cada unidad</small>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" id="btn-breakeven">⚖️ Calcular Equilibrio</button>
+                        <div class="calc-results" id="be-results" style="display:none;">
+                            <div class="calc-result-item success">
+                                <span>📦 Unidades para equilibrio:</span>
+                                <span id="be-units">0</span>
+                            </div>
+                            <div class="calc-result-item highlight">
+                                <span>💵 Ventas necesarias:</span>
+                                <span id="be-revenue">$0</span>
+                            </div>
+                            <div class="calc-result-item">
+                                <span>📅 Ritmo diario:</span>
+                                <span id="be-daily">-</span>
                             </div>
                         </div>
                     </div>
@@ -544,18 +652,25 @@
                             <div class="form-group">
                                 <label>Moneda</label>
                                 <select id="setting-currency">
-                                    <option value="$">$ (Peso/Dólar)</option>
+                                    <option value="COP">🇨🇴 Peso Colombiano (COP)</option>
+                                    <option value="$">$ (Dólar/genérico)</option>
                                     <option value="€">€ (Euro)</option>
                                     <option value="£">£ (Libra)</option>
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label>Impuesto por Defecto (%)</label>
-                                <input type="number" id="setting-default-tax" value="16" min="0" max="100">
+                                <label>IVA / Impuesto por Defecto (%)</label>
+                                <input type="number" id="setting-default-tax" value="19" min="0" max="100">
+                                <small>IVA Colombia: 19%</small>
                             </div>
                             <div class="form-group">
                                 <label>Margen por Defecto (%)</label>
                                 <input type="number" id="setting-default-margin" value="30" min="0" max="500">
+                            </div>
+                            <div class="form-group">
+                                <label>🎯 Meta de Ventas Mensual ($)</label>
+                                <input type="number" id="setting-monthly-goal" value="" min="0" placeholder="Ej: 5000000">
+                                <small>0 = sin meta</small>
                             </div>
                         </div>
                         <button class="btn btn-primary" id="btn-save-settings">💾 Guardar Ajustes</button>

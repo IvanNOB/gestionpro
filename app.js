@@ -8,10 +8,11 @@ let sales = [];
 let history = [];
 let settings = {
     businessName: 'Mi Negocio',
-    currency: '$',
-    defaultTax: 16,
+    currency: 'COP',
+    defaultTax: 19,
     defaultMargin: 30,
-    theme: 'light'
+    theme: 'light',
+    monthlyGoal: 0
 };
 let editingId = null;
 let charts = {};
@@ -29,6 +30,8 @@ document.addEventListener('DOMContentLoaded', () => {
     initBackup();
     initCalculator();
     renderAll();
+    renderGoalProgress();
+    initCashClose();
     showDate();
 });
 
@@ -50,10 +53,11 @@ function initNavigation() {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.getElementById(`page-${section}`).classList.add('active');
             if (window.innerWidth <= 900) sidebar.classList.remove('open');
-            if (section === 'dashboard') renderCharts();
+            if (section === 'dashboard') { renderCharts(); renderGoalProgress(); }
             if (section === 'reports') renderReports();
             if (section === 'alerts') renderAlerts();
             if (section === 'sales') updateSaleProductList();
+            if (section === 'cashclose') renderCashClose();
         });
     });
 
@@ -117,6 +121,7 @@ function initForms() {
     document.getElementById('sale-product').addEventListener('change', updateSalePreview);
     document.getElementById('sale-quantity').addEventListener('input', updateSalePreview);
     document.getElementById('sale-price').addEventListener('input', updateSalePreview);
+    document.getElementById('sale-discount').addEventListener('input', updateSalePreview);
 
     // Export/Import
     document.getElementById('btn-export-csv').addEventListener('click', exportCSV);
@@ -262,6 +267,7 @@ function updateSalePreview() {
     const productId = document.getElementById('sale-product').value;
     const qty = parseInt(document.getElementById('sale-quantity').value) || 0;
     const customPrice = parseFloat(document.getElementById('sale-price').value);
+    const discount = parseFloat(document.getElementById('sale-discount').value) || 0;
     const summary = document.getElementById('sale-summary');
 
     if (!productId || qty <= 0) { summary.style.display = 'none'; return; }
@@ -270,10 +276,14 @@ function updateSalePreview() {
     if (!product) return;
 
     const price = customPrice > 0 ? customPrice : product.price;
-    const subtotal = price * qty;
-    const profit = (price - product.cost) * qty;
+    const bruto = price * qty;
+    const descuentoMonto = bruto * (discount / 100);
+    const subtotal = bruto - descuentoMonto;
+    const profit = subtotal - (product.cost * qty);
 
     document.getElementById('sale-subtotal').textContent = formatCurrency(subtotal);
+    document.getElementById('sale-discount-amount').textContent = '- ' + formatCurrency(descuentoMonto);
+    document.getElementById('sale-discount-row').style.display = discount > 0 ? 'flex' : 'none';
     document.getElementById('sale-profit-preview').textContent = formatCurrency(profit);
     document.getElementById('sale-profit-preview').className = profit >= 0 ? 'profit-positive' : 'profit-negative';
     summary.style.display = 'block';
@@ -285,6 +295,7 @@ function handleSaleSubmit(e) {
     const productId = document.getElementById('sale-product').value;
     const qty = parseInt(document.getElementById('sale-quantity').value) || 0;
     const customPrice = parseFloat(document.getElementById('sale-price').value);
+    const discount = parseFloat(document.getElementById('sale-discount').value) || 0;
     const client = document.getElementById('sale-client').value.trim();
     const method = document.getElementById('sale-method').value;
     const notes = document.getElementById('sale-notes').value.trim();
@@ -298,11 +309,15 @@ function handleSaleSubmit(e) {
     }
 
     const price = customPrice > 0 ? customPrice : product.price;
+    const bruto = price * qty;
+    const descuentoMonto = bruto * (discount / 100);
+    const total = bruto - descuentoMonto;
     const sale = {
         id: generateId(),
         productId, productName: product.name,
         quantity: qty, price, cost: product.cost,
-        total: price * qty, profit: (price - product.cost) * qty,
+        discount, discountAmount: descuentoMonto,
+        total, profit: total - (product.cost * qty),
         client, method, notes,
         date: new Date().toISOString()
     };
@@ -316,10 +331,60 @@ function handleSaleSubmit(e) {
     saveSales();
     saveProducts();
     renderAll();
+    renderGoalProgress();
     showToast(`Venta registrada: ${qty}x ${product.name}`, 'success');
+    lastSale = sale;
     e.target.reset();
     document.getElementById('sale-summary').style.display = 'none';
+    document.getElementById('sale-discount-row').style.display = 'none';
     updateSaleProductList();
+    // Ofrecer recibo
+    if (confirm('Venta registrada. ¿Quieres imprimir el recibo?')) {
+        printReceipt(sale);
+    }
+}
+
+// ==========================================
+// RECIBO IMPRIMIBLE
+// ==========================================
+let lastSale = null;
+
+function printReceipt(sale) {
+    const fecha = new Date(sale.date).toLocaleString('es-CO');
+    const win = window.open('', '_blank', 'width=380,height=600');
+    if (!win) { showToast('Permite las ventanas emergentes para imprimir', 'warning'); return; }
+    const bruto = sale.price * sale.quantity;
+    win.document.write(`
+        <html><head><title>Recibo</title><style>
+            body { font-family: 'Courier New', monospace; padding: 16px; font-size: 13px; color: #000; }
+            h2 { text-align: center; margin: 4px 0; }
+            .center { text-align: center; }
+            hr { border: none; border-top: 1px dashed #000; margin: 8px 0; }
+            .row { display: flex; justify-content: space-between; margin: 3px 0; }
+            .total { font-weight: bold; font-size: 15px; }
+            .muted { color: #555; font-size: 11px; }
+        </style></head><body>
+            <h2>${esc(settings.businessName)}</h2>
+            <div class="center muted">RECIBO DE VENTA</div>
+            <div class="center muted">${fecha}</div>
+            <hr>
+            <div class="row"><span>Producto:</span><span>${esc(sale.productName)}</span></div>
+            <div class="row"><span>Cantidad:</span><span>${sale.quantity}</span></div>
+            <div class="row"><span>Precio unit.:</span><span>${formatCurrency(sale.price)}</span></div>
+            <div class="row"><span>Subtotal:</span><span>${formatCurrency(bruto)}</span></div>
+            ${sale.discount > 0 ? `<div class="row"><span>Descuento (${sale.discount}%):</span><span>- ${formatCurrency(sale.discountAmount)}</span></div>` : ''}
+            <hr>
+            <div class="row total"><span>TOTAL:</span><span>${formatCurrency(sale.total)}</span></div>
+            <hr>
+            <div class="row"><span>Pago:</span><span>${esc(sale.method)}</span></div>
+            ${sale.client ? `<div class="row"><span>Cliente:</span><span>${esc(sale.client)}</span></div>` : ''}
+            ${sale.notes ? `<div class="muted">Nota: ${esc(sale.notes)}</div>` : ''}
+            <hr>
+            <div class="center muted">¡Gracias por su compra!</div>
+            <script>window.onload = function(){ window.print(); }<\/script>
+        </body></html>
+    `);
+    win.document.close();
 }
 
 
@@ -590,6 +655,7 @@ function renderProfitCategoryChart() {
 function initCalculator() {
     document.getElementById('btn-calculate').addEventListener('click', calculate);
     document.getElementById('btn-simulate').addEventListener('click', simulate);
+    document.getElementById('btn-breakeven').addEventListener('click', calcBreakEven);
 }
 
 function calculate() {
@@ -911,16 +977,25 @@ function initSettings() {
     document.getElementById('setting-currency').value = settings.currency;
     document.getElementById('setting-default-tax').value = settings.defaultTax;
     document.getElementById('setting-default-margin').value = settings.defaultMargin;
+    document.getElementById('setting-monthly-goal').value = settings.monthlyGoal || '';
     document.getElementById('profit-margin').value = settings.defaultMargin;
 }
 
 function saveSettingsForm() {
     settings.businessName = document.getElementById('setting-business-name').value || 'Mi Negocio';
     settings.currency = document.getElementById('setting-currency').value;
-    settings.defaultTax = parseFloat(document.getElementById('setting-default-tax').value) || 16;
+    settings.defaultTax = parseFloat(document.getElementById('setting-default-tax').value) || 19;
     settings.defaultMargin = parseFloat(document.getElementById('setting-default-margin').value) || 30;
+    const goal = parseFloat(document.getElementById('setting-monthly-goal').value);
+    settings.monthlyGoal = isNaN(goal) ? 0 : goal;
     saveSettings();
+    applyCurrencyEverywhere();
     showToast('Ajustes guardados', 'success');
+}
+
+function applyCurrencyEverywhere() {
+    renderAll();
+    renderGoalProgress();
 }
 
 function clearAllData() {
@@ -1017,7 +1092,19 @@ function loadAllData() {
 function generateId() { return 'id_' + Date.now() + '_' + Math.random().toString(36).substr(2,9); }
 function getProduct(id) { return products.find(p => p.id === id); }
 function formatCurrency(amount) {
-    return settings.currency + amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    amount = amount || 0;
+    // Pesos colombianos (COP): separador de miles con punto, sin decimales
+    if (settings.currency === 'COP') {
+        return '$' + Math.round(amount).toLocaleString('es-CO');
+    }
+    if (settings.currency === '€') {
+        return amount.toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' €';
+    }
+    if (settings.currency === '£') {
+        return '£' + amount.toLocaleString('en-GB', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    }
+    // Dólar / genérico
+    return '$' + amount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 }
 function esc(text) {
     const d = document.createElement('div');
@@ -1040,3 +1127,141 @@ function showToast(message, type = 'info') {
 
 // Renderizar gráficas al cargar si estamos en dashboard
 setTimeout(() => { renderCharts(); renderHistory(); }, 500);
+
+
+// ==========================================
+// PUNTO DE EQUILIBRIO
+// ==========================================
+function calcBreakEven() {
+    const fixedCosts = parseFloat(document.getElementById('be-fixed').value) || 0;
+    const price = parseFloat(document.getElementById('be-price').value) || 0;
+    const varCost = parseFloat(document.getElementById('be-varcost').value) || 0;
+    const results = document.getElementById('be-results');
+
+    const contribution = price - varCost;
+    if (contribution <= 0) {
+        results.style.display = 'block';
+        document.getElementById('be-units').textContent = '⚠️ Imposible';
+        document.getElementById('be-revenue').textContent = 'El precio debe ser mayor al costo variable';
+        document.getElementById('be-daily').textContent = '-';
+        return;
+    }
+    const units = Math.ceil(fixedCosts / contribution);
+    const revenue = units * price;
+    const daily = Math.ceil(units / 30);
+
+    document.getElementById('be-units').textContent = units.toLocaleString('es-CO') + ' unidades';
+    document.getElementById('be-revenue').textContent = formatCurrency(revenue);
+    document.getElementById('be-daily').textContent = '~' + daily.toLocaleString('es-CO') + ' por día (mes de 30 días)';
+    results.style.display = 'block';
+}
+
+// ==========================================
+// CIERRE DE CAJA DIARIO
+// ==========================================
+function renderCashClose() {
+    const dateInput = document.getElementById('cash-date');
+    const selectedDate = dateInput.value || new Date().toISOString().split('T')[0];
+    const daySales = sales.filter(s => s.date.startsWith(selectedDate));
+
+    const methods = { 'Efectivo': 0, 'Tarjeta': 0, 'Transferencia': 0, 'Otro': 0 };
+    let total = 0, profit = 0, units = 0;
+    daySales.forEach(s => {
+        methods[s.method] = (methods[s.method] || 0) + s.total;
+        total += s.total;
+        profit += s.profit;
+        units += s.quantity;
+    });
+
+    setText('cash-total', formatCurrency(total));
+    setText('cash-profit', formatCurrency(profit));
+    setText('cash-count', daySales.length);
+    setText('cash-units', units);
+    setText('cash-efectivo', formatCurrency(methods['Efectivo']));
+    setText('cash-tarjeta', formatCurrency(methods['Tarjeta']));
+    setText('cash-transferencia', formatCurrency(methods['Transferencia']));
+    setText('cash-otro', formatCurrency(methods['Otro']));
+}
+
+
+// ==========================================
+// METAS DE VENTAS MENSUALES
+// ==========================================
+function renderGoalProgress() {
+    const container = document.getElementById('goal-progress-card');
+    if (!container) return;
+    const goal = settings.monthlyGoal || 0;
+    if (goal <= 0) {
+        container.style.display = 'none';
+        return;
+    }
+    container.style.display = 'block';
+    const thisMonth = new Date().toISOString().slice(0, 7);
+    const monthSales = sales.filter(s => s.date.startsWith(thisMonth)).reduce((sum, s) => sum + s.total, 0);
+    const pct = Math.min(100, (monthSales / goal) * 100);
+
+    setText('goal-current', formatCurrency(monthSales));
+    setText('goal-target', formatCurrency(goal));
+    setText('goal-pct', pct.toFixed(1) + '%');
+    const bar = document.getElementById('goal-bar');
+    if (bar) {
+        bar.style.width = pct + '%';
+        bar.style.background = pct >= 100 ? 'var(--success)' : pct >= 50 ? 'var(--primary)' : 'var(--warning)';
+    }
+    const msg = document.getElementById('goal-message');
+    if (msg) {
+        const falta = goal - monthSales;
+        msg.textContent = pct >= 100
+            ? '🎉 ¡Felicidades! Alcanzaste tu meta del mes.'
+            : `Te faltan ${formatCurrency(falta)} para tu meta.`;
+    }
+}
+
+
+// ==========================================
+// INIT CIERRE DE CAJA
+// ==========================================
+function initCashClose() {
+    const dateInput = document.getElementById('cash-date');
+    if (dateInput) {
+        dateInput.value = new Date().toISOString().split('T')[0];
+        dateInput.addEventListener('change', renderCashClose);
+    }
+    const btnPrint = document.getElementById('btn-print-cash');
+    if (btnPrint) btnPrint.addEventListener('click', printCashClose);
+}
+
+function printCashClose() {
+    const date = document.getElementById('cash-date').value || new Date().toISOString().split('T')[0];
+    const win = window.open('', '_blank', 'width=400,height=600');
+    if (!win) { showToast('Permite las ventanas emergentes', 'warning'); return; }
+    win.document.write(`
+        <html><head><title>Cierre de Caja</title><style>
+            body { font-family: 'Courier New', monospace; padding: 16px; font-size: 13px; }
+            h2 { text-align: center; margin: 4px 0; }
+            .center { text-align: center; }
+            hr { border: none; border-top: 1px dashed #000; margin: 8px 0; }
+            .row { display: flex; justify-content: space-between; margin: 4px 0; }
+            .total { font-weight: bold; font-size: 15px; }
+        </style></head><body>
+            <h2>${esc(settings.businessName)}</h2>
+            <div class="center">CIERRE DE CAJA</div>
+            <div class="center">${new Date(date).toLocaleDateString('es-CO')}</div>
+            <hr>
+            <div class="row"><span>Ventas:</span><span>${document.getElementById('cash-count').textContent}</span></div>
+            <div class="row"><span>Unidades:</span><span>${document.getElementById('cash-units').textContent}</span></div>
+            <hr>
+            <div class="row"><span>Efectivo:</span><span>${document.getElementById('cash-efectivo').textContent}</span></div>
+            <div class="row"><span>Tarjeta:</span><span>${document.getElementById('cash-tarjeta').textContent}</span></div>
+            <div class="row"><span>Transferencia:</span><span>${document.getElementById('cash-transferencia').textContent}</span></div>
+            <div class="row"><span>Otro:</span><span>${document.getElementById('cash-otro').textContent}</span></div>
+            <hr>
+            <div class="row total"><span>TOTAL:</span><span>${document.getElementById('cash-total').textContent}</span></div>
+            <div class="row"><span>Ganancia:</span><span>${document.getElementById('cash-profit').textContent}</span></div>
+            <hr>
+            <div class="center">Generado: ${new Date().toLocaleString('es-CO')}</div>
+            <script>window.onload=function(){window.print();}<\/script>
+        </body></html>
+    `);
+    win.document.close();
+}
