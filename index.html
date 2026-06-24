@@ -753,6 +753,68 @@
                             </div>
                         </div>
                     </div>
+
+                    <div class="card">
+                        <h3>🍦 Ganancia por Caja de Helado</h3>
+                        <p class="card-description">Calcula cuántas bolitas salen de una caja según su peso y cuánto ganas vendiéndolas.</p>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Peso de la Caja (gramos)</label>
+                                <input type="number" id="ice-box-weight" min="0" step="1" placeholder="Ej: 4000">
+                                <small>Varía según la caja</small>
+                            </div>
+                            <div class="form-group">
+                                <label>Costo de la Caja ($)</label>
+                                <input type="number" id="ice-box-cost" min="0" step="0.01" placeholder="Lo que te cuesta la caja">
+                            </div>
+                            <div class="form-group">
+                                <label>Peso de cada Bolita (gramos)</label>
+                                <input type="number" id="ice-scoop-weight" min="1" step="1" value="100" placeholder="100">
+                                <small>Peso de cada bola de helado</small>
+                            </div>
+                            <div class="form-group">
+                                <label>Precio de Venta por Bolita ($)</label>
+                                <input type="number" id="ice-scoop-price" min="0" step="0.01" placeholder="Ej: 3000">
+                            </div>
+                            <div class="form-group">
+                                <label>Costo Extra por Bolita ($)</label>
+                                <input type="number" id="ice-extra-cost" min="0" step="0.01" value="0" placeholder="0">
+                                <small>Cono, vaso, cuchara, servilleta</small>
+                            </div>
+                            <div class="form-group">
+                                <label>Desperdicio / Merma (%)</label>
+                                <input type="number" id="ice-waste" min="0" max="100" value="5" placeholder="5">
+                                <small>Helado que se pierde al servir</small>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" id="btn-ice">🍦 Calcular Ganancia</button>
+                        <div class="calc-results" id="ice-results" style="display:none;">
+                            <div class="calc-result-item highlight">
+                                <span>🍨 Bolitas que salen:</span>
+                                <span id="ice-scoops">0</span>
+                            </div>
+                            <div class="calc-result-item">
+                                <span>💵 Ingreso total (todas las bolitas):</span>
+                                <span id="ice-revenue">$0</span>
+                            </div>
+                            <div class="calc-result-item">
+                                <span>📉 Costo total (caja + extras):</span>
+                                <span id="ice-total-cost">$0</span>
+                            </div>
+                            <div class="calc-result-item success">
+                                <span>💰 Ganancia total por caja:</span>
+                                <span id="ice-profit">$0</span>
+                            </div>
+                            <div class="calc-result-item success">
+                                <span>📈 Ganancia por bolita:</span>
+                                <span id="ice-profit-scoop">$0</span>
+                            </div>
+                            <div class="calc-result-item">
+                                <span>📊 Margen de ganancia:</span>
+                                <span id="ice-margin">0%</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </section>
 

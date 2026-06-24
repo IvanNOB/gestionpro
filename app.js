@@ -683,6 +683,48 @@ function initCalculator() {
     document.getElementById('btn-calculate').addEventListener('click', calculate);
     document.getElementById('btn-simulate').addEventListener('click', simulate);
     document.getElementById('btn-breakeven').addEventListener('click', calcBreakEven);
+    document.getElementById('btn-ice').addEventListener('click', calcIceCream);
+}
+
+// ==========================================
+// CALCULADORA DE HELADO (ganancia por caja)
+// ==========================================
+function calcIceCream() {
+    const boxWeight = parseFloat(document.getElementById('ice-box-weight').value) || 0;
+    const boxCost = parseFloat(document.getElementById('ice-box-cost').value) || 0;
+    const scoopWeight = parseFloat(document.getElementById('ice-scoop-weight').value) || 0;
+    const scoopPrice = parseFloat(document.getElementById('ice-scoop-price').value) || 0;
+    const extraCost = parseFloat(document.getElementById('ice-extra-cost').value) || 0;
+    const waste = parseFloat(document.getElementById('ice-waste').value) || 0;
+    const results = document.getElementById('ice-results');
+
+    if (boxWeight <= 0 || scoopWeight <= 0) {
+        showToast('Ingresa el peso de la caja y de la bolita', 'error');
+        return;
+    }
+
+    // Peso aprovechable después de la merma
+    const usableWeight = boxWeight * (1 - waste / 100);
+    const scoops = Math.floor(usableWeight / scoopWeight);
+
+    const revenue = scoops * scoopPrice;
+    const totalCost = boxCost + (extraCost * scoops);
+    const profit = revenue - totalCost;
+    const profitPerScoop = scoops > 0 ? profit / scoops : 0;
+    const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
+
+    document.getElementById('ice-scoops').textContent = scoops.toLocaleString('es-CO') + ' bolitas';
+    document.getElementById('ice-revenue').textContent = formatCurrency(revenue);
+    document.getElementById('ice-total-cost').textContent = formatCurrency(totalCost);
+    document.getElementById('ice-profit').textContent = formatCurrency(profit);
+    document.getElementById('ice-profit-scoop').textContent = formatCurrency(profitPerScoop);
+    document.getElementById('ice-margin').textContent = margin.toFixed(1) + '%';
+
+    const profitEl = document.getElementById('ice-profit');
+    profitEl.parentElement.className = 'calc-result-item ' + (profit >= 0 ? 'success' : '');
+    profitEl.style.color = profit >= 0 ? 'var(--success)' : 'var(--danger)';
+
+    results.style.display = 'block';
 }
 
 function calculate() {
