@@ -1836,6 +1836,9 @@ tbody tr:hover {
                                 <span>📊 Margen de ganancia:</span>
                                 <span id="ice-margin">0%</span>
                             </div>
+                            <div class="form-actions" style="margin-top:14px;">
+                                <button type="button" class="btn btn-success" id="btn-ice-save">💾 Guardar como producto (vender por bolita)</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -2699,7 +2702,10 @@ function initCalculator() {
     document.getElementById('btn-simulate').addEventListener('click', simulate);
     document.getElementById('btn-breakeven').addEventListener('click', calcBreakEven);
     document.getElementById('btn-ice').addEventListener('click', calcIceCream);
+    document.getElementById('btn-ice-save').addEventListener('click', saveIceProduct);
 }
+
+let lastIceCalc = null;
 
 // ==========================================
 // CALCULADORA DE HELADO (ganancia por caja)
@@ -2739,7 +2745,43 @@ function calcIceCream() {
     profitEl.parentElement.className = 'calc-result-item ' + (profit >= 0 ? 'success' : '');
     profitEl.style.color = profit >= 0 ? 'var(--success)' : 'var(--danger)';
 
+    // Guardar para poder convertirlo en producto
+    const costPerScoop = scoops > 0 ? (boxCost / scoops) + extraCost : 0;
+    lastIceCalc = { scoops, scoopPrice, costPerScoop };
+
     results.style.display = 'block';
+}
+
+function saveIceProduct() {
+    if (!lastIceCalc || lastIceCalc.scoops <= 0) {
+        showToast('Primero calcula la caja de helado', 'error');
+        return;
+    }
+    const name = prompt('Nombre del producto (bolita de helado):', 'Helado - bolita');
+    if (!name || !name.trim()) return;
+
+    const cost = Math.round(lastIceCalc.costPerScoop * 100) / 100;
+    const price = lastIceCalc.scoopPrice;
+    const margin = cost > 0 ? Math.round(((price - cost) / cost) * 100) : settings.defaultMargin;
+
+    const product = {
+        id: generateId(),
+        name: name.trim(),
+        category: 'Alimentos',
+        quantity: lastIceCalc.scoops,
+        cost: cost,
+        margin: margin,
+        price: price,
+        minStock: 5,
+        supplier: '',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+    };
+    products.push(product);
+    saveProducts();
+    renderAll();
+    addHistory('add', `Producto creado desde calculadora de helado: ${product.name} (x${product.quantity} bolitas)`);
+    showToast(`"${product.name}" agregado al inventario (${product.quantity} bolitas)`, 'success');
 }
 
 function calculate() {
