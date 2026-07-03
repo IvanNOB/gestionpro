@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GestiónPro - Demo Insumos y Recetas</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #1e293b, #0f172a); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .card { background: white; border-radius: 16px; padding: 40px 32px; max-width: 550px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+        h1 { font-size: 1.6rem; margin-bottom: 8px; text-align: center; }
+        .subtitle { color: #64748b; text-align: center; margin-bottom: 24px; font-size: 0.9rem; }
+        .info-box { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 16px; margin-bottom: 20px; font-size: 0.85rem; color: #1e40af; }
+        .info-box h4 { margin-bottom: 8px; }
+        .info-box ul { padding-left: 20px; }
+        .info-box li { margin-bottom: 4px; }
+        .btn { display: block; width: 100%; padding: 16px; border: none; border-radius: 12px; font-size: 1.1rem; font-weight: 700; cursor: pointer; margin-bottom: 12px; transition: all 0.2s; }
+        .btn:hover { transform: translateY(-2px); }
+        .btn-primary { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; box-shadow: 0 4px 12px rgba(37,99,235,0.3); }
+        .btn-success { background: linear-gradient(135deg, #16a34a, #15803d); color: white; box-shadow: 0 4px 12px rgba(22,163,74,0.3); }
+        .btn-warning { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; box-shadow: 0 4px 12px rgba(245,158,11,0.3); }
+        .btn:disabled { opacity: 0.5; transform: none; cursor: not-allowed; }
+        .status { margin-top: 16px; padding: 16px; border-radius: 12px; display: none; font-size: 0.9rem; }
+        .status.loading { display: block; background: #eff6ff; color: #1d4ed8; }
+        .status.success { display: block; background: #f0fdf4; color: #166534; }
+        .status.error { display: block; background: #fef2f2; color: #991b1b; }
+        .progress { margin-top: 8px; font-size: 0.85rem; color: #475569; }
+        a { color: #2563eb; text-decoration: none; font-weight: 600; }
+        .result-table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 0.85rem; }
+        .result-table th, .result-table td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        .result-table th { background: #f8fafc; font-weight: 600; color: #475569; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>☕ Demo: Insumos + Recetas</h1>
+        <p class="subtitle">Prueba que al vender un producto se resten los insumos automáticamente</p>
+
+        <div class="info-box">
+            <h4>📋 Lo que va a cargar:</h4>
+            <ul>
+                <li><strong>5 Insumos:</strong> Café molido (500g), Azúcar (1000g), Leche (2000ml), Agua (20000ml), Chocolate (300g)</li>
+                <li><strong>3 Recetas:</strong></li>
+                <li>Café Americano = 2.5g café + 2.5g azúcar + 200ml agua</li>
+                <li>Café con Leche = 2.5g café + 2g azúcar + 100ml leche + 100ml agua</li>
+                <li>Chocolate Caliente = 15g chocolate + 5g azúcar + 200ml leche</li>
+            </ul>
+        </div>
+
+        <button class="btn btn-primary" id="btn-load" onclick="loadDemo()">🚀 1. Cargar Insumos y Recetas</button>
+        <button class="btn btn-warning" id="btn-check" onclick="checkStock()" disabled>📊 2. Ver Stock Actual</button>
+        <button class="btn btn-success" id="btn-sell" onclick="simulateSale()" disabled>💰 3. Simular Venta (1 Café Americano)</button>
+        <button class="btn btn-warning" id="btn-check2" onclick="checkStock()" disabled>📊 4. Ver Stock Después de Venta</button>
+
+        <div class="status" id="status"></div>
+        <div class="progress" id="progress"></div>
+        <div id="stock-result"></div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script>
+        let currentUser = null;
+        let insumosData = [];
+        let recipesData = [];
+        let productsData = [];
+
+        function userDoc() { return db.collection('users').doc(currentUser.uid); }
+        function userCollection(name) { return userDoc().collection(name); }
+        function generateId() { return 'id_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9); }
+
+        auth.onAuthStateChanged((user) => {
+            if (!user) {
+                showStatus('Inicia sesión primero en la app y luego vuelve aquí.', 'error');
+            } else {
+                currentUser = user;
+            }
+        });
+
+        // INSUMOS DE EJEMPLO
+        const demoInsumos = [
+            { id: 'insumo_cafe', name: 'Café molido', unit: 'g', purchasePrice: 25000, purchaseQty: 500, currentStock: 500, minStock: 50 },
+            { id: 'insumo_azucar', name: 'Azúcar', unit: 'g', purchasePrice: 5000, purchaseQty: 1000, currentStock: 1000, minStock: 100 },
+            { id: 'insumo_leche', name: 'Leche entera', unit: 'ml', purchasePrice: 4500, purchaseQty: 2000, currentStock: 2000, minStock: 200 },
+            { id: 'insumo_agua', name: 'Agua filtrada', unit: 'ml', purchasePrice: 3000, purchaseQty: 20000, currentStock: 20000, minStock: 2000 },
+            { id: 'insumo_chocolate', name: 'Chocolate en polvo', unit: 'g', purchasePrice: 12000, purchaseQty: 300, currentStock: 300, minStock: 30 },
+        ];
+
+        // PRODUCTOS
+        const demoProducts = [
+            { id: 'prod_cafe_americano', name: 'Café Americano', category: 'Alimentos', quantity: 100, cost: 145, price: 3000, margin: 200, minStock: 10, supplier: 'Café del Huila', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+            { id: 'prod_cafe_leche', name: 'Café con Leche', category: 'Alimentos', quantity: 100, cost: 360, price: 3500, margin: 150, minStock: 10, supplier: 'Café del Huila', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+            { id: 'prod_chocolate', name: 'Chocolate Caliente', category: 'Alimentos', quantity: 100, cost: 633, price: 3700, margin: 120, minStock: 10, supplier: 'Distribuidora Gourmet', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+        ];
+
+        // RECETAS
+        const demoRecipes = [
+            {
+                id: 'recipe_americano', productId: 'prod_cafe_americano', productName: 'Café Americano',
+                ingredients: [
+                    { insumoId: 'insumo_cafe', insumoName: 'Café molido', quantity: 2.5, unit: 'g', cost: 125 },
+                    { insumoId: 'insumo_azucar', insumoName: 'Azúcar', quantity: 2.5, unit: 'g', cost: 12.5 },
+                    { insumoId: 'insumo_agua', insumoName: 'Agua filtrada', quantity: 200, unit: 'ml', cost: 30 },
+                ],
+                totalCost: 167.5, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
+            },
+            {
+                id: 'recipe_cafe_leche', productId: 'prod_cafe_leche', productName: 'Café con Leche',
+                ingredients: [
+                    { insumoId: 'insumo_cafe', insumoName: 'Café molido', quantity: 2.5, unit: 'g', cost: 125 },
+                    { insumoId: 'insumo_azucar', insumoName: 'Azúcar', quantity: 2, unit: 'g', cost: 10 },
+                    { insumoId: 'insumo_leche', insumoName: 'Leche entera', quantity: 100, unit: 'ml', cost: 225 },
+                    { insumoId: 'insumo_agua', insumoName: 'Agua filtrada', quantity: 100, unit: 'ml', cost: 15 },
+                ],
+                totalCost: 375, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
+            },
+            {
+                id: 'recipe_chocolate', productId: 'prod_chocolate', productName: 'Chocolate Caliente',
+                ingredients: [
+                    { insumoId: 'insumo_chocolate', insumoName: 'Chocolate en polvo', quantity: 15, unit: 'g', cost: 600 },
+                    { insumoId: 'insumo_azucar', insumoName: 'Azúcar', quantity: 5, unit: 'g', cost: 25 },
+                    { insumoId: 'insumo_leche', insumoName: 'Leche entera', quantity: 200, unit: 'ml', cost: 450 },
+                ],
+                totalCost: 1075, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
+            },
+        ];
+
+        async function loadDemo() {
+            if (!currentUser) { showStatus('No has iniciado sesión', 'error'); return; }
+            document.getElementById('btn-load').disabled = true;
+            showStatus('Cargando insumos y recetas...', 'loading');
+
+            try {
+                // Cargar insumos
+                for (const ins of demoInsumos) {
+                    ins.costPerUnit = ins.purchasePrice / ins.purchaseQty;
+                    ins.createdAt = new Date().toISOString();
+                    await userCollection('insumos').doc(ins.id).set(ins);
+                }
+                setProgress('✅ 5 insumos cargados');
+
+                // Cargar productos
+                for (const p of demoProducts) {
+                    await userCollection('products').doc(p.id).set(p);
+                }
+                setProgress('✅ 3 productos cargados');
+
+                // Cargar recetas
+                for (const r of demoRecipes) {
+                    await userCollection('recipes').doc(r.id).set(r);
+                }
+                setProgress('✅ 3 recetas cargadas');
+
+                showStatus('¡Datos cargados! Ahora haz clic en "Ver Stock Actual" para ver los insumos.', 'success');
+                document.getElementById('btn-check').disabled = false;
+                document.getElementById('btn-sell').disabled = false;
+                document.getElementById('btn-check2').disabled = false;
+            } catch (e) {
+                showStatus('Error: ' + e.message, 'error');
+                document.getElementById('btn-load').disabled = false;
+            }
+        }
+
+        async function checkStock() {
+            if (!currentUser) return;
+            showStatus('Consultando stock...', 'loading');
+
+            const snap = await userCollection('insumos').get();
+            const insumos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+            let html = '<table class="result-table"><thead><tr><th>Insumo</th><th>Stock</th><th>Unidad</th><th>Costo/Unidad</th></tr></thead><tbody>';
+            insumos.forEach(i => {
+                const costUnit = (i.purchasePrice / i.purchaseQty).toFixed(2);
+                html += `<tr><td><strong>${i.name}</strong></td><td>${i.currentStock}</td><td>${i.unit}</td><td>$${costUnit}/${i.unit}</td></tr>`;
+            });
+            html += '</tbody></table>';
+
+            document.getElementById('stock-result').innerHTML = html;
+            showStatus('Stock actual:', 'success');
+        }
+
+        async function simulateSale() {
+            if (!currentUser) return;
+            showStatus('Vendiendo 1 Café Americano...', 'loading');
+
+            try {
+                // Buscar receta del Café Americano
+                const recipeSnap = await userCollection('recipes').doc('recipe_americano').get();
+                if (!recipeSnap.exists) { showStatus('No se encontró la receta', 'error'); return; }
+                const recipe = recipeSnap.data();
+
+                // Descontar cada insumo
+                for (const ing of recipe.ingredients) {
+                    const insumoSnap = await userCollection('insumos').doc(ing.insumoId).get();
+                    if (insumoSnap.exists) {
+                        const insumo = insumoSnap.data();
+                        const newStock = Math.max(0, insumo.currentStock - ing.quantity);
+                        await userCollection('insumos').doc(ing.insumoId).update({ currentStock: newStock });
+                        setProgress(`  → ${ing.insumoName}: ${insumo.currentStock} → ${newStock} ${ing.unit} (-${ing.quantity})`);
+                    }
+                }
+
+                // Registrar venta
+                const sale = {
+                    id: generateId(),
+                    productId: 'prod_cafe_americano',
+                    productName: 'Café Americano',
+                    quantity: 1, price: 3000, cost: 145,
+                    discount: 0, discountAmount: 0,
+                    total: 3000, profit: 2855,
+                    client: '', method: 'Efectivo', notes: 'Venta de prueba',
+                    date: new Date().toISOString()
+                };
+                await userCollection('sales').doc(sale.id).set(sale);
+
+                showStatus('✅ ¡Venta realizada! Los insumos se descontaron. Haz clic en "Ver Stock Después de Venta" para comprobarlo.', 'success');
+            } catch (e) {
+                showStatus('Error: ' + e.message, 'error');
+            }
+        }
+
+        function showStatus(msg, type) {
+            const el = document.getElementById('status');
+            el.textContent = msg;
+            el.className = 'status ' + type;
+        }
+        function setProgress(msg) {
+            const el = document.getElementById('progress');
+            el.innerHTML += msg + '<br>';
+        }
+    </script>
+</body>
+</html>
