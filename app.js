@@ -251,7 +251,7 @@ async function clearHistoryFromDB() {
 
 async function clearAllDataFromDB() {
     try {
-        const collections = ['products', 'sales', 'history', 'clients', 'suppliers', 'expenses'];
+        const collections = ['products', 'sales', 'history', 'clients', 'suppliers', 'expenses', 'insumos', 'recipes', 'mesas', 'orders'];
         for (const col of collections) {
             const snap = await userCollection(col).get();
             const batch = db.batch();

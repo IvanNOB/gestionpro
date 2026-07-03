@@ -117,7 +117,7 @@ function renderCategories() {
 
 function filterCategory(cat) {
     document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
-    event.target.classList.add('active');
+    if (event && event.target) event.target.classList.add('active');
     renderProducts(cat);
 }
 
