@@ -76,6 +76,7 @@ async function initApp() {
         renderExpenses();
         showDate();
         showUserInfo();
+        loadCustomization();
     } catch (error) {
         console.error('Error inicializando app:', error);
         showToast('Error cargando datos. Intenta recargar.', 'error');
@@ -2351,4 +2352,136 @@ function renderPendingOrders(orders) {
             </div>
         </div>`;
     }).join('');
+}
+
+
+
+// ==========================================
+// PERSONALIZACIÓN DEL LOBBY
+// ==========================================
+let customization = {
+    logo: '',
+    slogan: '',
+    color: '#2563eb',
+    sidebarStyle: 'default',
+    borderStyle: 'rounded',
+    bgStyle: 'light'
+};
+
+function loadCustomization() {
+    if (settings.customization) {
+        customization = { ...customization, ...settings.customization };
+    }
+    applyCustomization();
+    fillCustomizationForm();
+}
+
+function fillCustomizationForm() {
+    const el = (id) => document.getElementById(id);
+    if (el('setting-logo')) el('setting-logo').value = customization.logo || '';
+    if (el('setting-slogan')) el('setting-slogan').value = customization.slogan || '';
+    if (el('setting-color')) el('setting-color').value = customization.color || '#2563eb';
+    if (el('setting-sidebar-style')) el('setting-sidebar-style').value = customization.sidebarStyle || 'default';
+    if (el('setting-border-style')) el('setting-border-style').value = customization.borderStyle || 'rounded';
+    if (el('setting-bg-style')) el('setting-bg-style').value = customization.bgStyle || 'light';
+
+    // Logo preview
+    if (customization.logo) {
+        document.getElementById('logo-preview').style.display = 'block';
+        document.getElementById('logo-preview-img').src = customization.logo;
+    }
+
+    // Logo preview on change
+    const logoInput = document.getElementById('setting-logo');
+    if (logoInput) {
+        logoInput.addEventListener('input', () => {
+            const url = logoInput.value.trim();
+            if (url) {
+                document.getElementById('logo-preview').style.display = 'block';
+                document.getElementById('logo-preview-img').src = url;
+            } else {
+                document.getElementById('logo-preview').style.display = 'none';
+            }
+        });
+    }
+}
+
+async function saveCustomization() {
+    customization.logo = document.getElementById('setting-logo').value.trim();
+    customization.slogan = document.getElementById('setting-slogan').value.trim();
+    customization.color = document.getElementById('setting-color').value;
+    customization.sidebarStyle = document.getElementById('setting-sidebar-style').value;
+    customization.borderStyle = document.getElementById('setting-border-style').value;
+    customization.bgStyle = document.getElementById('setting-bg-style').value;
+
+    settings.customization = customization;
+    await saveSettings();
+    applyCustomization();
+    showToast('¡Personalización guardada!', 'success');
+}
+
+function applyCustomization() {
+    const root = document.documentElement;
+
+    // Color principal
+    if (customization.color) {
+        root.style.setProperty('--primary', customization.color);
+        root.style.setProperty('--primary-dark', adjustColor(customization.color, -20));
+        root.style.setProperty('--primary-light', adjustColor(customization.color, 80) + '20');
+    }
+
+    // Sidebar style
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar) {
+        const styles = {
+            'default': 'linear-gradient(180deg, #0f172a, #1e293b)',
+            'gradient-blue': 'linear-gradient(180deg, #1e3a5f, #0f172a)',
+            'gradient-purple': 'linear-gradient(180deg, #4c1d95, #1e1b4b)',
+            'gradient-green': 'linear-gradient(180deg, #064e3b, #0f172a)',
+            'gradient-dark': 'linear-gradient(180deg, #000000, #1e293b)',
+            'solid-primary': customization.color || '#2563eb'
+        };
+        const bg = styles[customization.sidebarStyle] || styles['default'];
+        sidebar.style.background = bg;
+    }
+
+    // Border style
+    const radiusMap = { 'rounded': '16px', 'sharp': '4px', 'pill': '24px' };
+    root.style.setProperty('--radius', radiusMap[customization.borderStyle] || '16px');
+    root.style.setProperty('--radius-sm', customization.borderStyle === 'sharp' ? '2px' : customization.borderStyle === 'pill' ? '16px' : '10px');
+
+    // Background style
+    const bgMap = {
+        'light': '#f1f5f9',
+        'white': '#ffffff',
+        'warm': '#fef7ed',
+        'cool': '#f0f4f8'
+    };
+    if (document.documentElement.getAttribute('data-theme') !== 'dark') {
+        root.style.setProperty('--bg', bgMap[customization.bgStyle] || '#f1f5f9');
+    }
+
+    // Logo in sidebar
+    const sidebarHeader = document.querySelector('.sidebar-header h1');
+    if (sidebarHeader) {
+        if (customization.logo) {
+            sidebarHeader.innerHTML = `<img src="${customization.logo}" style="width:28px;height:28px;border-radius:6px;margin-right:8px;vertical-align:middle;"> ${esc(settings.businessName)}`;
+        } else {
+            sidebarHeader.textContent = '📦 ' + (settings.businessName || 'GestiónPro');
+        }
+    }
+
+    // Slogan
+    const userDisplay = document.getElementById('user-display');
+    if (userDisplay && customization.slogan) {
+        userDisplay.textContent = customization.slogan;
+    }
+}
+
+function adjustColor(hex, amount) {
+    hex = hex.replace('#', '');
+    const r = Math.min(255, Math.max(0, parseInt(hex.substr(0, 2), 16) + amount));
+    const g = Math.min(255, Math.max(0, parseInt(hex.substr(2, 2), 16) + amount));
+    const b = Math.min(255, Math.max(0, parseInt(hex.substr(4, 2), 16) + amount));
+    return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
 }
