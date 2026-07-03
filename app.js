@@ -66,6 +66,7 @@ async function initApp() {
         initCashClose();
         initInsumos();
         initRecipes();
+        initMesas();
         initLogout();
         renderAll();
         renderGoalProgress();
@@ -286,6 +287,7 @@ function initNavigation() {
             if (section === 'expenses') renderExpenses();
             if (section === 'insumos') renderInsumos();
             if (section === 'recipes') { updateRecipeProductList(); renderRecipes(); }
+            if (section === 'mesas') { loadMesas(); }
         });
     });
 
@@ -2193,4 +2195,114 @@ function deductInsumosFromSale(productId, qty) {
             saveInsumo(insumo);
         }
     });
+}
+
+
+
+// ==========================================
+// MÓDULO DE MESAS
+// ==========================================
+let mesasList = [];
+let editingMesaId = null;
+
+function initMesas() {
+    document.getElementById('mesa-form').addEventListener('submit', handleMesaSubmit);
+    document.getElementById('btn-cancel-mesa').addEventListener('click', cancelMesaEdit);
+    // Mostrar link de mesero
+    const linkInput = document.getElementById('mesero-link');
+    if (linkInput) linkInput.value = window.location.origin + '/mesero.html';
+    loadMesas();
+}
+
+async function loadMesas() {
+    try {
+        const snap = await userCollection('mesas').get();
+        mesasList = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        renderMesasAdmin();
+    } catch (e) { console.error('Error cargando mesas:', e); }
+}
+
+function handleMesaSubmit(e) {
+    e.preventDefault();
+    const name = document.getElementById('mesa-name').value.trim();
+    const capacity = parseInt(document.getElementById('mesa-capacity').value) || 4;
+    if (!name) { showToast('Ponle nombre a la mesa', 'error'); return; }
+
+    if (editingMesaId) {
+        const idx = mesasList.findIndex(m => m.id === editingMesaId);
+        mesasList[idx] = { ...mesasList[idx], name, capacity };
+        saveMesa(mesasList[idx]);
+        showToast('Mesa actualizada', 'success');
+        cancelMesaEdit();
+    } else {
+        const mesa = { id: generateId(), name, capacity, status: 'libre', createdAt: new Date().toISOString() };
+        mesasList.push(mesa);
+        saveMesa(mesa);
+        showToast(`"${name}" agregada`, 'success');
+    }
+    renderMesasAdmin();
+    e.target.reset();
+}
+
+function editMesa(id) {
+    const m = mesasList.find(x => x.id === id);
+    if (!m) return;
+    editingMesaId = id;
+    document.getElementById('mesa-name').value = m.name;
+    document.getElementById('mesa-capacity').value = m.capacity || 4;
+    document.getElementById('btn-mesa-submit').textContent = 'Actualizar Mesa';
+    document.getElementById('btn-cancel-mesa').style.display = 'inline-block';
+}
+
+function cancelMesaEdit() {
+    editingMesaId = null;
+    document.getElementById('mesa-form').reset();
+    document.getElementById('btn-mesa-submit').textContent = 'Agregar Mesa';
+    document.getElementById('btn-cancel-mesa').style.display = 'none';
+}
+
+function deleteMesa(id) {
+    const m = mesasList.find(x => x.id === id);
+    if (!m) return;
+    if (confirm(`¿Eliminar "${m.name}"?`)) {
+        mesasList = mesasList.filter(x => x.id !== id);
+        userCollection('mesas').doc(id).delete();
+        renderMesasAdmin();
+        showToast('Mesa eliminada', 'warning');
+    }
+}
+
+async function saveMesa(mesa) {
+    try { await userCollection('mesas').doc(mesa.id).set(mesa); }
+    catch (e) { console.error('Error guardando mesa:', e); }
+}
+
+function renderMesasAdmin() {
+    const grid = document.getElementById('mesas-admin-grid');
+    const empty = document.getElementById('empty-mesas');
+    if (!grid) return;
+
+    if (mesasList.length === 0) { grid.innerHTML = ''; empty.style.display = 'block'; return; }
+    empty.style.display = 'none';
+
+    grid.innerHTML = mesasList.map(m => `
+        <div class="mesa-admin-card">
+            <div class="mesa-admin-icon">🪑</div>
+            <div class="mesa-admin-info">
+                <strong>${esc(m.name)}</strong>
+                <span>${m.capacity || 4} personas</span>
+            </div>
+            <div class="mesa-admin-actions">
+                <button class="action-btn" onclick="editMesa('${m.id}')" title="Editar">✏️</button>
+                <button class="action-btn" onclick="deleteMesa('${m.id}')" title="Eliminar">🗑️</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function copyMeseroLink() {
+    const input = document.getElementById('mesero-link');
+    input.select();
+    navigator.clipboard.writeText(input.value);
+    showToast('Link copiado', 'success');
 }

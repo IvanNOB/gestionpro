@@ -41,6 +41,7 @@
                 <li><a href="#" class="nav-link active" data-section="dashboard">📊 Dashboard</a></li>
                 <li><a href="#" class="nav-link" data-section="inventory">📋 Inventario</a></li>
                 <li><a href="#" class="nav-link" data-section="sales">💰 Ventas</a></li>
+                <li><a href="#" class="nav-link" data-section="mesas">🪑 Mesas</a></li>
                 <li><a href="#" class="nav-link" data-section="cashclose">🧾 Cierre de Caja</a></li>
                 <li><a href="#" class="nav-link" data-section="clients">👥 Clientes</a></li>
                 <li><a href="#" class="nav-link" data-section="suppliers">🚚 Proveedores</a></li>
@@ -382,6 +383,52 @@
                         </table>
                     </div>
                     <p class="empty-message" id="empty-sales">No hay ventas registradas aún.</p>
+                </div>
+            </section>
+
+            <!-- ======================== MESAS ======================== -->
+            <section class="page" id="page-mesas">
+                <div class="page-header">
+                    <h2>🪑 Gestión de Mesas</h2>
+                    <div class="header-actions">
+                        <a href="mesero.html" target="_blank" class="btn btn-sm btn-primary">📱 Abrir en Tablet/Celular</a>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>➕ Agregar Mesa</h3>
+                    <form id="mesa-form">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="mesa-name">Nombre de la Mesa</label>
+                                <input type="text" id="mesa-name" placeholder="Ej: Mesa 7, Terraza 1, Barra" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="mesa-capacity">Capacidad (personas)</label>
+                                <input type="number" id="mesa-capacity" min="1" value="4" placeholder="4">
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary" id="btn-mesa-submit">Agregar Mesa</button>
+                            <button type="button" class="btn btn-secondary" id="btn-cancel-mesa" style="display:none;">Cancelar</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="card">
+                    <h3>📱 Modo Mesero (para Tablet o Celular)</h3>
+                    <p class="card-description">Comparte este link con tus meseros. Ellos podrán tomar pedidos desde su celular o tablet y los pedidos se cobran automáticamente.</p>
+                    <div class="mesero-link-box">
+                        <input type="text" id="mesero-link" readonly value="" style="flex:1;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:0.9rem;">
+                        <button class="btn btn-sm btn-outline" onclick="copyMeseroLink()">📋 Copiar</button>
+                    </div>
+                    <small style="color:var(--text-light);">El mesero debe iniciar sesión con la misma cuenta para ver los productos y mesas.</small>
+                </div>
+
+                <div class="card">
+                    <h3>🪑 Tus Mesas</h3>
+                    <div class="mesas-admin-grid" id="mesas-admin-grid"></div>
+                    <p class="empty-message" id="empty-mesas">No hay mesas. Agrega la primera.</p>
                 </div>
             </section>
 

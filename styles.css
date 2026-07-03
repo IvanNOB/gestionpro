@@ -1194,3 +1194,56 @@ tbody tr:hover {
     color: var(--text-light);
     max-width: 250px;
 }
+
+
+/* ==========================================
+   ESTILOS PARA MESAS
+   ========================================== */
+
+.mesas-admin-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 12px;
+}
+
+.mesa-admin-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+}
+
+.mesa-admin-icon {
+    font-size: 1.8rem;
+}
+
+.mesa-admin-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.mesa-admin-info strong {
+    font-size: 1rem;
+    color: var(--text);
+}
+
+.mesa-admin-info span {
+    font-size: 0.8rem;
+    color: var(--text-light);
+}
+
+.mesa-admin-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.mesero-link-box {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin: 12px 0;
+}
