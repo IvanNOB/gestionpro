@@ -12,12 +12,13 @@
 // ==========================================
 
 const firebaseConfig = {
-    apiKey: "TU_API_KEY_AQUI",
-    authDomain: "TU_PROYECTO.firebaseapp.com",
-    projectId: "TU_PROJECT_ID",
-    storageBucket: "TU_PROYECTO.appspot.com",
-    messagingSenderId: "TU_SENDER_ID",
-    appId: "TU_APP_ID"
+    apiKey: "AIzaSyAg0d_g_l0wqSB3o2SThdcCQnZvA0II03Y",
+    authDomain: "gestionpro-d74ed.firebaseapp.com",
+    projectId: "gestionpro-d74ed",
+    storageBucket: "gestionpro-d74ed.firebasestorage.app",
+    messagingSenderId: "1040016256559",
+    appId: "1:1040016256559:web:c8aed7e87018ac103e60da",
+    measurementId: "G-6J00VWLGZD"
 };
 
 // Inicializar Firebase
