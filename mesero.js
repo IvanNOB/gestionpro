@@ -68,11 +68,13 @@ function renderMesas() {
     grid.innerHTML = mesas.map(m => {
         const hasOrder = orders[m.id] && orders[m.id].length > 0;
         const total = hasOrder ? orders[m.id].reduce((s, i) => s + (i.price * i.qty), 0) : 0;
+        const itemCount = hasOrder ? orders[m.id].reduce((s, i) => s + i.qty, 0) : 0;
         const statusClass = hasOrder ? 'ocupada' : 'libre';
         return `<div class="mesa-card ${statusClass}" onclick="openMesa('${m.id}')">
+            ${hasOrder ? `<div class="mesa-items-count">${itemCount}</div>` : ''}
             <div class="mesa-icon">${hasOrder ? '🍽️' : '🪑'}</div>
             <div class="mesa-name">${esc(m.name)}</div>
-            <div class="mesa-status">${hasOrder ? 'Ocupada' : 'Libre'}</div>
+            <div class="mesa-status">${hasOrder ? '● Ocupada' : '● Libre'}</div>
             ${hasOrder ? `<div class="mesa-total">${formatCurrency(total)}</div>` : ''}
         </div>`;
     }).join('');
@@ -122,6 +124,7 @@ function renderProducts(category = '') {
         <div class="product-btn" onclick="addToOrder('${p.id}')">
             <div class="prod-name">${esc(p.name)}</div>
             <div class="prod-price">${formatCurrency(p.price)}</div>
+            <div class="prod-stock">Stock: ${p.quantity}</div>
         </div>
     `).join('');
 }
@@ -164,6 +167,10 @@ function renderOrderItems() {
     const items = orders[currentMesaId] || [];
     const list = document.getElementById('order-items-list');
     const totalEl = document.getElementById('order-total-value');
+    const countEl = document.getElementById('order-count');
+    
+    const totalItems = items.reduce((s, i) => s + i.qty, 0);
+    if (countEl) countEl.textContent = totalItems;
     
     if (items.length === 0) {
         list.innerHTML = '<p class="empty-order">Toca un producto para agregarlo</p>';
