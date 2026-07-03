@@ -79,11 +79,6 @@
     </header>
 
     <div class="orders-grid" id="orders-grid">
-        <div class="empty-kitchen" id="empty-kitchen">
-            <div class="icon">👨‍🍳</div>
-            <h2>Sin pedidos pendientes</h2>
-            <p>Los nuevos pedidos aparecerán aquí automáticamente</p>
-        </div>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -133,15 +128,15 @@
 
         function renderOrders() {
             const grid = document.getElementById('orders-grid');
-            const empty = document.getElementById('empty-kitchen');
 
             if (orders.length === 0) {
-                grid.innerHTML = '';
-                grid.appendChild(empty);
-                empty.style.display = 'block';
+                grid.innerHTML = `<div class="empty-kitchen">
+                    <div class="icon">👨‍🍳</div>
+                    <h2>Sin pedidos pendientes</h2>
+                    <p>Los nuevos pedidos aparecerán aquí automáticamente</p>
+                </div>`;
                 return;
             }
-            empty.style.display = 'none';
 
             grid.innerHTML = orders.map(o => {
                 const statusClass = o.status === 'active' ? 'new' : o.status === 'preparing' ? 'preparing' : 'ready';
@@ -182,10 +177,31 @@
             try {
                 if (newStatus === 'completed') {
                     await userCollection('orders').doc(orderId).delete();
+                    showNotification('Pedido eliminado');
                 } else {
                     await userCollection('orders').doc(orderId).update({ status: newStatus, updatedAt: new Date().toISOString() });
+                    showNotification(newStatus === 'preparing' ? '👨‍🍳 Preparando...' : '✅ ¡Listo para servir!');
                 }
-            } catch (e) { console.error(e); }
+            } catch (e) {
+                console.error('Error actualizando pedido:', e);
+                // Si falla update, intentar con set merge
+                try {
+                    if (newStatus !== 'completed') {
+                        await userCollection('orders').doc(orderId).set({ status: newStatus, updatedAt: new Date().toISOString() }, { merge: true });
+                        showNotification(newStatus === 'preparing' ? '👨‍🍳 Preparando...' : '✅ ¡Listo!');
+                    }
+                } catch (e2) {
+                    showNotification('Error: ' + e2.message);
+                }
+            }
+        }
+
+        function showNotification(msg) {
+            const el = document.createElement('div');
+            el.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#16a34a;color:white;padding:12px 24px;border-radius:12px;font-weight:600;font-size:0.9rem;z-index:9999;animation:fadeUp 0.3s ease;';
+            el.textContent = msg;
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 2500);
         }
 
         function toggleSound() {
