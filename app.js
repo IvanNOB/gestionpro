@@ -1,5 +1,5 @@
 // ==========================================
-// GESTIÓN PRO - APP COMPLETA
+// GESTIÓN PRO - APP COMPLETA CON FIREBASE
 // ==========================================
 
 // Estado Global
@@ -9,8 +9,7 @@ let history = [];
 let clients = [];
 let suppliers = [];
 let expenses = [];
-let businesses = [];
-let currentBusinessId = null;
+let currentUser = null;
 let settings = {
     businessName: 'Mi Negocio',
     currency: 'COP',
@@ -25,30 +24,211 @@ let editingSupplierId = null;
 let editingExpenseId = null;
 let charts = {};
 
+
 // ==========================================
-// INICIALIZACIÓN
+// INICIALIZACIÓN CON FIREBASE AUTH
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
-    loadAllData();
-    initBusinesses();
-    initNavigation();
-    initTheme();
-    initForms();
-    initFilters();
-    initSettings();
-    initBackup();
-    initCalculator();
-    initClients();
-    initSuppliers();
-    initExpenses();
-    renderAll();
-    renderGoalProgress();
-    renderClients();
-    renderSuppliers();
-    renderExpenses();
-    initCashClose();
-    showDate();
+    // Esperar a que Firebase Auth confirme el usuario
+    auth.onAuthStateChanged((user) => {
+        if (user) {
+            currentUser = user;
+            initApp();
+        } else {
+            // No hay sesión, redirigir al login
+            window.location.href = 'login.html';
+        }
+    });
 });
+
+async function initApp() {
+    showAppLoading(true);
+    try {
+        await loadAllData();
+        initNavigation();
+        initTheme();
+        initForms();
+        initFilters();
+        initSettings();
+        initBackup();
+        initCalculator();
+        initClients();
+        initSuppliers();
+        initExpenses();
+        initCashClose();
+        initLogout();
+        renderAll();
+        renderGoalProgress();
+        renderClients();
+        renderSuppliers();
+        renderExpenses();
+        showDate();
+        showUserInfo();
+    } catch (error) {
+        console.error('Error inicializando app:', error);
+        showToast('Error cargando datos. Intenta recargar.', 'error');
+    } finally {
+        showAppLoading(false);
+    }
+}
+
+
+function showAppLoading(show) {
+    const el = document.getElementById('app-loading');
+    if (el) el.style.display = show ? 'flex' : 'none';
+}
+
+function showUserInfo() {
+    const el = document.getElementById('user-display');
+    if (el && currentUser) {
+        el.textContent = currentUser.displayName || currentUser.email;
+    }
+}
+
+function initLogout() {
+    const btn = document.getElementById('btn-logout');
+    if (btn) {
+        btn.addEventListener('click', async () => {
+            if (confirm('¿Cerrar sesión?')) {
+                await auth.signOut();
+                window.location.href = 'login.html';
+            }
+        });
+    }
+}
+
+// ==========================================
+// FIRESTORE - GUARDAR Y CARGAR DATOS
+// ==========================================
+function userDoc() {
+    return db.collection('users').doc(currentUser.uid);
+}
+
+function userCollection(name) {
+    return userDoc().collection(name);
+}
+
+
+// Cargar todos los datos del usuario desde Firestore
+async function loadAllData() {
+    try {
+        // Cargar settings del usuario
+        const userDocSnap = await userDoc().get();
+        if (userDocSnap.exists && userDocSnap.data().settings) {
+            settings = { ...settings, ...userDocSnap.data().settings };
+        }
+
+        // Cargar colecciones
+        const [productsSnap, salesSnap, historySnap, clientsSnap, suppliersSnap, expensesSnap] = await Promise.all([
+            userCollection('products').get(),
+            userCollection('sales').orderBy('date', 'desc').limit(500).get(),
+            userCollection('history').orderBy('date', 'desc').limit(200).get(),
+            userCollection('clients').get(),
+            userCollection('suppliers').get(),
+            userCollection('expenses').get()
+        ]);
+
+        products = productsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        sales = salesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        history = historySnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        clients = clientsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        suppliers = suppliersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        expenses = expensesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+        console.error('Error cargando datos:', error);
+        throw error;
+    }
+}
+
+
+// Funciones de guardado en Firestore
+async function saveProduct(product) {
+    try {
+        await userCollection('products').doc(product.id).set(product);
+    } catch (e) { console.error('Error guardando producto:', e); }
+}
+
+async function deleteProductFromDB(id) {
+    try {
+        await userCollection('products').doc(id).delete();
+    } catch (e) { console.error('Error eliminando producto:', e); }
+}
+
+async function saveSale(sale) {
+    try {
+        await userCollection('sales').doc(sale.id).set(sale);
+    } catch (e) { console.error('Error guardando venta:', e); }
+}
+
+async function saveHistoryItem(item) {
+    try {
+        await userCollection('history').doc(item.id).set(item);
+    } catch (e) { console.error('Error guardando historial:', e); }
+}
+
+async function saveClient(client) {
+    try {
+        await userCollection('clients').doc(client.id).set(client);
+    } catch (e) { console.error('Error guardando cliente:', e); }
+}
+
+async function deleteClientFromDB(id) {
+    try {
+        await userCollection('clients').doc(id).delete();
+    } catch (e) { console.error('Error eliminando cliente:', e); }
+}
+
+async function saveSupplier(supplier) {
+    try {
+        await userCollection('suppliers').doc(supplier.id).set(supplier);
+    } catch (e) { console.error('Error guardando proveedor:', e); }
+}
+
+async function deleteSupplierFromDB(id) {
+    try {
+        await userCollection('suppliers').doc(id).delete();
+    } catch (e) { console.error('Error eliminando proveedor:', e); }
+}
+
+
+async function saveExpense(expense) {
+    try {
+        await userCollection('expenses').doc(expense.id).set(expense);
+    } catch (e) { console.error('Error guardando gasto:', e); }
+}
+
+async function deleteExpenseFromDB(id) {
+    try {
+        await userCollection('expenses').doc(id).delete();
+    } catch (e) { console.error('Error eliminando gasto:', e); }
+}
+
+async function saveSettings() {
+    try {
+        await userDoc().update({ settings: settings });
+    } catch (e) { console.error('Error guardando settings:', e); }
+}
+
+async function clearHistoryFromDB() {
+    try {
+        const batch = db.batch();
+        const snap = await userCollection('history').get();
+        snap.docs.forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+    } catch (e) { console.error('Error limpiando historial:', e); }
+}
+
+async function clearAllDataFromDB() {
+    try {
+        const collections = ['products', 'sales', 'history', 'clients', 'suppliers', 'expenses'];
+        for (const col of collections) {
+            const snap = await userCollection(col).get();
+            const batch = db.batch();
+            snap.docs.forEach(doc => batch.delete(doc.ref));
+            await batch.commit();
+        }
+    } catch (e) { console.error('Error borrando datos:', e); }
+}
 
 
 // ==========================================
@@ -219,7 +399,7 @@ function handleProductSubmit(e) {
         showToast(`"${name}" agregado al inventario`, 'success');
     }
 
-    saveProducts();
+    saveProduct(product);
     renderAll();
     e.target.reset();
     document.getElementById('profit-margin').value = settings.defaultMargin;
@@ -263,7 +443,7 @@ function deleteProduct(id) {
     if (confirm(`¿Eliminar "${p.name}"?`)) {
         products = products.filter(pr => pr.id !== id);
         addHistory('delete', `Producto eliminado: ${p.name}`);
-        saveProducts();
+        deleteProductFromDB(id);
         renderAll();
         showToast(`"${p.name}" eliminado`, 'warning');
     }
@@ -346,8 +526,8 @@ function handleSaleSubmit(e) {
     products[idx].quantity -= qty;
 
     addHistory('sale', `Venta: ${qty}x ${product.name} por ${formatCurrency(sale.total)}`);
-    saveSales();
-    saveProducts();
+    saveSale(sale);
+    saveProduct(products[idx]);
     renderAll();
     renderGoalProgress();
     showToast(`Venta registrada: ${qty}x ${product.name}`, 'success');
@@ -356,11 +536,11 @@ function handleSaleSubmit(e) {
     document.getElementById('sale-summary').style.display = 'none';
     document.getElementById('sale-discount-row').style.display = 'none';
     updateSaleProductList();
-    // Ofrecer recibo
     if (confirm('Venta registrada. ¿Quieres imprimir el recibo?')) {
         printReceipt(sale);
     }
 }
+
 
 // ==========================================
 // RECIBO IMPRIMIBLE
@@ -424,7 +604,6 @@ function updateCategoryFilter() {
     cats.forEach(c => { select.innerHTML += `<option value="${c}">${c}</option>`; });
 }
 
-
 // ==========================================
 // RENDERIZADO
 // ==========================================
@@ -435,6 +614,7 @@ function renderAll() {
     updateCategoryFilter();
     checkAlerts();
 }
+
 
 function renderInventoryTable() {
     const search = document.getElementById('search-input').value.toLowerCase().trim();
@@ -455,7 +635,6 @@ function renderInventoryTable() {
     if (stockFilter === 'out') filtered = filtered.filter(p => p.quantity === 0);
     if (stockFilter === 'ok') filtered = filtered.filter(p => p.quantity > (p.minStock || 5));
 
-    // Sorting
     switch(sortBy) {
         case 'name': filtered.sort((a,b) => a.name.localeCompare(b.name)); break;
         case 'price-asc': filtered.sort((a,b) => a.price - b.price); break;
@@ -528,7 +707,6 @@ function renderSalesTable() {
     </tr>`).join('');
 }
 
-
 // ==========================================
 // DASHBOARD STATS
 // ==========================================
@@ -547,7 +725,6 @@ function updateDashboardStats() {
     const salesMonth = sales.filter(s => s.date.startsWith(thisMonth));
     const salesMonthTotal = salesMonth.reduce((s,v) => s + v.total, 0);
 
-    // Ganancia real del mes = ganancia de ventas del mes - gastos del mes
     const profitMonth = salesMonth.reduce((s,v) => s + v.profit, 0);
     const expensesMonth = expenses.filter(e => e.date.startsWith(thisMonth)).reduce((s,e) => s + e.amount, 0);
     const netProfitMonth = profitMonth - expensesMonth;
@@ -575,11 +752,8 @@ function setText(id, value) {
 // ==========================================
 function renderCharts() {
     if (typeof Chart === 'undefined') return;
-
-    // Destruir gráficas anteriores
     Object.values(charts).forEach(c => c.destroy && c.destroy());
     charts = {};
-
     renderSalesWeekChart();
     renderTopProductsChart();
     renderCategoriesChart();
@@ -601,17 +775,11 @@ function renderSalesWeekChart() {
         type: 'bar',
         data: {
             labels: last7.map(d => d.label),
-            datasets: [{
-                label: 'Ventas ($)',
-                data: last7.map(d => d.total),
-                backgroundColor: 'rgba(37,99,235,0.6)',
-                borderRadius: 6
-            }]
+            datasets: [{ label: 'Ventas ($)', data: last7.map(d => d.total), backgroundColor: 'rgba(37,99,235,0.6)', borderRadius: 6 }]
         },
         options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
     });
 }
-
 
 function renderTopProductsChart() {
     const ctx = document.getElementById('chart-top-products');
@@ -619,15 +787,11 @@ function renderTopProductsChart() {
     const productSales = {};
     sales.forEach(s => { productSales[s.productName] = (productSales[s.productName]||0) + s.quantity; });
     const sorted = Object.entries(productSales).sort((a,b) => b[1]-a[1]).slice(0,5);
-
     charts.topProducts = new Chart(ctx, {
         type: 'doughnut',
         data: {
             labels: sorted.map(s => s[0]),
-            datasets: [{
-                data: sorted.map(s => s[1]),
-                backgroundColor: ['#2563eb','#16a34a','#f59e0b','#dc2626','#8b5cf6']
-            }]
+            datasets: [{ data: sorted.map(s => s[1]), backgroundColor: ['#2563eb','#16a34a','#f59e0b','#dc2626','#8b5cf6'] }]
         },
         options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
     });
@@ -639,15 +803,11 @@ function renderCategoriesChart() {
     const cats = {};
     products.forEach(p => { cats[p.category] = (cats[p.category]||0) + p.quantity; });
     const entries = Object.entries(cats).sort((a,b) => b[1]-a[1]);
-
     charts.categories = new Chart(ctx, {
         type: 'pie',
         data: {
             labels: entries.map(e => e[0]),
-            datasets: [{
-                data: entries.map(e => e[1]),
-                backgroundColor: ['#2563eb','#16a34a','#f59e0b','#dc2626','#8b5cf6','#ec4899','#14b8a6','#f97316']
-            }]
+            datasets: [{ data: entries.map(e => e[1]), backgroundColor: ['#2563eb','#16a34a','#f59e0b','#dc2626','#8b5cf6','#ec4899','#14b8a6','#f97316'] }]
         },
         options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
     });
@@ -659,17 +819,11 @@ function renderProfitCategoryChart() {
     const catProfit = {};
     sales.forEach(s => { catProfit[getProduct(s.productId)?.category || 'Otro'] = (catProfit[getProduct(s.productId)?.category || 'Otro']||0) + s.profit; });
     const entries = Object.entries(catProfit).sort((a,b) => b[1]-a[1]);
-
     charts.profitCat = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: entries.map(e => e[0]),
-            datasets: [{
-                label: 'Ganancia ($)',
-                data: entries.map(e => e[1]),
-                backgroundColor: 'rgba(22,163,74,0.6)',
-                borderRadius: 6
-            }]
+            datasets: [{ label: 'Ganancia ($)', data: entries.map(e => e[1]), backgroundColor: 'rgba(22,163,74,0.6)', borderRadius: 6 }]
         },
         options: { responsive: true, indexAxis: 'y', plugins: { legend: { display: false } } }
     });
@@ -689,9 +843,6 @@ function initCalculator() {
 
 let lastIceCalc = null;
 
-// ==========================================
-// CALCULADORA DE HELADO (ganancia por caja)
-// ==========================================
 function calcIceCream() {
     const boxWeight = parseFloat(document.getElementById('ice-box-weight').value) || 0;
     const boxCost = parseFloat(document.getElementById('ice-box-cost').value) || 0;
@@ -706,10 +857,8 @@ function calcIceCream() {
         return;
     }
 
-    // Peso aprovechable después de la merma
     const usableWeight = boxWeight * (1 - waste / 100);
     const scoops = Math.floor(usableWeight / scoopWeight);
-
     const revenue = scoops * scoopPrice;
     const totalCost = boxCost + (extraCost * scoops);
     const profit = revenue - totalCost;
@@ -727,12 +876,11 @@ function calcIceCream() {
     profitEl.parentElement.className = 'calc-result-item ' + (profit >= 0 ? 'success' : '');
     profitEl.style.color = profit >= 0 ? 'var(--success)' : 'var(--danger)';
 
-    // Guardar para poder convertirlo en producto
     const costPerScoop = scoops > 0 ? (boxCost / scoops) + extraCost : 0;
     lastIceCalc = { scoops, scoopPrice, costPerScoop };
-
     results.style.display = 'block';
 }
+
 
 function saveIceProduct() {
     if (!lastIceCalc || lastIceCalc.scoops <= 0) {
@@ -760,7 +908,7 @@ function saveIceProduct() {
         updatedAt: new Date().toISOString()
     };
     products.push(product);
-    saveProducts();
+    saveProduct(product);
     renderAll();
     addHistory('add', `Producto creado desde calculadora de helado: ${product.name} (x${product.quantity} bolitas)`);
     showToast(`"${product.name}" agregado al inventario (${product.quantity} bolitas)`, 'success');
@@ -791,6 +939,7 @@ function calculate() {
     document.getElementById('calc-results').style.display = 'block';
 }
 
+
 function simulate() {
     const price = parseFloat(document.getElementById('sim-price').value) || 0;
     const cost = parseFloat(document.getElementById('sim-cost').value) || 0;
@@ -810,7 +959,6 @@ function simulate() {
     document.getElementById('sim-results').style.display = 'block';
 }
 
-
 // ==========================================
 // ALERTAS INTELIGENTES
 // ==========================================
@@ -827,7 +975,6 @@ function checkAlerts() {
 
 function generateAlerts() {
     const alerts = [];
-    // Stock bajo
     products.forEach(p => {
         if (p.quantity === 0) {
             alerts.push({ type: 'danger', title: `Sin stock: ${p.name}`, msg: 'Este producto se agotó. Reabastece pronto.' });
@@ -835,7 +982,6 @@ function generateAlerts() {
             alerts.push({ type: 'warning', title: `Stock bajo: ${p.name}`, msg: `Solo quedan ${p.quantity} unidades (mínimo: ${p.minStock || 5}).` });
         }
     });
-    // Márgenes bajos
     products.forEach(p => {
         const margin = ((p.price - p.cost) / p.cost) * 100;
         if (margin < 10 && margin >= 0) {
@@ -844,11 +990,10 @@ function generateAlerts() {
             alerts.push({ type: 'danger', title: `Vendiendo a pérdida: ${p.name}`, msg: `El precio es menor al costo. ¡Estás perdiendo dinero!` });
         }
     });
-    // Productos sin movimiento (30 días sin venta)
     const thirtyDaysAgo = new Date(Date.now() - 30*24*60*60*1000).toISOString();
     products.forEach(p => {
-        const lastSale = sales.filter(s => s.productId === p.id).sort((a,b) => b.date.localeCompare(a.date))[0];
-        if (!lastSale && new Date(p.createdAt) < new Date(thirtyDaysAgo)) {
+        const lastSaleItem = sales.filter(s => s.productId === p.id).sort((a,b) => b.date.localeCompare(a.date))[0];
+        if (!lastSaleItem && new Date(p.createdAt) < new Date(thirtyDaysAgo)) {
             alerts.push({ type: 'info', title: `Sin movimiento: ${p.name}`, msg: 'No se ha vendido en los últimos 30 días.' });
         }
     });
@@ -859,12 +1004,7 @@ function renderAlerts() {
     const grid = document.getElementById('alerts-grid');
     const empty = document.getElementById('empty-alerts');
     const alerts = generateAlerts();
-
-    if (alerts.length === 0) {
-        grid.innerHTML = '';
-        empty.style.display = 'block';
-        return;
-    }
+    if (alerts.length === 0) { grid.innerHTML = ''; empty.style.display = 'block'; return; }
     empty.style.display = 'none';
     grid.innerHTML = alerts.map(a => `
         <div class="alert-card ${a.type}">
@@ -959,14 +1099,14 @@ function renderMonthlyReport() {
     }).join('') || '<tr><td colspan="5" style="text-align:center;">No hay ventas</td></tr>';
 }
 
-
 // ==========================================
 // HISTORIAL
 // ==========================================
 function addHistory(type, message) {
-    history.unshift({ type, message, date: new Date().toISOString() });
+    const item = { id: generateId(), type, message, date: new Date().toISOString() };
+    history.unshift(item);
     if (history.length > 200) history = history.slice(0, 200);
-    saveHistory();
+    saveHistoryItem(item);
     renderHistory();
 }
 
@@ -989,7 +1129,7 @@ function renderHistory() {
 function clearHistory() {
     if (confirm('¿Limpiar todo el historial?')) {
         history = [];
-        saveHistory();
+        clearHistoryFromDB();
         renderHistory();
         showToast('Historial limpiado', 'info');
     }
@@ -1024,7 +1164,6 @@ function exportReport() {
     lines.push('');
     lines.push('--- Productos ---');
     products.forEach(p => lines.push(`${p.name} | Stock:${p.quantity} | Costo:${p.cost} | Precio:${p.price}`));
-
     const blob = new Blob([lines.join('\n')], {type:'text/plain'});
     downloadBlob(blob, 'reporte-negocio.txt');
     showToast('Reporte exportado', 'success');
@@ -1041,17 +1180,19 @@ function importCSV(e) {
         for (let i = 1; i < lines.length; i++) {
             const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g,''));
             if (cols.length >= 4) {
-                products.push({
+                const product = {
                     id: generateId(), name: cols[0], category: cols[1] || 'Otro',
                     quantity: parseInt(cols[2])||0, cost: parseFloat(cols[3])||0,
                     price: parseFloat(cols[4]) || calculateSuggestedPrice(parseFloat(cols[3])||0, 30),
                     margin: parseFloat(cols[5])||30, supplier: cols[6]||'', minStock: parseInt(cols[7])||5,
                     createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
-                });
+                };
+                products.push(product);
+                saveProduct(product);
                 imported++;
             }
         }
-        saveProducts(); renderAll();
+        renderAll();
         addHistory('add', `Importados ${imported} productos desde CSV`);
         showToast(`${imported} productos importados`, 'success');
     };
@@ -1079,16 +1220,11 @@ function downloadBlob(blob, filename) {
 function initSettings() {
     document.getElementById('btn-save-settings').addEventListener('click', saveSettingsForm);
     document.getElementById('btn-clear-all').addEventListener('click', clearAllData);
-    document.getElementById('btn-rename-business').addEventListener('click', renameBusiness);
-    document.getElementById('btn-delete-business').addEventListener('click', deleteBusiness);
     fillSettingsForm();
 }
 
 function saveSettingsForm() {
     settings.businessName = document.getElementById('setting-business-name').value || 'Mi Negocio';
-    // Sincronizar el nombre con la lista de negocios
-    const biz = getCurrentBusiness();
-    if (biz) { biz.name = settings.businessName; saveBusinesses(); refreshBusinessSelector(); }
     settings.currency = document.getElementById('setting-currency').value;
     settings.defaultTax = parseFloat(document.getElementById('setting-default-tax').value) || 19;
     settings.defaultMargin = parseFloat(document.getElementById('setting-default-margin').value) || 30;
@@ -1105,14 +1241,24 @@ function applyCurrencyEverywhere() {
 }
 
 function clearAllData() {
-    if (confirm('⚠️ ¿BORRAR TODOS los datos de "' + getCurrentBusiness().name + '"? Esta acción NO se puede deshacer.')) {
+    if (confirm('⚠️ ¿BORRAR TODOS los datos? Esta acción NO se puede deshacer.')) {
         if (confirm('¿Estás REALMENTE seguro?')) {
             products = []; sales = []; history = []; clients = []; suppliers = []; expenses = [];
-            saveProducts(); saveSales(); saveHistory(); saveClients(); saveSuppliers(); saveExpenses();
-            renderAll(); renderHistory();
-            showToast('Todos los datos del negocio han sido borrados', 'warning');
+            clearAllDataFromDB();
+            renderAll(); renderHistory(); renderClients(); renderSuppliers(); renderExpenses();
+            showToast('Todos los datos han sido borrados', 'warning');
         }
     }
+}
+
+function fillSettingsForm() {
+    const el = (id) => document.getElementById(id);
+    if (el('setting-business-name')) el('setting-business-name').value = settings.businessName;
+    if (el('setting-currency')) el('setting-currency').value = settings.currency;
+    if (el('setting-default-tax')) el('setting-default-tax').value = settings.defaultTax;
+    if (el('setting-default-margin')) el('setting-default-margin').value = settings.defaultMargin;
+    if (el('setting-monthly-goal')) el('setting-monthly-goal').value = settings.monthlyGoal || '';
+    if (el('profit-margin')) el('profit-margin').value = settings.defaultMargin;
 }
 
 
@@ -1125,24 +1271,17 @@ function initBackup() {
         document.getElementById('file-restore').click();
     });
     document.getElementById('file-restore').addEventListener('change', restoreBackup);
-
-    const lastBackup = localStorage.getItem('gestion-last-backup');
-    if (lastBackup) {
-        document.getElementById('last-backup').textContent = new Date(lastBackup).toLocaleString('es-MX');
-    }
 }
 
 function createBackup() {
     const backup = {
-        version: '3.0',
+        version: '4.0-firebase',
         date: new Date().toISOString(),
-        businessName: getCurrentBusiness().name,
+        businessName: settings.businessName,
         products, sales, history, clients, suppliers, expenses, settings
     };
     const blob = new Blob([JSON.stringify(backup, null, 2)], {type:'application/json'});
-    downloadBlob(blob, `backup-${getCurrentBusiness().name.replace(/\s+/g,'-')}-${new Date().toISOString().split('T')[0]}.json`);
-    localStorage.setItem('gestion-last-backup', new Date().toISOString());
-    document.getElementById('last-backup').textContent = new Date().toLocaleString('es-CO');
+    downloadBlob(blob, `backup-${settings.businessName.replace(/\s+/g,'-')}-${new Date().toISOString().split('T')[0]}.json`);
     showToast('Backup creado exitosamente', 'success');
 }
 
@@ -1150,13 +1289,18 @@ function restoreBackup(e) {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = function(ev) {
+    reader.onload = async function(ev) {
         try {
             const data = JSON.parse(ev.target.result);
             if (!data.products || !Array.isArray(data.products)) {
                 showToast('Archivo de backup inválido', 'error'); return;
             }
-            if (confirm(`Restaurar backup del ${new Date(data.date).toLocaleString('es-CO')}? Esto reemplazará los datos del negocio actual.`)) {
+            if (confirm(`Restaurar backup del ${new Date(data.date).toLocaleString('es-CO')}? Esto reemplazará todos tus datos actuales.`)) {
+                showAppLoading(true);
+                // Limpiar datos actuales
+                await clearAllDataFromDB();
+
+                // Restaurar datos
                 products = data.products || [];
                 sales = data.sales || [];
                 history = data.history || [];
@@ -1164,134 +1308,29 @@ function restoreBackup(e) {
                 suppliers = data.suppliers || [];
                 expenses = data.expenses || [];
                 if (data.settings) settings = { ...settings, ...data.settings };
-                saveProducts(); saveSales(); saveHistory(); saveClients(); saveSuppliers(); saveExpenses(); saveSettings();
-                renderAll(); renderHistory();
+
+                // Guardar todo en Firestore
+                for (const p of products) { await saveProduct(p); }
+                for (const s of sales) { await saveSale(s); }
+                for (const h of history) { await saveHistoryItem(h); }
+                for (const c of clients) { await saveClient(c); }
+                for (const s of suppliers) { await saveSupplier(s); }
+                for (const ex of expenses) { await saveExpense(ex); }
+                await saveSettings();
+
+                renderAll(); renderHistory(); renderClients(); renderSuppliers(); renderExpenses();
                 addHistory('add', 'Datos restaurados desde backup');
                 showToast('Backup restaurado exitosamente', 'success');
+                showAppLoading(false);
             }
         } catch(err) {
             showToast('Error al leer el archivo', 'error');
+            showAppLoading(false);
         }
     };
     reader.readAsText(file);
     e.target.value = '';
 }
-
-
-// ==========================================
-// ALMACENAMIENTO (multi-negocio)
-// ==========================================
-function defaultSettings() {
-    return { businessName: 'Mi Negocio', currency: 'COP', defaultTax: 19, defaultMargin: 30, theme: 'light', monthlyGoal: 0 };
-}
-
-function bizKey(suffix) { return `gp-${currentBusinessId}-${suffix}`; }
-
-function saveProducts() { localStorage.setItem(bizKey('products'), JSON.stringify(products)); }
-function saveSales() { localStorage.setItem(bizKey('sales'), JSON.stringify(sales)); }
-function saveHistory() { localStorage.setItem(bizKey('history'), JSON.stringify(history)); }
-function saveClients() { localStorage.setItem(bizKey('clients'), JSON.stringify(clients)); }
-function saveSuppliers() { localStorage.setItem(bizKey('suppliers'), JSON.stringify(suppliers)); }
-function saveExpenses() { localStorage.setItem(bizKey('expenses'), JSON.stringify(expenses)); }
-function saveSettings() { localStorage.setItem(bizKey('settings'), JSON.stringify(settings)); }
-function saveBusinesses() {
-    localStorage.setItem('gp-businesses', JSON.stringify(businesses));
-    localStorage.setItem('gp-current-business', currentBusinessId);
-}
-
-function loadAllData() {
-    loadBusinesses();
-    loadBusinessData();
-}
-
-function loadBusinesses() {
-    try { businesses = JSON.parse(localStorage.getItem('gp-businesses')) || []; } catch(e) { businesses = []; }
-    currentBusinessId = localStorage.getItem('gp-current-business');
-
-    // Primera vez o migración desde la versión sin multi-negocio
-    if (businesses.length === 0) {
-        const firstId = generateId();
-        let firstName = 'Mi Negocio';
-        const oldSettings = localStorage.getItem('gp-settings');
-        if (oldSettings) {
-            try { firstName = (JSON.parse(oldSettings).businessName) || 'Mi Negocio'; } catch(e) {}
-        }
-        businesses = [{ id: firstId, name: firstName }];
-        currentBusinessId = firstId;
-        // Migrar datos antiguos al primer negocio
-        const map = { 'gp-products': 'products', 'gp-sales': 'sales', 'gp-history': 'history', 'gp-settings': 'settings' };
-        Object.keys(map).forEach(oldKey => {
-            const data = localStorage.getItem(oldKey);
-            if (data) {
-                localStorage.setItem(`gp-${firstId}-${map[oldKey]}`, data);
-                localStorage.removeItem(oldKey);
-            }
-        });
-        saveBusinesses();
-    }
-    if (!currentBusinessId || !businesses.find(b => b.id === currentBusinessId)) {
-        currentBusinessId = businesses[0].id;
-    }
-}
-
-function loadBusinessData() {
-    try { products = JSON.parse(localStorage.getItem(bizKey('products'))) || []; } catch(e) { products = []; }
-    try { sales = JSON.parse(localStorage.getItem(bizKey('sales'))) || []; } catch(e) { sales = []; }
-    try { history = JSON.parse(localStorage.getItem(bizKey('history'))) || []; } catch(e) { history = []; }
-    try { clients = JSON.parse(localStorage.getItem(bizKey('clients'))) || []; } catch(e) { clients = []; }
-    try { suppliers = JSON.parse(localStorage.getItem(bizKey('suppliers'))) || []; } catch(e) { suppliers = []; }
-    try { expenses = JSON.parse(localStorage.getItem(bizKey('expenses'))) || []; } catch(e) { expenses = []; }
-    settings = defaultSettings();
-    try {
-        const s = JSON.parse(localStorage.getItem(bizKey('settings')));
-        if (s) settings = { ...settings, ...s };
-    } catch(e) {}
-    // El nombre del negocio siempre refleja el de la lista
-    const biz = businesses.find(b => b.id === currentBusinessId);
-    if (biz) settings.businessName = biz.name;
-}
-
-// ==========================================
-// UTILIDADES
-// ==========================================
-function generateId() { return 'id_' + Date.now() + '_' + Math.random().toString(36).substr(2,9); }
-function getProduct(id) { return products.find(p => p.id === id); }
-function formatCurrency(amount) {
-    amount = amount || 0;
-    // Pesos colombianos (COP): separador de miles con punto, sin decimales
-    if (settings.currency === 'COP') {
-        return '$' + Math.round(amount).toLocaleString('es-CO');
-    }
-    if (settings.currency === '€') {
-        return amount.toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' €';
-    }
-    if (settings.currency === '£') {
-        return '£' + amount.toLocaleString('en-GB', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-    }
-    // Dólar / genérico
-    return '$' + amount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-}
-function esc(text) {
-    const d = document.createElement('div');
-    d.textContent = text || '';
-    return d.innerHTML;
-}
-
-// ==========================================
-// TOAST NOTIFICATIONS
-// ==========================================
-function showToast(message, type = 'info') {
-    const container = document.getElementById('toast-container');
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
-    toast.innerHTML = `<span>${icons[type] || ''}</span><span>${message}</span>`;
-    container.appendChild(toast);
-    setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3000);
-}
-
-// Renderizar gráficas al cargar si estamos en dashboard
-setTimeout(() => { renderCharts(); renderHistory(); }, 500);
 
 
 // ==========================================
@@ -1356,10 +1395,7 @@ function renderGoalProgress() {
     const container = document.getElementById('goal-progress-card');
     if (!container) return;
     const goal = settings.monthlyGoal || 0;
-    if (goal <= 0) {
-        container.style.display = 'none';
-        return;
-    }
+    if (goal <= 0) { container.style.display = 'none'; return; }
     container.style.display = 'block';
     const thisMonth = new Date().toISOString().slice(0, 7);
     const monthSales = sales.filter(s => s.date.startsWith(thisMonth)).reduce((sum, s) => sum + s.total, 0);
@@ -1382,7 +1418,6 @@ function renderGoalProgress() {
     }
 }
 
-
 // ==========================================
 // INIT CIERRE DE CAJA
 // ==========================================
@@ -1395,6 +1430,7 @@ function initCashClose() {
     const btnPrint = document.getElementById('btn-print-cash');
     if (btnPrint) btnPrint.addEventListener('click', printCashClose);
 }
+
 
 function printCashClose() {
     const date = document.getElementById('cash-date').value || new Date().toISOString().split('T')[0];
@@ -1433,97 +1469,6 @@ function printCashClose() {
 
 
 // ==========================================
-// GESTIÓN DE NEGOCIOS (multi-negocio)
-// ==========================================
-function getCurrentBusiness() {
-    return businesses.find(b => b.id === currentBusinessId) || businesses[0];
-}
-
-function initBusinesses() {
-    refreshBusinessSelector();
-    document.getElementById('business-selector').addEventListener('change', (e) => {
-        switchBusiness(e.target.value);
-    });
-    document.getElementById('btn-new-business').addEventListener('click', addBusinessPrompt);
-}
-
-function refreshBusinessSelector() {
-    const sel = document.getElementById('business-selector');
-    if (!sel) return;
-    sel.innerHTML = businesses.map(b =>
-        `<option value="${b.id}" ${b.id === currentBusinessId ? 'selected' : ''}>${esc(b.name)}</option>`
-    ).join('');
-}
-
-function switchBusiness(id) {
-    currentBusinessId = id;
-    saveBusinesses();
-    loadBusinessData();
-    applyTheme(settings.theme);
-    fillSettingsForm();
-    renderAll();
-    renderGoalProgress();
-    renderClients();
-    renderSuppliers();
-    renderExpenses();
-    showToast('Negocio activo: ' + getCurrentBusiness().name, 'info');
-}
-
-function addBusinessPrompt() {
-    const name = prompt('Nombre del nuevo negocio:');
-    if (!name || !name.trim()) return;
-    const id = generateId();
-    businesses.push({ id, name: name.trim() });
-    saveBusinesses();
-    refreshBusinessSelector();
-    document.getElementById('business-selector').value = id;
-    switchBusiness(id);
-    showToast(`Negocio "${name.trim()}" creado`, 'success');
-}
-
-function renameBusiness() {
-    const biz = getCurrentBusiness();
-    const name = prompt('Nuevo nombre del negocio:', biz.name);
-    if (!name || !name.trim()) return;
-    biz.name = name.trim();
-    settings.businessName = name.trim();
-    saveBusinesses();
-    saveSettings();
-    refreshBusinessSelector();
-    showToast('Negocio renombrado', 'success');
-}
-
-function deleteBusiness() {
-    if (businesses.length <= 1) {
-        showToast('Debe existir al menos un negocio', 'error');
-        return;
-    }
-    const biz = getCurrentBusiness();
-    if (!confirm(`¿Eliminar el negocio "${biz.name}" y TODOS sus datos? Esta acción no se puede deshacer.`)) return;
-    // Borrar datos del negocio
-    ['products','sales','history','clients','suppliers','expenses','settings'].forEach(s => {
-        localStorage.removeItem(`gp-${biz.id}-${s}`);
-    });
-    businesses = businesses.filter(b => b.id !== biz.id);
-    currentBusinessId = businesses[0].id;
-    saveBusinesses();
-    refreshBusinessSelector();
-    switchBusiness(currentBusinessId);
-    showToast('Negocio eliminado', 'warning');
-}
-
-function fillSettingsForm() {
-    const el = (id) => document.getElementById(id);
-    if (el('setting-business-name')) el('setting-business-name').value = settings.businessName;
-    if (el('setting-currency')) el('setting-currency').value = settings.currency;
-    if (el('setting-default-tax')) el('setting-default-tax').value = settings.defaultTax;
-    if (el('setting-default-margin')) el('setting-default-margin').value = settings.defaultMargin;
-    if (el('setting-monthly-goal')) el('setting-monthly-goal').value = settings.monthlyGoal || '';
-    if (el('profit-margin')) el('profit-margin').value = settings.defaultMargin;
-}
-
-
-// ==========================================
 // MÓDULO DE CLIENTES
 // ==========================================
 function initClients() {
@@ -1543,13 +1488,15 @@ function handleClientSubmit(e) {
     if (editingClientId) {
         const idx = clients.findIndex(c => c.id === editingClientId);
         clients[idx] = { ...clients[idx], name, phone, email, notes };
+        saveClient(clients[idx]);
         showToast('Cliente actualizado', 'success');
         cancelClientEdit();
     } else {
-        clients.push({ id: generateId(), name, phone, email, notes, createdAt: new Date().toISOString() });
+        const client = { id: generateId(), name, phone, email, notes, createdAt: new Date().toISOString() };
+        clients.push(client);
+        saveClient(client);
         showToast(`Cliente "${name}" agregado`, 'success');
     }
-    saveClients();
     renderClients();
     e.target.reset();
 }
@@ -1579,11 +1526,12 @@ function deleteClient(id) {
     if (!c) return;
     if (confirm(`¿Eliminar al cliente "${c.name}"?`)) {
         clients = clients.filter(x => x.id !== id);
-        saveClients();
+        deleteClientFromDB(id);
         renderClients();
         showToast('Cliente eliminado', 'warning');
     }
 }
+
 
 function renderClients() {
     const tbody = document.getElementById('clients-body');
@@ -1613,11 +1561,9 @@ function renderClients() {
         </tr>`;
     }).join('');
 
-    // Actualizar datalist para el formulario de ventas
     const dl = document.getElementById('clients-datalist');
     if (dl) dl.innerHTML = clients.map(c => `<option value="${esc(c.name)}">`).join('');
 }
-
 
 // ==========================================
 // MÓDULO DE PROVEEDORES
@@ -1639,16 +1585,19 @@ function handleSupplierSubmit(e) {
     if (editingSupplierId) {
         const idx = suppliers.findIndex(s => s.id === editingSupplierId);
         suppliers[idx] = { ...suppliers[idx], name, contact, phone, products: products_ };
+        saveSupplier(suppliers[idx]);
         showToast('Proveedor actualizado', 'success');
         cancelSupplierEdit();
     } else {
-        suppliers.push({ id: generateId(), name, contact, phone, products: products_, createdAt: new Date().toISOString() });
+        const supplier = { id: generateId(), name, contact, phone, products: products_, createdAt: new Date().toISOString() };
+        suppliers.push(supplier);
+        saveSupplier(supplier);
         showToast(`Proveedor "${name}" agregado`, 'success');
     }
-    saveSuppliers();
     renderSuppliers();
     e.target.reset();
 }
+
 
 function editSupplier(id) {
     const s = suppliers.find(x => x.id === id);
@@ -1675,7 +1624,7 @@ function deleteSupplier(id) {
     if (!s) return;
     if (confirm(`¿Eliminar al proveedor "${s.name}"?`)) {
         suppliers = suppliers.filter(x => x.id !== id);
-        saveSuppliers();
+        deleteSupplierFromDB(id);
         renderSuppliers();
         showToast('Proveedor eliminado', 'warning');
     }
@@ -1711,7 +1660,6 @@ function renderSuppliers() {
 function initExpenses() {
     document.getElementById('expense-form').addEventListener('submit', handleExpenseSubmit);
     document.getElementById('btn-cancel-expense').addEventListener('click', cancelExpenseEdit);
-    // Fecha por defecto = hoy
     const dateField = document.getElementById('expense-date');
     if (dateField) dateField.value = new Date().toISOString().split('T')[0];
 }
@@ -1727,14 +1675,16 @@ function handleExpenseSubmit(e) {
     if (editingExpenseId) {
         const idx = expenses.findIndex(x => x.id === editingExpenseId);
         expenses[idx] = { ...expenses[idx], concept, category, amount, date };
+        saveExpense(expenses[idx]);
         showToast('Gasto actualizado', 'success');
         cancelExpenseEdit();
     } else {
-        expenses.push({ id: generateId(), concept, category, amount, date });
+        const expense = { id: generateId(), concept, category, amount, date };
+        expenses.push(expense);
+        saveExpense(expense);
         addHistory('add', `Gasto registrado: ${concept} (${formatCurrency(amount)})`);
         showToast('Gasto registrado', 'success');
     }
-    saveExpenses();
     renderExpenses();
     updateDashboardStats();
     e.target.reset();
@@ -1767,19 +1717,19 @@ function deleteExpense(id) {
     if (!x) return;
     if (confirm(`¿Eliminar el gasto "${x.concept}"?`)) {
         expenses = expenses.filter(e => e.id !== id);
-        saveExpenses();
+        deleteExpenseFromDB(id);
         renderExpenses();
         updateDashboardStats();
         showToast('Gasto eliminado', 'warning');
     }
 }
 
+
 function renderExpenses() {
     const tbody = document.getElementById('expenses-body');
     const empty = document.getElementById('empty-expenses');
     if (!tbody) return;
 
-    // Total del mes actual
     const thisMonth = new Date().toISOString().slice(0, 7);
     const monthTotal = expenses.filter(e => e.date.startsWith(thisMonth)).reduce((s, e) => s + e.amount, 0);
     const allTotal = expenses.reduce((s, e) => s + e.amount, 0);
@@ -1802,3 +1752,43 @@ function renderExpenses() {
         </td>
     </tr>`).join('');
 }
+
+// ==========================================
+// UTILIDADES
+// ==========================================
+function generateId() { return 'id_' + Date.now() + '_' + Math.random().toString(36).substr(2,9); }
+function getProduct(id) { return products.find(p => p.id === id); }
+function formatCurrency(amount) {
+    amount = amount || 0;
+    if (settings.currency === 'COP') {
+        return '$' + Math.round(amount).toLocaleString('es-CO');
+    }
+    if (settings.currency === '€') {
+        return amount.toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' €';
+    }
+    if (settings.currency === '£') {
+        return '£' + amount.toLocaleString('en-GB', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    }
+    return '$' + amount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+}
+function esc(text) {
+    const d = document.createElement('div');
+    d.textContent = text || '';
+    return d.innerHTML;
+}
+
+// ==========================================
+// TOAST NOTIFICATIONS
+// ==========================================
+function showToast(message, type = 'info') {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+    toast.innerHTML = `<span>${icons[type] || ''}</span><span>${message}</span>`;
+    container.appendChild(toast);
+    setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3000);
+}
+
+// Renderizar gráficas al cargar si estamos en dashboard
+setTimeout(() => { if (currentUser) { renderCharts(); renderHistory(); } }, 1000);

@@ -6,8 +6,21 @@
     <title>Gestión Pro - Tu Negocio Completo</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
 </head>
 <body>
+    <!-- Loading overlay while checking auth -->
+    <div class="app-loading" id="app-loading" style="display:flex;">
+        <div class="app-loading-content">
+            <div class="app-spinner"></div>
+            <p>Cargando GestiónPro...</p>
+        </div>
+    </div>
+
     <div class="app-layout">
         <!-- Sidebar / Navegación -->
         <nav class="sidebar" id="sidebar">
@@ -15,12 +28,9 @@
                 <h1>📦 GestiónPro</h1>
                 <button class="sidebar-toggle" id="sidebar-toggle">☰</button>
             </div>
-            <div class="business-switcher">
-                <label for="business-selector">🏪 Negocio activo</label>
-                <div class="business-switcher-row">
-                    <select id="business-selector"></select>
-                    <button id="btn-new-business" title="Nuevo negocio">＋</button>
-                </div>
+            <div class="user-info-bar">
+                <span class="user-display" id="user-display">Usuario</span>
+                <button class="btn-logout" id="btn-logout" title="Cerrar sesión">🚪</button>
             </div>
             <ul class="nav-menu">
                 <li><a href="#" class="nav-link active" data-section="dashboard">📊 Dashboard</a></li>
@@ -956,11 +966,10 @@
                     </div>
 
                     <div class="card">
-                        <h3>🏪 Gestión de Negocios</h3>
-                        <p class="card-description">Crea, renombra o elimina negocios. Cada negocio tiene su propio inventario, ventas, clientes y gastos por separado. Cambia entre ellos con el selector de arriba a la izquierda.</p>
+                        <h3>🏪 Tu Cuenta</h3>
+                        <p class="card-description">Tu cuenta está vinculada a tu correo electrónico. Cada cuenta tiene su propio inventario, ventas, clientes y gastos.</p>
                         <div class="form-actions">
-                            <button class="btn btn-outline" id="btn-rename-business">✏️ Renombrar Negocio Actual</button>
-                            <button class="btn btn-danger" id="btn-delete-business">🗑️ Eliminar Negocio Actual</button>
+                            <button class="btn btn-danger" id="btn-logout-settings" onclick="document.getElementById('btn-logout').click()">🚪 Cerrar Sesión</button>
                         </div>
                     </div>
 
