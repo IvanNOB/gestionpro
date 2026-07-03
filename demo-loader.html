@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GestiónPro - Cargar Demo Heladería</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 40px 32px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        h1 { font-size: 1.8rem; margin-bottom: 8px; }
+        p { color: #64748b; margin-bottom: 24px; }
+        .btn {
+            padding: 16px 32px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-bottom: 16px;
+        }
+        .btn:hover { background: #1d4ed8; }
+        .btn:disabled { background: #94a3b8; cursor: not-allowed; }
+        .status {
+            margin-top: 20px;
+            padding: 16px;
+            border-radius: 10px;
+            display: none;
+        }
+        .status.success { display: block; background: #dcfce7; color: #166534; }
+        .status.error { display: block; background: #fef2f2; color: #991b1b; }
+        .status.loading { display: block; background: #eff6ff; color: #1d4ed8; }
+        .progress { margin-top: 12px; font-size: 0.9rem; color: #475569; }
+        a { color: #2563eb; text-decoration: none; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🍦 Demo Heladería</h1>
+        <p>Esto va a cargar productos, ventas, clientes y proveedores de ejemplo en tu cuenta para demostrar cómo funciona la app.</p>
+        
+        <button class="btn" id="btn-load" onclick="loadDemoData()">🚀 Cargar Datos de Prueba</button>
+        
+        <div class="status" id="status"></div>
+        <div class="progress" id="progress"></div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script>
+        function generateId() { return 'id_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9); }
+        function daysAgo(n) { const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString(); }
+        function dateStr(daysAgo) { const d = new Date(); d.setDate(d.getDate() - daysAgo); return d.toISOString().split('T')[0]; }
+
+        // ==========================================
+        // DATOS DE EJEMPLO - HELADERÍA
+        // ==========================================
+        const demoProducts = [
+            { name: 'Helado de Chocolate (bolita)', category: 'Alimentos', quantity: 120, cost: 800, margin: 275, price: 3000, minStock: 20, supplier: 'Distribuidora Helados del Valle' },
+            { name: 'Helado de Vainilla (bolita)', category: 'Alimentos', quantity: 95, cost: 750, margin: 300, price: 3000, minStock: 20, supplier: 'Distribuidora Helados del Valle' },
+            { name: 'Helado de Fresa (bolita)', category: 'Alimentos', quantity: 80, cost: 850, margin: 253, price: 3000, minStock: 20, supplier: 'Distribuidora Helados del Valle' },
+            { name: 'Helado de Maracuyá (bolita)', category: 'Alimentos', quantity: 60, cost: 900, margin: 233, price: 3000, minStock: 15, supplier: 'Frutihelos S.A.' },
+            { name: 'Helado de Arequipe (bolita)', category: 'Alimentos', quantity: 70, cost: 950, margin: 216, price: 3000, minStock: 15, supplier: 'Distribuidora Helados del Valle' },
+            { name: 'Helado de Cookies & Cream (bolita)', category: 'Alimentos', quantity: 55, cost: 1100, margin: 182, price: 3500, minStock: 15, supplier: 'Frutihelos S.A.' },
+            { name: 'Helado de Mango (bolita)', category: 'Alimentos', quantity: 45, cost: 900, margin: 233, price: 3000, minStock: 10, supplier: 'Frutihelos S.A.' },
+            { name: 'Helado de Ron con Pasas (bolita)', category: 'Alimentos', quantity: 40, cost: 1000, margin: 200, price: 3000, minStock: 10, supplier: 'Distribuidora Helados del Valle' },
+            { name: 'Cono sencillo', category: 'Accesorios', quantity: 200, cost: 300, margin: 100, price: 600, minStock: 50, supplier: 'Empaques Rápidos' },
+            { name: 'Cono doble (waffle)', category: 'Accesorios', quantity: 150, cost: 500, margin: 140, price: 1200, minStock: 30, supplier: 'Empaques Rápidos' },
+            { name: 'Vaso pequeño', category: 'Accesorios', quantity: 300, cost: 200, margin: 150, price: 500, minStock: 50, supplier: 'Empaques Rápidos' },
+            { name: 'Vaso grande', category: 'Accesorios', quantity: 250, cost: 350, margin: 143, price: 850, minStock: 40, supplier: 'Empaques Rápidos' },
+            { name: 'Malteada de Chocolate', category: 'Alimentos', quantity: 30, cost: 2500, margin: 120, price: 5500, minStock: 10, supplier: 'Distribuidora Helados del Valle' },
+            { name: 'Malteada de Vainilla', category: 'Alimentos', quantity: 30, cost: 2400, margin: 125, price: 5500, minStock: 10, supplier: 'Distribuidora Helados del Valle' },
+            { name: 'Sundae con toppings', category: 'Alimentos', quantity: 25, cost: 3000, margin: 133, price: 7000, minStock: 8, supplier: 'Distribuidora Helados del Valle' },
+            { name: 'Banana Split', category: 'Alimentos', quantity: 20, cost: 3500, margin: 143, price: 8500, minStock: 5, supplier: 'Frutihelos S.A.' },
+            { name: 'Topping de Chocolate', category: 'Alimentos', quantity: 40, cost: 500, margin: 200, price: 1500, minStock: 10, supplier: 'Frutihelos S.A.' },
+            { name: 'Topping de Arequipe', category: 'Alimentos', quantity: 35, cost: 600, margin: 150, price: 1500, minStock: 10, supplier: 'Frutihelos S.A.' },
+            { name: 'Chispas de colores', category: 'Alimentos', quantity: 50, cost: 300, margin: 233, price: 1000, minStock: 15, supplier: 'Empaques Rápidos' },
+            { name: 'Agua embotellada', category: 'Alimentos', quantity: 48, cost: 800, margin: 150, price: 2000, minStock: 12, supplier: 'Distribuidora Express' },
+        ];
+
+        const demoClients = [
+            { name: 'María González', phone: '300 123 4567', email: 'maria@correo.com', notes: 'Cliente frecuente, le gusta chocolate' },
+            { name: 'Carlos Rodríguez', phone: '310 987 6543', email: 'carlos.r@gmail.com', notes: 'Pide para fiestas infantiles' },
+            { name: 'Ana Martínez', phone: '320 456 7890', email: '', notes: 'Siempre pide malteada de vainilla' },
+            { name: 'Pedro Sánchez', phone: '315 111 2233', email: 'pedro.s@hotmail.com', notes: 'Compra todos los domingos' },
+            { name: 'Luisa Fernanda', phone: '301 222 3344', email: '', notes: 'Pide sundae con todo' },
+            { name: 'Restaurante El Buen Sabor', phone: '604 333 4455', email: 'contacto@buensabor.com', notes: 'Pedidos grandes cada viernes' },
+            { name: 'Jardín Infantil Arcoíris', phone: '304 555 6677', email: 'jardin.arcoiris@edu.co', notes: 'Eventos mensuales, 30+ helados' },
+        ];
+
+        const demoSuppliers = [
+            { name: 'Distribuidora Helados del Valle', contact: 'Roberto Mejía', phone: '602 111 2233', products: 'Helados base, malteadas, arequipe' },
+            { name: 'Frutihelos S.A.', contact: 'Sandra López', phone: '310 444 5566', products: 'Helados frutales, toppings, salsas' },
+            { name: 'Empaques Rápidos', contact: 'Juan Torres', phone: '315 777 8899', products: 'Conos, vasos, cucharas, servilletas' },
+            { name: 'Distribuidora Express', contact: 'Camilo Ruiz', phone: '300 999 0011', products: 'Bebidas, agua, gaseosas' },
+        ];
+
+        const demoExpenses = [
+            { concept: 'Arriendo local', category: 'Arriendo', amount: 1500000, date: dateStr(2) },
+            { concept: 'Recibo de luz', category: 'Servicios', amount: 280000, date: dateStr(5) },
+            { concept: 'Recibo de agua', category: 'Servicios', amount: 95000, date: dateStr(5) },
+            { concept: 'Internet', category: 'Servicios', amount: 75000, date: dateStr(8) },
+            { concept: 'Sueldo empleada Laura', category: 'Sueldos', amount: 1300000, date: dateStr(1) },
+            { concept: 'Publicidad Instagram', category: 'Marketing', amount: 150000, date: dateStr(10) },
+            { concept: 'Servilletas y cucharas extra', category: 'Insumos', amount: 45000, date: dateStr(3) },
+        ];
+
+        function generateSales(products) {
+            const salesData = [];
+            const methods = ['Efectivo', 'Transferencia', 'Tarjeta', 'Efectivo', 'Efectivo'];
+            const clientNames = ['María González', 'Carlos Rodríguez', 'Ana Martínez', 'Pedro Sánchez', '', '', 'Luisa Fernanda', '', ''];
+            
+            // Generar ventas de los últimos 14 días
+            for (let day = 0; day < 14; day++) {
+                const numSales = Math.floor(Math.random() * 6) + 3; // 3-8 ventas por día
+                for (let s = 0; s < numSales; s++) {
+                    const product = products[Math.floor(Math.random() * 10)]; // Principalmente helados
+                    const qty = Math.floor(Math.random() * 3) + 1;
+                    const method = methods[Math.floor(Math.random() * methods.length)];
+                    const client = clientNames[Math.floor(Math.random() * clientNames.length)];
+                    const total = product.price * qty;
+                    const profit = total - (product.cost * qty);
+                    
+                    const saleDate = new Date();
+                    saleDate.setDate(saleDate.getDate() - day);
+                    saleDate.setHours(Math.floor(Math.random() * 10) + 9, Math.floor(Math.random() * 60));
+
+                    salesData.push({
+                        id: generateId() + '_' + day + '_' + s,
+                        productId: product.id,
+                        productName: product.name,
+                        quantity: qty,
+                        price: product.price,
+                        cost: product.cost,
+                        discount: 0,
+                        discountAmount: 0,
+                        total: total,
+                        profit: profit,
+                        client: client,
+                        method: method,
+                        notes: '',
+                        date: saleDate.toISOString()
+                    });
+                }
+            }
+            return salesData;
+        }
+
+        // ==========================================
+        // CARGAR DATOS
+        // ==========================================
+        async function loadDemoData() {
+            const btn = document.getElementById('btn-load');
+            const status = document.getElementById('status');
+            const progress = document.getElementById('progress');
+            
+            btn.disabled = true;
+            status.className = 'status loading';
+            status.textContent = '⏳ Verificando sesión...';
+            status.style.display = 'block';
+
+            // Verificar que está logueado
+            const user = auth.currentUser;
+            if (!user) {
+                status.className = 'status error';
+                status.textContent = '❌ No has iniciado sesión. Abre la app primero, inicia sesión, y luego vuelve aquí.';
+                btn.disabled = false;
+                return;
+            }
+
+            const userDoc = db.collection('users').doc(user.uid);
+
+            try {
+                // 1. Cargar productos
+                status.textContent = '📦 Cargando productos...';
+                const productsWithIds = demoProducts.map(p => ({
+                    ...p,
+                    id: generateId(),
+                    createdAt: daysAgo(Math.floor(Math.random() * 30) + 7),
+                    updatedAt: new Date().toISOString()
+                }));
+
+                for (let i = 0; i < productsWithIds.length; i++) {
+                    const p = productsWithIds[i];
+                    await userDoc.collection('products').doc(p.id).set(p);
+                    progress.textContent = `Productos: ${i + 1}/${productsWithIds.length}`;
+                }
+
+                // 2. Cargar clientes
+                status.textContent = '👥 Cargando clientes...';
+                for (let i = 0; i < demoClients.length; i++) {
+                    const c = { ...demoClients[i], id: generateId(), createdAt: daysAgo(Math.floor(Math.random() * 20) + 5) };
+                    await userDoc.collection('clients').doc(c.id).set(c);
+                    progress.textContent = `Clientes: ${i + 1}/${demoClients.length}`;
+                }
+
+                // 3. Cargar proveedores
+                status.textContent = '🚚 Cargando proveedores...';
+                for (let i = 0; i < demoSuppliers.length; i++) {
+                    const s = { ...demoSuppliers[i], id: generateId(), createdAt: daysAgo(30) };
+                    await userDoc.collection('suppliers').doc(s.id).set(s);
+                    progress.textContent = `Proveedores: ${i + 1}/${demoSuppliers.length}`;
+                }
+
+                // 4. Cargar ventas
+                status.textContent = '💰 Cargando ventas...';
+                const salesData = generateSales(productsWithIds);
+                for (let i = 0; i < salesData.length; i++) {
+                    await userDoc.collection('sales').doc(salesData[i].id).set(salesData[i]);
+                    progress.textContent = `Ventas: ${i + 1}/${salesData.length}`;
+                }
+
+                // 5. Cargar gastos
+                status.textContent = '💸 Cargando gastos...';
+                for (let i = 0; i < demoExpenses.length; i++) {
+                    const e = { ...demoExpenses[i], id: generateId() };
+                    await userDoc.collection('expenses').doc(e.id).set(e);
+                    progress.textContent = `Gastos: ${i + 1}/${demoExpenses.length}`;
+                }
+
+                // 6. Actualizar settings
+                await userDoc.update({
+                    settings: {
+                        businessName: 'Heladería Delicias',
+                        currency: 'COP',
+                        defaultTax: 19,
+                        defaultMargin: 200,
+                        theme: 'light',
+                        monthlyGoal: 5000000
+                    }
+                });
+
+                // LISTO
+                status.className = 'status success';
+                status.innerHTML = '✅ ¡Datos cargados exitosamente!<br><br>📦 ' + productsWithIds.length + ' productos<br>💰 ' + salesData.length + ' ventas<br>👥 ' + demoClients.length + ' clientes<br>🚚 ' + demoSuppliers.length + ' proveedores<br>💸 ' + demoExpenses.length + ' gastos<br><br><a href="index.html">👉 Abrir GestiónPro para ver los datos</a>';
+                progress.textContent = '¡Completado!';
+
+            } catch (error) {
+                status.className = 'status error';
+                status.textContent = '❌ Error: ' + error.message;
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
