@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 showAccessDenied();
             }
         } else {
-            window.location.href = 'login.html';
+            window.location.href = 'admin-login.html';
         }
     });
 });
@@ -202,7 +202,7 @@ async function unblockUser(uid) {
 async function handleLogout() {
     if (confirm('¿Cerrar sesión?')) {
         await auth.signOut();
-        window.location.href = 'login.html';
+        window.location.href = 'admin-login.html';
     }
 }
 
