@@ -571,8 +571,8 @@ function handleSaleSubmit(e) {
     document.getElementById('sale-summary').style.display = 'none';
     document.getElementById('sale-discount-row').style.display = 'none';
     updateSaleProductList();
-    if (confirm('Venta registrada. ¿Quieres imprimir el recibo?')) {
-        printReceipt(sale);
+    if (confirm('Venta registrada. ¿Quieres imprimir el ticket?')) {
+        printSaleTicket(sale);
     }
 }
 

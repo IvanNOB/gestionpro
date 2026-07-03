@@ -5,10 +5,11 @@
 let currentUser = null;
 let products = [];
 let mesas = [];
-let orders = {};  // { mesaId: [{ productId, name, price, qty }] }
+let orders = {};
 let currentMesaId = null;
 let insumos = [];
 let recipes = [];
+let settings = { businessName: 'Mi Negocio', customization: {} };
 
 // ==========================================
 // INICIALIZACIÓN
@@ -30,17 +31,22 @@ function userDoc() { return db.collection('users').doc(currentUser.uid); }
 function userCollection(name) { return userDoc().collection(name); }
 
 async function loadData() {
-    const [productsSnap, mesasSnap, ordersSnap, insumosSnap, recipesSnap] = await Promise.all([
+    const [productsSnap, mesasSnap, ordersSnap, insumosSnap, recipesSnap, userDocSnap] = await Promise.all([
         userCollection('products').get(),
         userCollection('mesas').get(),
         userCollection('orders').get(),
         userCollection('insumos').get(),
-        userCollection('recipes').get()
+        userCollection('recipes').get(),
+        userDoc().get()
     ]);
     products = productsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     mesas = mesasSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     insumos = insumosSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     recipes = recipesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    
+    if (userDocSnap.exists && userDocSnap.data().settings) {
+        settings = { ...settings, ...userDocSnap.data().settings };
+    }
     
     // Cargar pedidos activos
     ordersSnap.docs.forEach(doc => {
@@ -203,11 +209,13 @@ async function sendOrder() {
     const items = orders[currentMesaId];
     if (!items || items.length === 0) { showToast('El pedido está vacío', 'error'); return; }
     
+    const mesa = mesas.find(m => m.id === currentMesaId);
+    
     // Guardar pedido en Firestore
     const orderDoc = {
         id: 'order_' + currentMesaId,
         mesaId: currentMesaId,
-        mesaName: mesas.find(m => m.id === currentMesaId)?.name || '',
+        mesaName: mesa?.name || '',
         items: items,
         total: items.reduce((s, i) => s + (i.price * i.qty), 0),
         status: 'active',
@@ -216,6 +224,12 @@ async function sendOrder() {
     };
     
     await userCollection('orders').doc(orderDoc.id).set(orderDoc);
+    
+    // Imprimir ticket de cocina
+    if (confirm('Pedido enviado. ¿Imprimir ticket para cocina?')) {
+        printKitchenTicket(mesa?.name || 'Mesa', items);
+    }
+    
     showToast('✅ Pedido enviado', 'success');
     showMesas();
 }
@@ -228,6 +242,11 @@ async function payOrder() {
     const mesa = mesas.find(m => m.id === currentMesaId);
     
     if (!confirm(`¿Cobrar ${formatCurrency(total)} de ${mesa?.name}?`)) return;
+    
+    // Preguntar método de pago
+    const method = prompt('Método de pago:\n1 = Efectivo\n2 = Tarjeta\n3 = Transferencia', '1');
+    const methods = { '1': 'Efectivo', '2': 'Tarjeta', '3': 'Transferencia' };
+    const payMethod = methods[method] || 'Efectivo';
     
     // Registrar cada item como venta
     for (const item of items) {
@@ -243,7 +262,7 @@ async function payOrder() {
             total: item.price * item.qty,
             profit: (item.price - (item.cost || 0)) * item.qty,
             client: mesa?.name || '',
-            method: 'Efectivo',
+            method: payMethod,
             notes: 'Pedido de mesa',
             date: new Date().toISOString()
         };
@@ -259,6 +278,9 @@ async function payOrder() {
         // Descontar insumos
         deductInsumos(item.productId, item.qty);
     }
+    
+    // Imprimir ticket de venta
+    printTableBillTicket(mesa?.name || 'Mesa', items, total, payMethod);
     
     // Limpiar pedido
     delete orders[currentMesaId];
@@ -306,4 +328,15 @@ function showToast(msg, type) {
     toast.textContent = msg;
     container.appendChild(toast);
     setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 2000);
+}
+
+
+
+// Imprimir pre-cuenta de la mesa actual
+function printPreBill() {
+    const items = orders[currentMesaId];
+    if (!items || items.length === 0) { showToast('No hay pedido', 'error'); return; }
+    const mesa = mesas.find(m => m.id === currentMesaId);
+    const total = items.reduce((s, i) => s + (i.price * i.qty), 0);
+    printPreBillTicket(mesa?.name || 'Mesa', items, total);
 }
