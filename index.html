@@ -388,6 +388,7 @@
                                     <th>Ganancia</th>
                                     <th>Pago</th>
                                     <th>Cliente</th>
+                                    <th>Acción</th>
                                 </tr>
                             </thead>
                             <tbody id="sales-body"></tbody>
@@ -435,6 +436,20 @@
                         <button class="btn btn-sm btn-outline" onclick="copyMeseroLink()">📋 Copiar</button>
                     </div>
                     <small style="color:var(--text-light);">El mesero debe iniciar sesión con la misma cuenta para ver los productos y mesas.</small>
+                </div>
+
+                <div class="card">
+                    <h3>📲 Menú Digital + Código QR</h3>
+                    <p class="card-description">Tus clientes escanean el QR y ven tu menú con precios en su celular. No necesitan registrarse ni descargar nada.</p>
+                    <div class="mesero-link-box">
+                        <input type="text" id="menu-link" readonly value="" style="flex:1;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:0.9rem;">
+                        <button class="btn btn-sm btn-outline" onclick="copyMenuLink()">📋 Copiar</button>
+                    </div>
+                    <div style="text-align:center;margin-top:16px;">
+                        <img id="menu-qr" src="" style="width:200px;height:200px;border:2px solid var(--border);border-radius:12px;">
+                        <p style="margin-top:8px;color:var(--text-light);font-size:0.8rem;">Escanea o imprime este código QR</p>
+                        <button class="btn btn-sm btn-success" onclick="printQR()" style="margin-top:8px;">🖨️ Imprimir QR</button>
+                    </div>
                 </div>
 
                 <div class="card">
@@ -1218,6 +1233,44 @@
                             </div>
                         </div>
                         <button class="btn btn-primary" id="btn-save-settings">💾 Guardar Ajustes</button>
+                    </div>
+
+                    <div class="card">
+                        <h3>👥 Empleados y Roles</h3>
+                        <p class="card-description">Agrega empleados y asígnales un rol. Los meseros solo ven pedidos, los cajeros ven ventas e inventario, y el dueño ve todo.</p>
+                        <form id="employee-form">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Nombre</label>
+                                    <input type="text" id="employee-name" placeholder="Ej: Laura" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Correo (opcional)</label>
+                                    <input type="email" id="employee-email" placeholder="laura@correo.com">
+                                </div>
+                                <div class="form-group">
+                                    <label>Rol</label>
+                                    <select id="employee-role" required>
+                                        <option value="waiter">📋 Mesero</option>
+                                        <option value="cashier">💰 Cajero</option>
+                                        <option value="owner">👑 Dueño</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>PIN (opcional)</label>
+                                    <input type="text" id="employee-pin" placeholder="4 dígitos" maxlength="4">
+                                    <small>Para cambio rápido de turno</small>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">➕ Agregar Empleado</button>
+                        </form>
+                        <div class="table-container" style="margin-top:16px;">
+                            <table>
+                                <thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>PIN</th><th>Estado</th><th>Acciones</th></tr></thead>
+                                <tbody id="employees-body"></tbody>
+                            </table>
+                        </div>
+                        <p class="empty-message" id="empty-employees">No hay empleados registrados.</p>
                     </div>
 
                     <div class="card">

@@ -68,6 +68,7 @@ async function initApp() {
         initRecipes();
         initMesas();
         initPendingOrders();
+        initRoles();
         initLogout();
         renderAll();
         renderGoalProgress();
@@ -77,6 +78,7 @@ async function initApp() {
         showDate();
         showUserInfo();
         loadCustomization();
+        checkOnboarding();
     } catch (error) {
         console.error('Error inicializando app:', error);
         showToast('Error cargando datos. Intenta recargar.', 'error');
@@ -730,16 +732,20 @@ function renderSalesTable() {
     }
     emptyMsg.style.display = 'none';
 
-    tbody.innerHTML = filtered.slice(0, 50).map(s => `<tr>
+    tbody.innerHTML = filtered.slice(0, 50).map(s => {
+        const voided = s.voided === true;
+        return `<tr style="${voided ? 'opacity:0.5;text-decoration:line-through;' : ''}">
         <td>${new Date(s.date).toLocaleDateString('es-MX', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</td>
-        <td>${esc(s.productName)}</td>
+        <td>${esc(s.productName)}${voided ? ' ❌' : ''}</td>
         <td>${s.quantity}</td>
         <td>${formatCurrency(s.price)}</td>
         <td><strong>${formatCurrency(s.total)}</strong></td>
         <td class="${s.profit>=0?'profit-positive':'profit-negative'}">${formatCurrency(s.profit)}</td>
         <td>${s.method}</td>
         <td>${esc(s.client || '-')}</td>
-    </tr>`).join('');
+        <td>${!voided ? `<button class="action-btn" onclick="voidSale('${s.id}')" title="Anular venta">❌</button>` : '<span style="font-size:0.75rem;color:var(--danger);">Anulada</span>'}</td>
+    </tr>`;
+    }).join('');
 }
 
 // ==========================================
@@ -1030,6 +1036,16 @@ function generateAlerts() {
         const lastSaleItem = sales.filter(s => s.productId === p.id).sort((a,b) => b.date.localeCompare(a.date))[0];
         if (!lastSaleItem && new Date(p.createdAt) < new Date(thirtyDaysAgo)) {
             alerts.push({ type: 'info', title: `Sin movimiento: ${p.name}`, msg: 'No se ha vendido en los últimos 30 días.' });
+        }
+    });
+    // Alertas de insumos bajos
+    insumos.forEach(i => {
+        if (i.minStock && i.currentStock <= i.minStock) {
+            if (i.currentStock === 0) {
+                alerts.push({ type: 'danger', title: `Sin insumo: ${i.name}`, msg: `Se agotó. No podrás preparar productos que lo usen.` });
+            } else {
+                alerts.push({ type: 'warning', title: `Insumo bajo: ${i.name}`, msg: `Quedan ${i.currentStock} ${i.unit} (mínimo: ${i.minStock}).` });
+            }
         }
     });
     return alerts;
@@ -2221,6 +2237,12 @@ async function loadMesas() {
         const snap = await userCollection('mesas').get();
         mesasList = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         renderMesasAdmin();
+        // Generate menu link and QR
+        const menuUrl = window.location.origin + '/menu.html?u=' + currentUser.uid;
+        const menuLinkEl = document.getElementById('menu-link');
+        if (menuLinkEl) menuLinkEl.value = menuUrl;
+        const qrEl = document.getElementById('menu-qr');
+        if (qrEl) qrEl.src = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(menuUrl);
     } catch (e) { console.error('Error cargando mesas:', e); }
 }
 
@@ -2307,6 +2329,32 @@ function copyMeseroLink() {
     input.select();
     navigator.clipboard.writeText(input.value);
     showToast('Link copiado', 'success');
+}
+
+function copyMenuLink() {
+    const input = document.getElementById('menu-link');
+    input.select();
+    navigator.clipboard.writeText(input.value);
+    showToast('Link del menú copiado', 'success');
+}
+
+function printQR() {
+    const qrSrc = document.getElementById('menu-qr').src;
+    const win = window.open('', '_blank', 'width=350,height=500');
+    if (!win) { showToast('Permite ventanas emergentes', 'warning'); return; }
+    win.document.write(`<!DOCTYPE html><html><head><style>
+        body { font-family: sans-serif; text-align: center; padding: 40px 20px; }
+        img { width: 250px; height: 250px; margin: 20px 0; }
+        h2 { font-size: 1.5rem; margin-bottom: 8px; }
+        p { color: #64748b; font-size: 0.9rem; }
+    </style></head><body>
+        <h2>${esc(settings.businessName || 'Mi Negocio')}</h2>
+        <p>Escanea para ver nuestro menú</p>
+        <img src="${qrSrc}">
+        <p style="font-size:0.8rem;margin-top:12px;">Menú digital • GestiónPro</p>
+        <script>window.onload=function(){window.print();}<\/script>
+    </body></html>`);
+    win.document.close();
 }
 
 
@@ -2484,4 +2532,218 @@ function adjustColor(hex, amount) {
     const g = Math.min(255, Math.max(0, parseInt(hex.substr(2, 2), 16) + amount));
     const b = Math.min(255, Math.max(0, parseInt(hex.substr(4, 2), 16) + amount));
     return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
+}
+
+
+
+// ==========================================
+// ANULAR VENTAS
+// ==========================================
+async function voidSale(saleId) {
+    const sale = sales.find(s => s.id === saleId);
+    if (!sale) return;
+    if (sale.voided) { showToast('Esta venta ya fue anulada', 'info'); return; }
+
+    if (!confirm(`¿Anular la venta de ${sale.quantity}x "${sale.productName}" por ${formatCurrency(sale.total)}?\n\nSe devolverá el stock al inventario.`)) return;
+
+    // Marcar como anulada
+    sale.voided = true;
+    sale.voidedAt = new Date().toISOString();
+    await saveSale(sale);
+
+    // Devolver stock al producto
+    const product = getProduct(sale.productId);
+    if (product) {
+        product.quantity += sale.quantity;
+        await saveProduct(product);
+    }
+
+    // Devolver insumos si tiene receta
+    const recipe = recipes.find(r => r.productId === sale.productId);
+    if (recipe) {
+        for (const ing of recipe.ingredients) {
+            const insumo = insumos.find(i => i.id === ing.insumoId);
+            if (insumo) {
+                insumo.currentStock += ing.quantity * sale.quantity;
+                await saveInsumo(insumo);
+            }
+        }
+    }
+
+    addHistory('delete', `Venta anulada: ${sale.quantity}x ${sale.productName} (${formatCurrency(sale.total)})`);
+    renderAll();
+    showToast('Venta anulada. Stock restaurado.', 'warning');
+}
+
+
+
+// ==========================================
+// SISTEMA DE ROLES
+// ==========================================
+// Roles: 'owner' (todo), 'cashier' (ventas, inventario, caja), 'waiter' (solo mesero)
+let currentRole = 'owner';
+let employees = [];
+
+function initRoles() {
+    // Cargar empleados
+    loadEmployees();
+    // Form
+    const form = document.getElementById('employee-form');
+    if (form) form.addEventListener('submit', handleEmployeeSubmit);
+}
+
+async function loadEmployees() {
+    try {
+        const snap = await userCollection('employees').get();
+        employees = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        renderEmployees();
+    } catch (e) { console.error('Error cargando empleados:', e); }
+}
+
+function handleEmployeeSubmit(e) {
+    e.preventDefault();
+    const name = document.getElementById('employee-name').value.trim();
+    const email = document.getElementById('employee-email').value.trim();
+    const role = document.getElementById('employee-role').value;
+    const pin = document.getElementById('employee-pin').value.trim();
+
+    if (!name || !role) { showToast('Completa nombre y rol', 'error'); return; }
+
+    const employee = { id: generateId(), name, email, role, pin, active: true, createdAt: new Date().toISOString() };
+    employees.push(employee);
+    saveEmployee(employee);
+    renderEmployees();
+    showToast(`Empleado "${name}" agregado como ${getRoleName(role)}`, 'success');
+    e.target.reset();
+}
+
+function deleteEmployee(id) {
+    const emp = employees.find(e => e.id === id);
+    if (!emp) return;
+    if (confirm(`¿Eliminar a "${emp.name}"?`)) {
+        employees = employees.filter(e => e.id !== id);
+        userCollection('employees').doc(id).delete();
+        renderEmployees();
+        showToast('Empleado eliminado', 'warning');
+    }
+}
+
+function toggleEmployeeActive(id) {
+    const emp = employees.find(e => e.id === id);
+    if (!emp) return;
+    emp.active = !emp.active;
+    saveEmployee(emp);
+    renderEmployees();
+    showToast(`${emp.name}: ${emp.active ? 'Activado' : 'Desactivado'}`, 'info');
+}
+
+function getRoleName(role) {
+    const names = { owner: '👑 Dueño', cashier: '💰 Cajero', waiter: '📋 Mesero' };
+    return names[role] || role;
+}
+
+function renderEmployees() {
+    const tbody = document.getElementById('employees-body');
+    if (!tbody) return;
+    const empty = document.getElementById('empty-employees');
+
+    if (employees.length === 0) { tbody.innerHTML = ''; if (empty) empty.style.display = 'block'; return; }
+    if (empty) empty.style.display = 'none';
+
+    tbody.innerHTML = employees.map(emp => `<tr style="${!emp.active ? 'opacity:0.5;' : ''}">
+        <td><strong>${esc(emp.name)}</strong></td>
+        <td>${esc(emp.email || '-')}</td>
+        <td>${getRoleName(emp.role)}</td>
+        <td>${emp.pin ? '••••' : '-'}</td>
+        <td><span style="color:${emp.active ? 'var(--success)' : 'var(--danger)'};">${emp.active ? '✅ Activo' : '❌ Inactivo'}</span></td>
+        <td>
+            <button class="action-btn" onclick="toggleEmployeeActive('${emp.id}')" title="${emp.active ? 'Desactivar' : 'Activar'}">${emp.active ? '🚫' : '✅'}</button>
+            <button class="action-btn" onclick="deleteEmployee('${emp.id}')" title="Eliminar">🗑️</button>
+        </td>
+    </tr>`).join('');
+}
+
+async function saveEmployee(emp) {
+    try { await userCollection('employees').doc(emp.id).set(emp); }
+    catch (e) { console.error('Error guardando empleado:', e); }
+}
+
+// Aplicar restricciones de rol al menú
+function applyRoleRestrictions(role) {
+    currentRole = role;
+    const hiddenForCashier = ['page-reports', 'page-settings'];
+    const hiddenForWaiter = ['page-inventory', 'page-reports', 'page-settings', 'page-expenses', 'page-insumos', 'page-recipes', 'page-clients', 'page-suppliers'];
+
+    const allNavLinks = document.querySelectorAll('.nav-link');
+    allNavLinks.forEach(link => {
+        const section = link.dataset.section;
+        link.style.display = '';
+        if (role === 'cashier' && hiddenForCashier.includes('page-' + section)) {
+            link.style.display = 'none';
+        }
+        if (role === 'waiter' && hiddenForWaiter.includes('page-' + section)) {
+            link.style.display = 'none';
+        }
+    });
+}
+
+
+
+// ==========================================
+// TUTORIAL / ONBOARDING
+// ==========================================
+function checkOnboarding() {
+    if (settings.onboardingDone) return;
+    showOnboarding();
+}
+
+function showOnboarding() {
+    const overlay = document.createElement('div');
+    overlay.id = 'onboarding-overlay';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);';
+
+    const steps = [
+        { icon: '👋', title: '¡Bienvenido a GestiónPro!', text: 'Tu negocio completo en la nube. Te mostramos cómo empezar.' },
+        { icon: '📦', title: '1. Agrega tus productos', text: 'Ve a Inventario y agrega tus productos con costo, precio y stock.' },
+        { icon: '🧂', title: '2. Registra tus insumos', text: 'Si vendes preparaciones (café, comida), agrega las materias primas en Insumos.' },
+        { icon: '📝', title: '3. Crea recetas', text: 'Define qué insumos lleva cada producto. Así se descuentan automáticamente al vender.' },
+        { icon: '🪑', title: '4. Configura tus mesas', text: 'Ve a Mesas, agrégalas y comparte el link de mesero con tu equipo.' },
+        { icon: '💰', title: '5. ¡Empieza a vender!', text: 'Registra ventas directamente o toma pedidos por mesa. Los tickets se imprimen automáticamente.' },
+        { icon: '🎨', title: '6. Personaliza tu app', text: 'En Ajustes puedes cambiar colores, agregar tu logo y configurar tu negocio.' },
+        { icon: '🚀', title: '¡Listo!', text: 'Ya tienes todo para empezar. Si necesitas ayuda, revisa cada sección. ¡Éxito con tu negocio!' },
+    ];
+
+    let currentStep = 0;
+
+    function renderStep() {
+        const step = steps[currentStep];
+        const isLast = currentStep === steps.length - 1;
+        const isFirst = currentStep === 0;
+        overlay.innerHTML = `
+            <div style="background:white;border-radius:20px;padding:40px 32px;max-width:420px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3);animation:fadeIn 0.3s ease;">
+                <div style="font-size:3.5rem;margin-bottom:16px;">${step.icon}</div>
+                <h2 style="font-size:1.4rem;color:#1e293b;margin-bottom:12px;">${step.title}</h2>
+                <p style="color:#64748b;font-size:1rem;margin-bottom:28px;line-height:1.5;">${step.text}</p>
+                <div style="display:flex;gap:8px;justify-content:center;margin-bottom:20px;">
+                    ${steps.map((_, i) => `<div style="width:8px;height:8px;border-radius:50%;background:${i === currentStep ? '#2563eb' : '#e2e8f0'};transition:background 0.2s;"></div>`).join('')}
+                </div>
+                <div style="display:flex;gap:12px;justify-content:center;">
+                    ${!isFirst ? '<button onclick="onboardingPrev()" style="padding:12px 24px;border:2px solid #e2e8f0;background:white;border-radius:10px;font-size:0.95rem;cursor:pointer;font-weight:600;color:#64748b;">← Anterior</button>' : ''}
+                    <button onclick="${isLast ? 'finishOnboarding()' : 'onboardingNext()'}" style="padding:12px 24px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:white;border:none;border-radius:10px;font-size:0.95rem;cursor:pointer;font-weight:600;box-shadow:0 4px 12px rgba(37,99,235,0.3);">${isLast ? '✅ ¡Empezar!' : 'Siguiente →'}</button>
+                </div>
+                ${isFirst ? '<p style="margin-top:16px;font-size:0.8rem;color:#94a3b8;cursor:pointer;" onclick="finishOnboarding()">Saltar tutorial</p>' : ''}
+            </div>
+        `;
+    }
+
+    window.onboardingNext = () => { currentStep = Math.min(currentStep + 1, steps.length - 1); renderStep(); };
+    window.onboardingPrev = () => { currentStep = Math.max(currentStep - 1, 0); renderStep(); };
+    window.finishOnboarding = async () => {
+        overlay.remove();
+        settings.onboardingDone = true;
+        await saveSettings();
+    };
+
+    renderStep();
+    document.body.appendChild(overlay);
 }

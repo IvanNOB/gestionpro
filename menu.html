@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menú Digital</title>
+    <meta name="theme-color" content="#1e293b">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f8fafc; min-height: 100vh; }
+        
+        .menu-header { background: linear-gradient(135deg, #1e293b, #334155); color: white; padding: 32px 20px; text-align: center; }
+        .menu-logo { width: 60px; height: 60px; border-radius: 14px; margin-bottom: 12px; object-fit: cover; }
+        .menu-header h1 { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+        .menu-header p { color: #94a3b8; font-size: 0.9rem; }
+        
+        .menu-container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        
+        .category-title { font-size: 1.1rem; font-weight: 700; color: #1e293b; padding: 16px 0 8px; border-bottom: 2px solid #e2e8f0; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+        
+        .menu-item { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid #f1f5f9; }
+        .menu-item:last-child { border-bottom: none; }
+        .menu-item-info { flex: 1; }
+        .menu-item-name { font-weight: 600; font-size: 0.95rem; color: #1e293b; }
+        .menu-item-desc { font-size: 0.8rem; color: #94a3b8; margin-top: 2px; }
+        .menu-item-price { font-weight: 800; font-size: 1.05rem; color: #2563eb; white-space: nowrap; padding-left: 12px; }
+        .menu-item-unavailable { opacity: 0.4; }
+        .menu-item-unavailable .menu-item-price { color: #94a3b8; text-decoration: line-through; }
+        .out-badge { font-size: 0.7rem; background: #fee2e2; color: #dc2626; padding: 2px 8px; border-radius: 8px; font-weight: 600; margin-left: 8px; }
+        
+        .menu-footer { text-align: center; padding: 32px 20px; color: #94a3b8; font-size: 0.8rem; }
+        .menu-footer a { color: #2563eb; text-decoration: none; }
+        
+        .loading-menu { text-align: center; padding: 60px 20px; }
+        .loading-menu .spinner { width: 40px; height: 40px; border: 4px solid #e2e8f0; border-top-color: #2563eb; border-radius: 50%; animation: spin 0.7s linear infinite; margin: 0 auto 16px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .error-menu { text-align: center; padding: 60px 20px; color: #dc2626; }
+    </style>
+</head>
+<body>
+    <div class="loading-menu" id="loading-menu">
+        <div class="spinner"></div>
+        <p>Cargando menú...</p>
+    </div>
+
+    <div id="menu-content" style="display:none;">
+        <div class="menu-header" id="menu-header">
+            <h1 id="menu-business-name">Mi Negocio</h1>
+            <p id="menu-slogan"></p>
+        </div>
+        <div class="menu-container" id="menu-items"></div>
+        <div class="menu-footer">
+            <p>Menú digital por <a href="#">GestiónPro</a></p>
+        </div>
+    </div>
+
+    <div class="error-menu" id="error-menu" style="display:none;">
+        <p>⚠️ No se pudo cargar el menú. Verifica el link.</p>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script>
+        // Obtener el userId del URL: menu.html?u=USER_ID
+        const params = new URLSearchParams(window.location.search);
+        const userId = params.get('u');
+
+        if (!userId) {
+            document.getElementById('loading-menu').style.display = 'none';
+            document.getElementById('error-menu').style.display = 'block';
+        } else {
+            loadMenu(userId);
+        }
+
+        async function loadMenu(uid) {
+            try {
+                // Cargar datos del usuario (público)
+                const userDoc = await db.collection('users').doc(uid).get();
+                const productsSnap = await db.collection('users').doc(uid).collection('products').get();
+
+                if (!userDoc.exists) {
+                    throw new Error('Usuario no encontrado');
+                }
+
+                const userData = userDoc.data();
+                const settings = userData.settings || {};
+                const products = productsSnap.docs.map(doc => doc.data());
+
+                // Header
+                document.getElementById('menu-business-name').textContent = settings.businessName || 'Mi Negocio';
+                if (settings.customization?.slogan) {
+                    document.getElementById('menu-slogan').textContent = settings.customization.slogan;
+                }
+                if (settings.customization?.logo) {
+                    const img = document.createElement('img');
+                    img.src = settings.customization.logo;
+                    img.className = 'menu-logo';
+                    document.getElementById('menu-header').prepend(img);
+                }
+                // Theme color
+                if (settings.customization?.color) {
+                    document.querySelector('.menu-header').style.background = `linear-gradient(135deg, ${settings.customization.color}, #1e293b)`;
+                }
+
+                // Group by category
+                const categories = {};
+                products.forEach(p => {
+                    if (!categories[p.category]) categories[p.category] = [];
+                    categories[p.category].push(p);
+                });
+
+                // Render
+                const container = document.getElementById('menu-items');
+                const catIcons = { 'Alimentos': '🍽️', 'Ropa': '👕', 'Electrónica': '📱', 'Hogar': '🏠', 'Belleza': '💄', 'Deportes': '⚽', 'Accesorios': '💍', 'Tecnología': '💻', 'Salud': '💊', 'Mascotas': '🐾', 'Papelería': '📝', 'Otro': '📦' };
+
+                let html = '';
+                Object.entries(categories).sort((a, b) => a[0].localeCompare(b[0])).forEach(([cat, items]) => {
+                    html += `<div class="category-title">${catIcons[cat] || '📦'} ${cat}</div>`;
+                    items.sort((a, b) => a.name.localeCompare(b.name)).forEach(p => {
+                        const unavailable = p.quantity <= 0;
+                        const currency = settings.currency === 'COP' ? '$' + Math.round(p.price).toLocaleString('es-CO') : '$' + p.price.toFixed(2);
+                        html += `<div class="menu-item ${unavailable ? 'menu-item-unavailable' : ''}">
+                            <div class="menu-item-info">
+                                <div class="menu-item-name">${p.name}${unavailable ? '<span class="out-badge">Agotado</span>' : ''}</div>
+                            </div>
+                            <div class="menu-item-price">${currency}</div>
+                        </div>`;
+                    });
+                });
+
+                container.innerHTML = html;
+
+                // Show content
+                document.getElementById('loading-menu').style.display = 'none';
+                document.getElementById('menu-content').style.display = 'block';
+
+            } catch (e) {
+                console.error(e);
+                document.getElementById('loading-menu').style.display = 'none';
+                document.getElementById('error-menu').style.display = 'block';
+            }
+        }
+    </script>
+</body>
+</html>

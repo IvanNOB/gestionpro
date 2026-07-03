@@ -48,10 +48,10 @@ async function loadData() {
         settings = { ...settings, ...userDocSnap.data().settings };
     }
     
-    // Cargar pedidos activos
+    // Cargar pedidos activos (cualquier estado excepto completed)
     ordersSnap.docs.forEach(doc => {
         const data = doc.data();
-        if (data.status === 'active') {
+        if (data.status && data.status !== 'completed') {
             orders[data.mesaId] = data.items || [];
         }
     });
@@ -106,6 +106,7 @@ function openMesa(mesaId) {
     renderCategories();
     renderProducts();
     renderOrderItems();
+    initProductSearch();
 }
 
 function renderCategories() {
@@ -115,22 +116,43 @@ function renderCategories() {
         cats.map(c => `<button class="cat-btn" onclick="filterCategory('${c}')">${esc(c)}</button>`).join('');
 }
 
+// Búsqueda de productos
+let searchTimeout = null;
+function initProductSearch() {
+    const searchEl = document.getElementById('product-search');
+    if (searchEl) {
+        searchEl.addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                renderProducts('', e.target.value.trim().toLowerCase());
+            }, 200);
+        });
+    }
+}
+
 function filterCategory(cat) {
     document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
     if (event && event.target) event.target.classList.add('active');
-    renderProducts(cat);
+    const searchEl = document.getElementById('product-search');
+    const search = searchEl ? searchEl.value.trim().toLowerCase() : '';
+    renderProducts(cat, search);
 }
 
-function renderProducts(category = '') {
+function renderProducts(category = '', search = '') {
     let filtered = products.filter(p => p.quantity > 0);
     if (category) filtered = filtered.filter(p => p.category === category);
+    if (search) filtered = filtered.filter(p => p.name.toLowerCase().includes(search));
     
     const grid = document.getElementById('products-grid');
+    if (filtered.length === 0) {
+        grid.innerHTML = '<p style="text-align:center;color:var(--text-muted, #64748b);padding:20px;grid-column:1/-1;">No se encontraron productos</p>';
+        return;
+    }
     grid.innerHTML = filtered.map(p => `
         <div class="product-btn" onclick="addToOrder('${p.id}')">
             <div class="prod-name">${esc(p.name)}</div>
             <div class="prod-price">${formatCurrency(p.price)}</div>
-            <div class="prod-stock">Stock: ${p.quantity}</div>
+            <div class="prod-stock">${p.quantity > 5 ? 'Stock: ' + p.quantity : '⚠️ ' + p.quantity}</div>
         </div>
     `).join('');
 }
@@ -141,12 +163,20 @@ function renderProducts(category = '') {
 function addToOrder(productId) {
     if (!orders[currentMesaId]) orders[currentMesaId] = [];
     
-    const existing = orders[currentMesaId].find(i => i.productId === productId);
-    if (existing) {
-        existing.qty++;
+    const product = products.find(p => p.id === productId);
+    if (!product) return;
+    
+    // Validar stock disponible
+    const currentInOrder = orders[currentMesaId].find(i => i.productId === productId);
+    const qtyInOrder = currentInOrder ? currentInOrder.qty : 0;
+    if (qtyInOrder >= product.quantity) {
+        showToast(`Sin stock de ${product.name}`, 'error');
+        return;
+    }
+    
+    if (currentInOrder) {
+        currentInOrder.qty++;
     } else {
-        const product = products.find(p => p.id === productId);
-        if (!product) return;
         orders[currentMesaId].push({
             productId: product.id,
             name: product.name,
@@ -156,7 +186,7 @@ function addToOrder(productId) {
         });
     }
     renderOrderItems();
-    showToast(`+ ${products.find(p => p.id === productId)?.name}`, 'info');
+    showToast(`+ ${product.name}`, 'info');
 }
 
 function changeQty(productId, delta) {
