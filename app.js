@@ -67,6 +67,7 @@ async function initApp() {
         initInsumos();
         initRecipes();
         initMesas();
+        initPendingOrders();
         initLogout();
         renderAll();
         renderGoalProgress();
@@ -2305,4 +2306,49 @@ function copyMeseroLink() {
     input.select();
     navigator.clipboard.writeText(input.value);
     showToast('Link copiado', 'success');
+}
+
+
+
+// ==========================================
+// PEDIDOS PENDIENTES (Dashboard + Tiempo Real)
+// ==========================================
+function initPendingOrders() {
+    // Escuchar pedidos en tiempo real
+    userCollection('orders').onSnapshot((snapshot) => {
+        const pendingOrders = snapshot.docs
+            .map(doc => ({ id: doc.id, ...doc.data() }))
+            .filter(o => o.status === 'active' || o.status === 'preparing' || o.status === 'ready');
+        renderPendingOrders(pendingOrders);
+    });
+}
+
+function renderPendingOrders(orders) {
+    const container = document.getElementById('pending-orders-list');
+    if (!container) return;
+
+    if (orders.length === 0) {
+        container.innerHTML = '<p class="empty-message" style="display:block;">No hay pedidos pendientes. ¡Todo al día! ✅</p>';
+        return;
+    }
+
+    container.innerHTML = orders.map(o => {
+        const items = o.items || [];
+        const total = items.reduce((s, i) => s + (i.price * i.qty), 0);
+        const time = o.createdAt ? new Date(o.createdAt).toLocaleTimeString('es-CO', {hour:'2-digit', minute:'2-digit'}) : '';
+        const statusColors = { active: '#f59e0b', preparing: '#3b82f6', ready: '#16a34a' };
+        const statusLabels = { active: '🆕 Nuevo', preparing: '👨‍🍳 Preparando', ready: '✅ Listo' };
+        const itemsList = items.map(i => `${i.qty}x ${i.name}`).join(', ');
+
+        return `<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:var(--bg);border-radius:12px;margin-bottom:8px;border-left:4px solid ${statusColors[o.status] || '#64748b'};">
+            <div style="flex:1;">
+                <div style="font-weight:700;font-size:0.95rem;color:var(--text);margin-bottom:4px;">🪑 ${esc(o.mesaName || 'Mesa')}</div>
+                <div style="font-size:0.8rem;color:var(--text-light);">${itemsList}</div>
+            </div>
+            <div style="text-align:right;">
+                <div style="font-weight:700;font-size:0.95rem;color:var(--text);">${formatCurrency(total)}</div>
+                <div style="font-size:0.75rem;color:${statusColors[o.status]};font-weight:600;">${statusLabels[o.status] || o.status} · ${time}</div>
+            </div>
+        </div>`;
+    }).join('');
 }
