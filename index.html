@@ -45,6 +45,8 @@
                 <li><a href="#" class="nav-link" data-section="clients">👥 Clientes</a></li>
                 <li><a href="#" class="nav-link" data-section="suppliers">🚚 Proveedores</a></li>
                 <li><a href="#" class="nav-link" data-section="expenses">💸 Gastos</a></li>
+                <li><a href="#" class="nav-link" data-section="insumos">🧂 Insumos</a></li>
+                <li><a href="#" class="nav-link" data-section="recipes">📝 Recetas</a></li>
                 <li><a href="#" class="nav-link" data-section="calculator">🧮 Calculadora</a></li>
                 <li><a href="#" class="nav-link" data-section="reports">📈 Reportes</a></li>
                 <li><a href="#" class="nav-link" data-section="alerts">🔔 Alertas</a></li>
@@ -621,6 +623,133 @@
                         </table>
                     </div>
                     <p class="empty-message" id="empty-expenses">No hay gastos registrados aún.</p>
+                </div>
+            </section>
+
+            <!-- ======================== INSUMOS ======================== -->
+            <section class="page" id="page-insumos">
+                <div class="page-header">
+                    <h2>🧂 Insumos (Materias Primas)</h2>
+                </div>
+                <div class="card">
+                    <h3>➕ Agregar Insumo</h3>
+                    <p class="card-description">Registra tus materias primas. El costo por unidad se calcula con: (Precio de Compra ÷ Cantidad Total) = Costo por unidad</p>
+                    <form id="insumo-form">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="insumo-name">Nombre del Insumo</label>
+                                <input type="text" id="insumo-name" placeholder="Ej: Café molido" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="insumo-unit">Unidad de Medida</label>
+                                <select id="insumo-unit" required>
+                                    <option value="g">Gramos (g)</option>
+                                    <option value="kg">Kilogramos (kg)</option>
+                                    <option value="ml">Mililitros (ml)</option>
+                                    <option value="L">Litros (L)</option>
+                                    <option value="unidad">Unidades</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="insumo-purchase-price">Precio de Compra ($)</label>
+                                <input type="number" id="insumo-purchase-price" min="0" step="0.01" placeholder="Ej: 25000" required>
+                                <small>Lo que pagaste por la bolsa/paquete</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="insumo-purchase-qty">Cantidad Total de Compra</label>
+                                <input type="number" id="insumo-purchase-qty" min="0.01" step="0.01" placeholder="Ej: 500 (gramos)" required>
+                                <small>Cuánto trae el paquete en la unidad elegida</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="insumo-stock">Stock Actual</label>
+                                <input type="number" id="insumo-stock" min="0" step="0.01" placeholder="Ej: 500">
+                                <small>Cuánto tienes disponible ahora</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="insumo-min-stock">Stock Mínimo (alerta)</label>
+                                <input type="number" id="insumo-min-stock" min="0" step="0.01" value="0" placeholder="0">
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary" id="btn-insumo-submit">Agregar Insumo</button>
+                            <button type="button" class="btn btn-secondary" id="btn-cancel-insumo" style="display:none;">Cancelar</button>
+                        </div>
+                    </form>
+                </div>
+                <div class="card filters-card">
+                    <div class="search-box">
+                        <input type="text" id="insumo-search" placeholder="🔍 Buscar insumo...">
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Insumo</th>
+                                    <th>Unidad</th>
+                                    <th>Precio Compra</th>
+                                    <th>Cant. Compra</th>
+                                    <th>Costo/Unidad</th>
+                                    <th>Stock</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="insumos-body"></tbody>
+                        </table>
+                    </div>
+                    <p class="empty-message" id="empty-insumos">No hay insumos registrados.</p>
+                </div>
+            </section>
+
+            <!-- ======================== RECETAS ======================== -->
+            <section class="page" id="page-recipes">
+                <div class="page-header">
+                    <h2>📝 Recetas (Ingredientes por Producto)</h2>
+                </div>
+                <div class="card">
+                    <h3>➕ Crear / Editar Receta</h3>
+                    <p class="card-description">Define qué insumos lleva cada producto. Al vender ese producto, los insumos se descontarán automáticamente.</p>
+                    <form id="recipe-form">
+                        <div class="form-group">
+                            <label for="recipe-product">Producto</label>
+                            <select id="recipe-product" required>
+                                <option value="">Seleccionar producto...</option>
+                            </select>
+                        </div>
+                        <div class="ingredients-section">
+                            <label>Ingredientes:</label>
+                            <div id="ingredients-list"></div>
+                            <button type="button" class="btn btn-sm btn-outline" id="btn-add-ingredient">+ Agregar Ingrediente</button>
+                        </div>
+                        <div class="recipe-cost-summary">
+                            <strong>Costo total de la receta:</strong>
+                            <span id="recipe-total-cost">$0</span>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary" id="btn-recipe-submit">Guardar Receta</button>
+                            <button type="button" class="btn btn-secondary" id="btn-cancel-recipe" style="display:none;">Cancelar</button>
+                        </div>
+                    </form>
+                </div>
+                <div class="card">
+                    <h3>📋 Recetas Registradas</h3>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Producto</th>
+                                    <th>Ingredientes</th>
+                                    <th>Costo Receta</th>
+                                    <th>Precio Venta</th>
+                                    <th>Ganancia</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recipes-body"></tbody>
+                        </table>
+                    </div>
+                    <p class="empty-message" id="empty-recipes">No hay recetas registradas.</p>
                 </div>
             </section>
 

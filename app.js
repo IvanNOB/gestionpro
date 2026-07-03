@@ -9,6 +9,8 @@ let history = [];
 let clients = [];
 let suppliers = [];
 let expenses = [];
+let insumos = [];
+let recipes = [];
 let currentUser = null;
 let settings = {
     businessName: 'Mi Negocio',
@@ -62,6 +64,8 @@ async function initApp() {
         initSuppliers();
         initExpenses();
         initCashClose();
+        initInsumos();
+        initRecipes();
         initLogout();
         renderAll();
         renderGoalProgress();
@@ -139,13 +143,15 @@ async function loadAllData() {
         }
 
         // Cargar colecciones
-        const [productsSnap, salesSnap, historySnap, clientsSnap, suppliersSnap, expensesSnap] = await Promise.all([
+        const [productsSnap, salesSnap, historySnap, clientsSnap, suppliersSnap, expensesSnap, insumosSnap, recipesSnap] = await Promise.all([
             userCollection('products').get(),
             userCollection('sales').orderBy('date', 'desc').limit(500).get(),
             userCollection('history').orderBy('date', 'desc').limit(200).get(),
             userCollection('clients').get(),
             userCollection('suppliers').get(),
-            userCollection('expenses').get()
+            userCollection('expenses').get(),
+            userCollection('insumos').get(),
+            userCollection('recipes').get()
         ]);
 
         products = productsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -154,6 +160,8 @@ async function loadAllData() {
         clients = clientsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         suppliers = suppliersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         expenses = expensesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        insumos = insumosSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        recipes = recipesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
         console.error('Error cargando datos:', error);
         throw error;
@@ -276,6 +284,8 @@ function initNavigation() {
             if (section === 'clients') renderClients();
             if (section === 'suppliers') renderSuppliers();
             if (section === 'expenses') renderExpenses();
+            if (section === 'insumos') renderInsumos();
+            if (section === 'recipes') { updateRecipeProductList(); renderRecipes(); }
         });
     });
 
@@ -548,6 +558,7 @@ function handleSaleSubmit(e) {
     addHistory('sale', `Venta: ${qty}x ${product.name} por ${formatCurrency(sale.total)}`);
     saveSale(sale);
     saveProduct(products[idx]);
+    deductInsumosFromSale(productId, qty);
     renderAll();
     renderGoalProgress();
     showToast(`Venta registrada: ${qty}x ${product.name}`, 'success');
@@ -1812,3 +1823,374 @@ function showToast(message, type = 'info') {
 
 // Renderizar gráficas al cargar si estamos en dashboard
 setTimeout(() => { if (currentUser) { renderCharts(); renderHistory(); } }, 1000);
+
+
+
+// ==========================================
+// MÓDULO DE INSUMOS (Materias Primas)
+// ==========================================
+let editingInsumoId = null;
+
+function initInsumos() {
+    document.getElementById('insumo-form').addEventListener('submit', handleInsumoSubmit);
+    document.getElementById('btn-cancel-insumo').addEventListener('click', cancelInsumoEdit);
+    document.getElementById('insumo-search').addEventListener('input', renderInsumos);
+    renderInsumos();
+}
+
+function handleInsumoSubmit(e) {
+    e.preventDefault();
+    const name = document.getElementById('insumo-name').value.trim();
+    const unit = document.getElementById('insumo-unit').value;
+    const purchasePrice = parseFloat(document.getElementById('insumo-purchase-price').value) || 0;
+    const purchaseQty = parseFloat(document.getElementById('insumo-purchase-qty').value) || 0;
+    const currentStock = parseFloat(document.getElementById('insumo-stock').value) || 0;
+    const minStock = parseFloat(document.getElementById('insumo-min-stock').value) || 0;
+
+    if (!name || purchasePrice <= 0 || purchaseQty <= 0) {
+        showToast('Completa nombre, precio y cantidad de compra', 'error');
+        return;
+    }
+
+    const costPerUnit = purchasePrice / purchaseQty;
+
+    if (editingInsumoId) {
+        const idx = insumos.findIndex(i => i.id === editingInsumoId);
+        insumos[idx] = { ...insumos[idx], name, unit, purchasePrice, purchaseQty, currentStock, minStock, costPerUnit };
+        saveInsumo(insumos[idx]);
+        showToast('Insumo actualizado', 'success');
+        cancelInsumoEdit();
+    } else {
+        const insumo = { id: generateId(), name, unit, purchasePrice, purchaseQty, currentStock, minStock, costPerUnit, createdAt: new Date().toISOString() };
+        insumos.push(insumo);
+        saveInsumo(insumo);
+        showToast(`Insumo "${name}" agregado`, 'success');
+    }
+    renderInsumos();
+    e.target.reset();
+}
+
+function editInsumo(id) {
+    const i = insumos.find(x => x.id === id);
+    if (!i) return;
+    editingInsumoId = id;
+    document.getElementById('insumo-name').value = i.name;
+    document.getElementById('insumo-unit').value = i.unit;
+    document.getElementById('insumo-purchase-price').value = i.purchasePrice;
+    document.getElementById('insumo-purchase-qty').value = i.purchaseQty;
+    document.getElementById('insumo-stock').value = i.currentStock;
+    document.getElementById('insumo-min-stock').value = i.minStock || 0;
+    document.getElementById('btn-insumo-submit').textContent = 'Actualizar Insumo';
+    document.getElementById('btn-cancel-insumo').style.display = 'inline-block';
+    document.getElementById('insumo-form').scrollIntoView({ behavior: 'smooth' });
+}
+
+function cancelInsumoEdit() {
+    editingInsumoId = null;
+    document.getElementById('insumo-form').reset();
+    document.getElementById('btn-insumo-submit').textContent = 'Agregar Insumo';
+    document.getElementById('btn-cancel-insumo').style.display = 'none';
+}
+
+function deleteInsumo(id) {
+    const i = insumos.find(x => x.id === id);
+    if (!i) return;
+    if (confirm(`¿Eliminar insumo "${i.name}"?`)) {
+        insumos = insumos.filter(x => x.id !== id);
+        deleteInsumoFromDB(id);
+        renderInsumos();
+        showToast('Insumo eliminado', 'warning');
+    }
+}
+
+function restockInsumo(id) {
+    const i = insumos.find(x => x.id === id);
+    if (!i) return;
+    const qty = prompt(`¿Cuántas ${i.unit} de "${i.name}" compraste?`, i.purchaseQty);
+    if (!qty || parseFloat(qty) <= 0) return;
+    i.currentStock += parseFloat(qty);
+    saveInsumo(i);
+    renderInsumos();
+    showToast(`Stock de "${i.name}" actualizado: ${i.currentStock} ${i.unit}`, 'success');
+}
+
+function renderInsumos() {
+    const tbody = document.getElementById('insumos-body');
+    const empty = document.getElementById('empty-insumos');
+    if (!tbody) return;
+    const search = (document.getElementById('insumo-search').value || '').toLowerCase().trim();
+    let list = [...insumos];
+    if (search) list = list.filter(i => i.name.toLowerCase().includes(search));
+
+    if (list.length === 0) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
+    empty.style.display = 'none';
+
+    tbody.innerHTML = list.map(i => {
+        const costPerUnit = i.costPerUnit || (i.purchasePrice / i.purchaseQty);
+        const lowStock = i.currentStock <= (i.minStock || 0);
+        return `<tr>
+            <td><strong>${esc(i.name)}</strong></td>
+            <td>${esc(i.unit)}</td>
+            <td>${formatCurrency(i.purchasePrice)}</td>
+            <td>${i.purchaseQty} ${i.unit}</td>
+            <td><strong>${formatCurrency(costPerUnit)}</strong>/${i.unit}</td>
+            <td class="${lowStock ? 'profit-negative' : ''}">${i.currentStock} ${i.unit} ${lowStock ? '⚠️' : ''}</td>
+            <td>
+                <button class="action-btn" onclick="restockInsumo('${i.id}')" title="Reabastecer">📦</button>
+                <button class="action-btn" onclick="editInsumo('${i.id}')" title="Editar">✏️</button>
+                <button class="action-btn" onclick="deleteInsumo('${i.id}')" title="Eliminar">🗑️</button>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+async function saveInsumo(insumo) {
+    try { await userCollection('insumos').doc(insumo.id).set(insumo); }
+    catch (e) { console.error('Error guardando insumo:', e); }
+}
+
+async function deleteInsumoFromDB(id) {
+    try { await userCollection('insumos').doc(id).delete(); }
+    catch (e) { console.error('Error eliminando insumo:', e); }
+}
+
+// ==========================================
+// MÓDULO DE RECETAS (Ingredientes por Producto)
+// ==========================================
+let editingRecipeId = null;
+
+function initRecipes() {
+    document.getElementById('recipe-form').addEventListener('submit', handleRecipeSubmit);
+    document.getElementById('btn-cancel-recipe').addEventListener('click', cancelRecipeEdit);
+    document.getElementById('recipe-product').addEventListener('change', renderRecipeIngredients);
+    document.getElementById('btn-add-ingredient').addEventListener('click', addIngredientRow);
+    updateRecipeProductList();
+    renderRecipes();
+}
+
+function updateRecipeProductList() {
+    const select = document.getElementById('recipe-product');
+    if (!select) return;
+    select.innerHTML = '<option value="">Seleccionar producto...</option>';
+    products.forEach(p => {
+        select.innerHTML += `<option value="${p.id}">${esc(p.name)}</option>`;
+    });
+}
+
+function addIngredientRow() {
+    const container = document.getElementById('ingredients-list');
+    const row = document.createElement('div');
+    row.className = 'ingredient-row';
+    row.innerHTML = `
+        <select class="ing-insumo" required>
+            <option value="">Insumo...</option>
+            ${insumos.map(i => `<option value="${i.id}">${esc(i.name)} (${i.unit})</option>`).join('')}
+        </select>
+        <input type="number" class="ing-qty" placeholder="Cantidad" step="0.01" min="0.01" required>
+        <span class="ing-cost">$0</span>
+        <button type="button" class="btn-remove-ing" onclick="this.parentElement.remove(); calcRecipeCost();">✖</button>
+    `;
+    container.appendChild(row);
+
+    // Calcular costo cuando cambie
+    row.querySelector('.ing-insumo').addEventListener('change', calcRecipeCost);
+    row.querySelector('.ing-qty').addEventListener('input', calcRecipeCost);
+}
+
+function calcRecipeCost() {
+    const rows = document.querySelectorAll('.ingredient-row');
+    let totalCost = 0;
+
+    rows.forEach(row => {
+        const insumoId = row.querySelector('.ing-insumo').value;
+        const qty = parseFloat(row.querySelector('.ing-qty').value) || 0;
+        const costSpan = row.querySelector('.ing-cost');
+
+        if (insumoId && qty > 0) {
+            const insumo = insumos.find(i => i.id === insumoId);
+            if (insumo) {
+                const cost = (insumo.purchasePrice / insumo.purchaseQty) * qty;
+                costSpan.textContent = formatCurrency(cost);
+                totalCost += cost;
+            }
+        } else {
+            costSpan.textContent = '$0';
+        }
+    });
+
+    document.getElementById('recipe-total-cost').textContent = formatCurrency(totalCost);
+}
+
+function handleRecipeSubmit(e) {
+    e.preventDefault();
+    const productId = document.getElementById('recipe-product').value;
+    if (!productId) { showToast('Selecciona un producto', 'error'); return; }
+
+    const rows = document.querySelectorAll('.ingredient-row');
+    const ingredients = [];
+    let totalCost = 0;
+
+    rows.forEach(row => {
+        const insumoId = row.querySelector('.ing-insumo').value;
+        const qty = parseFloat(row.querySelector('.ing-qty').value) || 0;
+        if (insumoId && qty > 0) {
+            const insumo = insumos.find(i => i.id === insumoId);
+            const cost = insumo ? (insumo.purchasePrice / insumo.purchaseQty) * qty : 0;
+            ingredients.push({ insumoId, insumoName: insumo?.name || '', quantity: qty, unit: insumo?.unit || '', cost });
+            totalCost += cost;
+        }
+    });
+
+    if (ingredients.length === 0) { showToast('Agrega al menos un ingrediente', 'error'); return; }
+
+    const product = getProduct(productId);
+    const recipe = {
+        id: editingRecipeId || generateId(),
+        productId,
+        productName: product?.name || '',
+        ingredients,
+        totalCost,
+        createdAt: editingRecipeId ? recipes.find(r => r.id === editingRecipeId)?.createdAt : new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+    };
+
+    if (editingRecipeId) {
+        const idx = recipes.findIndex(r => r.id === editingRecipeId);
+        recipes[idx] = recipe;
+        showToast('Receta actualizada', 'success');
+        cancelRecipeEdit();
+    } else {
+        // Verificar si ya existe receta para este producto
+        const existing = recipes.findIndex(r => r.productId === productId);
+        if (existing >= 0) {
+            recipes[existing] = recipe;
+            recipe.id = recipes[existing].id;
+            showToast('Receta actualizada', 'success');
+        } else {
+            recipes.push(recipe);
+            showToast(`Receta para "${product?.name}" creada`, 'success');
+        }
+    }
+
+    saveRecipe(recipe);
+    renderRecipes();
+    // Limpiar
+    document.getElementById('ingredients-list').innerHTML = '';
+    document.getElementById('recipe-product').value = '';
+    document.getElementById('recipe-total-cost').textContent = '$0';
+    editingRecipeId = null;
+}
+
+function editRecipe(id) {
+    const r = recipes.find(x => x.id === id);
+    if (!r) return;
+    editingRecipeId = id;
+    document.getElementById('recipe-product').value = r.productId;
+    document.getElementById('ingredients-list').innerHTML = '';
+
+    r.ingredients.forEach(ing => {
+        addIngredientRow();
+        const rows = document.querySelectorAll('.ingredient-row');
+        const lastRow = rows[rows.length - 1];
+        lastRow.querySelector('.ing-insumo').value = ing.insumoId;
+        lastRow.querySelector('.ing-qty').value = ing.quantity;
+    });
+    calcRecipeCost();
+    document.getElementById('btn-recipe-submit').textContent = 'Actualizar Receta';
+    document.getElementById('btn-cancel-recipe').style.display = 'inline-block';
+    document.getElementById('recipe-form').scrollIntoView({ behavior: 'smooth' });
+}
+
+function cancelRecipeEdit() {
+    editingRecipeId = null;
+    document.getElementById('ingredients-list').innerHTML = '';
+    document.getElementById('recipe-product').value = '';
+    document.getElementById('recipe-total-cost').textContent = '$0';
+    document.getElementById('btn-recipe-submit').textContent = 'Guardar Receta';
+    document.getElementById('btn-cancel-recipe').style.display = 'none';
+}
+
+function deleteRecipe(id) {
+    const r = recipes.find(x => x.id === id);
+    if (!r) return;
+    if (confirm(`¿Eliminar receta de "${r.productName}"?`)) {
+        recipes = recipes.filter(x => x.id !== id);
+        deleteRecipeFromDB(id);
+        renderRecipes();
+        showToast('Receta eliminada', 'warning');
+    }
+}
+
+function renderRecipeIngredients() {
+    // Cuando seleccionan un producto, cargar su receta si ya existe
+    const productId = document.getElementById('recipe-product').value;
+    const existing = recipes.find(r => r.productId === productId);
+    if (existing) {
+        editingRecipeId = existing.id;
+        document.getElementById('ingredients-list').innerHTML = '';
+        existing.ingredients.forEach(ing => {
+            addIngredientRow();
+            const rows = document.querySelectorAll('.ingredient-row');
+            const lastRow = rows[rows.length - 1];
+            lastRow.querySelector('.ing-insumo').value = ing.insumoId;
+            lastRow.querySelector('.ing-qty').value = ing.quantity;
+        });
+        calcRecipeCost();
+        document.getElementById('btn-recipe-submit').textContent = 'Actualizar Receta';
+        document.getElementById('btn-cancel-recipe').style.display = 'inline-block';
+    }
+}
+
+function renderRecipes() {
+    const tbody = document.getElementById('recipes-body');
+    const empty = document.getElementById('empty-recipes');
+    if (!tbody) return;
+
+    if (recipes.length === 0) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
+    empty.style.display = 'none';
+
+    tbody.innerHTML = recipes.map(r => {
+        const ingredientsList = r.ingredients.map(i => `${i.quantity} ${i.unit} ${esc(i.insumoName)}`).join(', ');
+        const product = getProduct(r.productId);
+        const salePrice = product ? product.price : 0;
+        const profit = salePrice - r.totalCost;
+        return `<tr>
+            <td><strong>${esc(r.productName)}</strong></td>
+            <td class="recipe-ingredients">${ingredientsList}</td>
+            <td>${formatCurrency(r.totalCost)}</td>
+            <td>${formatCurrency(salePrice)}</td>
+            <td class="${profit >= 0 ? 'profit-positive' : 'profit-negative'}">${formatCurrency(profit)}</td>
+            <td>
+                <button class="action-btn" onclick="editRecipe('${r.id}')" title="Editar">✏️</button>
+                <button class="action-btn" onclick="deleteRecipe('${r.id}')" title="Eliminar">🗑️</button>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+async function saveRecipe(recipe) {
+    try { await userCollection('recipes').doc(recipe.id).set(recipe); }
+    catch (e) { console.error('Error guardando receta:', e); }
+}
+
+async function deleteRecipeFromDB(id) {
+    try { await userCollection('recipes').doc(id).delete(); }
+    catch (e) { console.error('Error eliminando receta:', e); }
+}
+
+// ==========================================
+// DESCONTAR INSUMOS AL VENDER
+// ==========================================
+function deductInsumosFromSale(productId, qty) {
+    const recipe = recipes.find(r => r.productId === productId);
+    if (!recipe) return; // No tiene receta, no descontar
+
+    recipe.ingredients.forEach(ing => {
+        const insumo = insumos.find(i => i.id === ing.insumoId);
+        if (insumo) {
+            const totalToDeduct = ing.quantity * qty;
+            insumo.currentStock = Math.max(0, insumo.currentStock - totalToDeduct);
+            saveInsumo(insumo);
+        }
+    });
+}
