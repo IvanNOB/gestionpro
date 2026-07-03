@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GestiónPro - Cargar Demo Heladería</title>
+    <title>GestiónPro - Cargar Demo Cafetería</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -55,7 +55,7 @@
 </head>
 <body>
     <div class="card">
-        <h1>🍦 Demo Heladería</h1>
+        <h1>☕ Demo Cafetería</h1>
         <p>Esto va a cargar productos, ventas, clientes y proveedores de ejemplo en tu cuenta para demostrar cómo funciona la app.</p>
         
         <button class="btn" id="btn-load" onclick="loadDemoData()">🚀 Cargar Datos de Prueba</button>
@@ -78,43 +78,44 @@
         // DATOS DE EJEMPLO - HELADERÍA
         // ==========================================
         const demoProducts = [
-            { name: 'Helado de Chocolate (bolita)', category: 'Alimentos', quantity: 120, cost: 800, margin: 275, price: 3000, minStock: 20, supplier: 'Distribuidora Helados del Valle' },
-            { name: 'Helado de Vainilla (bolita)', category: 'Alimentos', quantity: 95, cost: 750, margin: 300, price: 3000, minStock: 20, supplier: 'Distribuidora Helados del Valle' },
-            { name: 'Helado de Fresa (bolita)', category: 'Alimentos', quantity: 80, cost: 850, margin: 253, price: 3000, minStock: 20, supplier: 'Distribuidora Helados del Valle' },
-            { name: 'Helado de Maracuyá (bolita)', category: 'Alimentos', quantity: 60, cost: 900, margin: 233, price: 3000, minStock: 15, supplier: 'Frutihelos S.A.' },
-            { name: 'Helado de Arequipe (bolita)', category: 'Alimentos', quantity: 70, cost: 950, margin: 216, price: 3000, minStock: 15, supplier: 'Distribuidora Helados del Valle' },
-            { name: 'Helado de Cookies & Cream (bolita)', category: 'Alimentos', quantity: 55, cost: 1100, margin: 182, price: 3500, minStock: 15, supplier: 'Frutihelos S.A.' },
-            { name: 'Helado de Mango (bolita)', category: 'Alimentos', quantity: 45, cost: 900, margin: 233, price: 3000, minStock: 10, supplier: 'Frutihelos S.A.' },
-            { name: 'Helado de Ron con Pasas (bolita)', category: 'Alimentos', quantity: 40, cost: 1000, margin: 200, price: 3000, minStock: 10, supplier: 'Distribuidora Helados del Valle' },
-            { name: 'Cono sencillo', category: 'Accesorios', quantity: 200, cost: 300, margin: 100, price: 600, minStock: 50, supplier: 'Empaques Rápidos' },
-            { name: 'Cono doble (waffle)', category: 'Accesorios', quantity: 150, cost: 500, margin: 140, price: 1200, minStock: 30, supplier: 'Empaques Rápidos' },
-            { name: 'Vaso pequeño', category: 'Accesorios', quantity: 300, cost: 200, margin: 150, price: 500, minStock: 50, supplier: 'Empaques Rápidos' },
-            { name: 'Vaso grande', category: 'Accesorios', quantity: 250, cost: 350, margin: 143, price: 850, minStock: 40, supplier: 'Empaques Rápidos' },
-            { name: 'Malteada de Chocolate', category: 'Alimentos', quantity: 30, cost: 2500, margin: 120, price: 5500, minStock: 10, supplier: 'Distribuidora Helados del Valle' },
-            { name: 'Malteada de Vainilla', category: 'Alimentos', quantity: 30, cost: 2400, margin: 125, price: 5500, minStock: 10, supplier: 'Distribuidora Helados del Valle' },
-            { name: 'Sundae con toppings', category: 'Alimentos', quantity: 25, cost: 3000, margin: 133, price: 7000, minStock: 8, supplier: 'Distribuidora Helados del Valle' },
-            { name: 'Banana Split', category: 'Alimentos', quantity: 20, cost: 3500, margin: 143, price: 8500, minStock: 5, supplier: 'Frutihelos S.A.' },
-            { name: 'Topping de Chocolate', category: 'Alimentos', quantity: 40, cost: 500, margin: 200, price: 1500, minStock: 10, supplier: 'Frutihelos S.A.' },
-            { name: 'Topping de Arequipe', category: 'Alimentos', quantity: 35, cost: 600, margin: 150, price: 1500, minStock: 10, supplier: 'Frutihelos S.A.' },
-            { name: 'Chispas de colores', category: 'Alimentos', quantity: 50, cost: 300, margin: 233, price: 1000, minStock: 15, supplier: 'Empaques Rápidos' },
+            { name: 'Café Americano', category: 'Alimentos', quantity: 100, cost: 800, margin: 275, price: 3000, minStock: 20, supplier: 'Café del Huila' },
+            { name: 'Café con Leche', category: 'Alimentos', quantity: 90, cost: 1000, margin: 250, price: 3500, minStock: 20, supplier: 'Café del Huila' },
+            { name: 'Cappuccino', category: 'Alimentos', quantity: 80, cost: 1200, margin: 233, price: 4000, minStock: 15, supplier: 'Café del Huila' },
+            { name: 'Latte', category: 'Alimentos', quantity: 70, cost: 1300, margin: 208, price: 4000, minStock: 15, supplier: 'Café del Huila' },
+            { name: 'Espresso doble', category: 'Alimentos', quantity: 60, cost: 700, margin: 257, price: 2500, minStock: 15, supplier: 'Café del Huila' },
+            { name: 'Mocaccino', category: 'Alimentos', quantity: 50, cost: 1500, margin: 200, price: 4500, minStock: 10, supplier: 'Café del Huila' },
+            { name: 'Café Frappé', category: 'Alimentos', quantity: 45, cost: 1800, margin: 178, price: 5000, minStock: 10, supplier: 'Distribuidora Gourmet' },
+            { name: 'Chocolate caliente', category: 'Alimentos', quantity: 40, cost: 1200, margin: 208, price: 3700, minStock: 10, supplier: 'Distribuidora Gourmet' },
+            { name: 'Té verde', category: 'Alimentos', quantity: 35, cost: 600, margin: 250, price: 2100, minStock: 10, supplier: 'Distribuidora Gourmet' },
+            { name: 'Aromática de frutas', category: 'Alimentos', quantity: 40, cost: 500, margin: 280, price: 1900, minStock: 10, supplier: 'Distribuidora Gourmet' },
+            { name: 'Croissant de mantequilla', category: 'Alimentos', quantity: 30, cost: 1500, margin: 167, price: 4000, minStock: 8, supplier: 'Panadería La Estrella' },
+            { name: 'Muffin de arándanos', category: 'Alimentos', quantity: 25, cost: 1200, margin: 192, price: 3500, minStock: 8, supplier: 'Panadería La Estrella' },
+            { name: 'Torta de zanahoria (porción)', category: 'Alimentos', quantity: 20, cost: 2000, margin: 175, price: 5500, minStock: 5, supplier: 'Panadería La Estrella' },
+            { name: 'Brownie', category: 'Alimentos', quantity: 30, cost: 1000, margin: 200, price: 3000, minStock: 8, supplier: 'Panadería La Estrella' },
+            { name: 'Sándwich de pollo', category: 'Alimentos', quantity: 20, cost: 3000, margin: 133, price: 7000, minStock: 5, supplier: 'Distribuidora Gourmet' },
+            { name: 'Sándwich caprese', category: 'Alimentos', quantity: 15, cost: 2800, margin: 143, price: 6800, minStock: 5, supplier: 'Distribuidora Gourmet' },
+            { name: 'Galleta de chocolate', category: 'Alimentos', quantity: 40, cost: 700, margin: 214, price: 2200, minStock: 10, supplier: 'Panadería La Estrella' },
+            { name: 'Jugo natural de naranja', category: 'Alimentos', quantity: 25, cost: 1500, margin: 167, price: 4000, minStock: 8, supplier: 'Distribuidora Express' },
             { name: 'Agua embotellada', category: 'Alimentos', quantity: 48, cost: 800, margin: 150, price: 2000, minStock: 12, supplier: 'Distribuidora Express' },
+            { name: 'Vaso para llevar + tapa', category: 'Accesorios', quantity: 200, cost: 400, margin: 50, price: 600, minStock: 50, supplier: 'Empaques Rápidos' },
         ];
 
         const demoClients = [
-            { name: 'María González', phone: '300 123 4567', email: 'maria@correo.com', notes: 'Cliente frecuente, le gusta chocolate' },
-            { name: 'Carlos Rodríguez', phone: '310 987 6543', email: 'carlos.r@gmail.com', notes: 'Pide para fiestas infantiles' },
-            { name: 'Ana Martínez', phone: '320 456 7890', email: '', notes: 'Siempre pide malteada de vainilla' },
-            { name: 'Pedro Sánchez', phone: '315 111 2233', email: 'pedro.s@hotmail.com', notes: 'Compra todos los domingos' },
-            { name: 'Luisa Fernanda', phone: '301 222 3344', email: '', notes: 'Pide sundae con todo' },
-            { name: 'Restaurante El Buen Sabor', phone: '604 333 4455', email: 'contacto@buensabor.com', notes: 'Pedidos grandes cada viernes' },
-            { name: 'Jardín Infantil Arcoíris', phone: '304 555 6677', email: 'jardin.arcoiris@edu.co', notes: 'Eventos mensuales, 30+ helados' },
+            { name: 'María González', phone: '300 123 4567', email: 'maria@correo.com', notes: 'Cliente frecuente, siempre pide cappuccino' },
+            { name: 'Carlos Rodríguez', phone: '310 987 6543', email: 'carlos.r@gmail.com', notes: 'Viene todos los días a las 7am' },
+            { name: 'Ana Martínez', phone: '320 456 7890', email: '', notes: 'Latte con leche de almendras' },
+            { name: 'Pedro Sánchez', phone: '315 111 2233', email: 'pedro.s@hotmail.com', notes: 'Pide café americano doble' },
+            { name: 'Luisa Fernanda', phone: '301 222 3344', email: '', notes: 'Le encanta el mocaccino con brownie' },
+            { name: 'Oficina TechCorp', phone: '604 333 4455', email: 'admin@techcorp.co', notes: 'Pedido de 15 cafés los lunes' },
+            { name: 'Empresa ABC Ltda', phone: '304 555 6677', email: 'compras@abcltda.com', notes: 'Servicio de café para reuniones' },
         ];
 
         const demoSuppliers = [
-            { name: 'Distribuidora Helados del Valle', contact: 'Roberto Mejía', phone: '602 111 2233', products: 'Helados base, malteadas, arequipe' },
-            { name: 'Frutihelos S.A.', contact: 'Sandra López', phone: '310 444 5566', products: 'Helados frutales, toppings, salsas' },
-            { name: 'Empaques Rápidos', contact: 'Juan Torres', phone: '315 777 8899', products: 'Conos, vasos, cucharas, servilletas' },
-            { name: 'Distribuidora Express', contact: 'Camilo Ruiz', phone: '300 999 0011', products: 'Bebidas, agua, gaseosas' },
+            { name: 'Café del Huila', contact: 'Roberto Mejía', phone: '602 111 2233', products: 'Café en grano, molido, espresso' },
+            { name: 'Distribuidora Gourmet', contact: 'Sandra López', phone: '310 444 5566', products: 'Chocolate, tés, salsas, sándwiches' },
+            { name: 'Panadería La Estrella', contact: 'Juan Torres', phone: '315 777 8899', products: 'Croissants, muffins, brownies, tortas' },
+            { name: 'Empaques Rápidos', contact: 'Camilo Ruiz', phone: '300 999 0011', products: 'Vasos, tapas, servilletas, pitillos' },
+            { name: 'Distribuidora Express', contact: 'Laura Peña', phone: '301 888 9900', products: 'Agua, jugos, bebidas' },
         ];
 
         const demoExpenses = [
@@ -243,12 +244,12 @@
                 // 6. Actualizar settings
                 await userDoc.update({
                     settings: {
-                        businessName: 'Heladería Delicias',
+                        businessName: 'Cafetería El Aroma',
                         currency: 'COP',
                         defaultTax: 19,
                         defaultMargin: 200,
                         theme: 'light',
-                        monthlyGoal: 5000000
+                        monthlyGoal: 6000000
                     }
                 });
 
