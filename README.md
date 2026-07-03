@@ -27,3 +27,4 @@ Tus datos se guardan localmente en el navegador (localStorage), así que no se p
 
 - HTML, CSS y JavaScript puro (sin frameworks)
 - [Chart.js](https://www.chartjs.org/) para las gráficas
+
