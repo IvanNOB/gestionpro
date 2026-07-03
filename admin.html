@@ -26,61 +26,105 @@
     <div class="admin-container" id="admin-container" style="display:none;">
         <header class="admin-header">
             <div class="header-left">
-                <h1>🛡️ Panel de Administrador</h1>
-                <span class="admin-badge">ADMIN</span>
+                <div class="brand">
+                    <span class="brand-icon">🛡️</span>
+                    <div>
+                        <h1>Panel de Control</h1>
+                        <span class="brand-sub">GestiónPro Admin</span>
+                    </div>
+                </div>
             </div>
             <div class="header-right">
-                <span id="admin-email"></span>
-                <a href="index.html" class="btn-app">📦 Ir a la App</a>
-                <button class="btn-logout" id="btn-admin-logout">🚪 Salir</button>
+                <div class="admin-user">
+                    <div class="admin-avatar">👤</div>
+                    <div class="admin-user-info">
+                        <span class="admin-name" id="admin-email">Admin</span>
+                        <span class="admin-role">Administrador</span>
+                    </div>
+                </div>
+                <a href="index.html" class="btn-header btn-app">📦 App</a>
+                <button class="btn-header btn-logout" id="btn-admin-logout">🚪 Salir</button>
             </div>
         </header>
 
+        <!-- Quick Actions -->
+        <section class="quick-actions">
+            <a href="index.html" class="quick-btn">
+                <span class="quick-icon">📦</span>
+                <span>Ir a la App</span>
+            </a>
+            <a href="mesero.html" class="quick-btn">
+                <span class="quick-icon">📋</span>
+                <span>Modo Mesero</span>
+            </a>
+            <a href="admin-login.html" class="quick-btn">
+                <span class="quick-icon">🔐</span>
+                <span>Login Admin</span>
+            </a>
+            <button class="quick-btn" id="btn-refresh">
+                <span class="quick-icon">🔄</span>
+                <span>Actualizar</span>
+            </button>
+        </section>
+
         <!-- Estadísticas -->
         <section class="stats-section">
-            <div class="stat-card">
-                <div class="stat-icon">👥</div>
-                <div class="stat-info">
-                    <span class="stat-value" id="stat-total-users">0</span>
-                    <span class="stat-label">Usuarios Totales</span>
+            <div class="stat-card stat-total">
+                <div class="stat-card-inner">
+                    <div class="stat-icon-bg">👥</div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="stat-total-users">0</span>
+                        <span class="stat-label">Usuarios Totales</span>
+                    </div>
                 </div>
+                <div class="stat-bar"></div>
             </div>
-            <div class="stat-card">
-                <div class="stat-icon">✅</div>
-                <div class="stat-info">
-                    <span class="stat-value" id="stat-active-users">0</span>
-                    <span class="stat-label">Activos</span>
+            <div class="stat-card stat-active">
+                <div class="stat-card-inner">
+                    <div class="stat-icon-bg">✅</div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="stat-active-users">0</span>
+                        <span class="stat-label">Activos</span>
+                    </div>
                 </div>
+                <div class="stat-bar"></div>
             </div>
-            <div class="stat-card">
-                <div class="stat-icon">🚫</div>
-                <div class="stat-info">
-                    <span class="stat-value" id="stat-blocked-users">0</span>
-                    <span class="stat-label">Bloqueados</span>
+            <div class="stat-card stat-blocked">
+                <div class="stat-card-inner">
+                    <div class="stat-icon-bg">🚫</div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="stat-blocked-users">0</span>
+                        <span class="stat-label">Bloqueados</span>
+                    </div>
                 </div>
+                <div class="stat-bar"></div>
             </div>
-            <div class="stat-card">
-                <div class="stat-icon">📅</div>
-                <div class="stat-info">
-                    <span class="stat-value" id="stat-new-today">0</span>
-                    <span class="stat-label">Nuevos Hoy</span>
+            <div class="stat-card stat-new">
+                <div class="stat-card-inner">
+                    <div class="stat-icon-bg">📅</div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="stat-new-today">0</span>
+                        <span class="stat-label">Nuevos Hoy</span>
+                    </div>
                 </div>
+                <div class="stat-bar"></div>
             </div>
         </section>
 
-        <!-- Filtros -->
-        <section class="filters-section">
-            <input type="text" id="search-users" placeholder="🔍 Buscar por nombre o correo..." class="search-input">
-            <select id="filter-status" class="filter-select">
-                <option value="all">Todos</option>
-                <option value="active">Activos</option>
-                <option value="blocked">Bloqueados</option>
-            </select>
-            <button class="btn-refresh" id="btn-refresh">🔄 Actualizar</button>
-        </section>
+        <!-- Filtros y Tabla -->
+        <section class="main-section">
+            <div class="section-header">
+                <h2>👥 Usuarios Registrados</h2>
+                <div class="section-filters">
+                    <input type="text" id="search-users" placeholder="🔍 Buscar..." class="search-input">
+                    <select id="filter-status" class="filter-select">
+                        <option value="all">Todos</option>
+                        <option value="active">✅ Activos</option>
+                        <option value="blocked">🚫 Bloqueados</option>
+                    </select>
+                </div>
+            </div>
 
-        <!-- Tabla de Usuarios -->
-        <section class="users-section">
             <div class="table-container">
                 <table id="users-table">
                     <thead>
@@ -94,16 +138,15 @@
                             <th>Acciones</th>
                         </tr>
                     </thead>
-                    <tbody id="users-body">
-                    </tbody>
+                    <tbody id="users-body"></tbody>
                 </table>
             </div>
             <p class="empty-message" id="empty-users" style="display:none;">No hay usuarios registrados.</p>
         </section>
-
-        <!-- Toast -->
-        <div class="toast-container" id="toast-container"></div>
     </div>
+
+    <!-- Toast -->
+    <div class="toast-container" id="toast-container"></div>
 
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
