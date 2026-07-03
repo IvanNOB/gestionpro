@@ -1,0 +1,22 @@
+{
+    "name": "GestiónPro - Tu Negocio Completo",
+    "short_name": "GestiónPro",
+    "description": "Gestiona tu negocio: inventario, ventas, clientes y más",
+    "start_url": "/index.html",
+    "display": "standalone",
+    "background_color": "#1e293b",
+    "theme_color": "#2563eb",
+    "orientation": "any",
+    "icons": [
+        {
+            "src": "icons/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}
