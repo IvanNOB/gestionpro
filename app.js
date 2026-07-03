@@ -44,6 +44,12 @@ document.addEventListener('DOMContentLoaded', () => {
 async function initApp() {
     showAppLoading(true);
     try {
+        // Verificar si el usuario está bloqueado
+        const userDocSnap = await db.collection('users').doc(currentUser.uid).get();
+        if (userDocSnap.exists && userDocSnap.data().blocked === true) {
+            showBlockedMessage();
+            return;
+        }
         await loadAllData();
         initNavigation();
         initTheme();
@@ -76,6 +82,20 @@ async function initApp() {
 function showAppLoading(show) {
     const el = document.getElementById('app-loading');
     if (el) el.style.display = show ? 'flex' : 'none';
+}
+
+function showBlockedMessage() {
+    showAppLoading(false);
+    document.querySelector('.app-layout').innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f1f5f9;padding:20px;">
+            <div style="text-align:center;max-width:400px;background:white;padding:48px 32px;border-radius:16px;box-shadow:0 10px 40px rgba(0,0,0,0.1);">
+                <div style="font-size:4rem;margin-bottom:16px;">🚫</div>
+                <h1 style="font-size:1.5rem;color:#1e293b;margin-bottom:12px;">Cuenta Suspendida</h1>
+                <p style="color:#64748b;margin-bottom:24px;">Tu acceso ha sido deshabilitado. Contacta al administrador para más información.</p>
+                <button onclick="auth.signOut().then(()=>window.location.href='login.html')" style="padding:12px 24px;background:#2563eb;color:white;border:none;border-radius:8px;font-size:1rem;cursor:pointer;font-weight:600;">Cerrar Sesión</button>
+            </div>
+        </div>
+    `;
 }
 
 function showUserInfo() {

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GestiónPro - Panel de Administrador</title>
+    <link rel="stylesheet" href="admin-styles.css">
+</head>
+<body>
+    <!-- Loading -->
+    <div class="admin-loading" id="admin-loading">
+        <div class="spinner"></div>
+        <p>Cargando panel...</p>
+    </div>
+
+    <!-- Acceso denegado -->
+    <div class="access-denied" id="access-denied" style="display:none;">
+        <div class="denied-card">
+            <h1>🚫 Acceso Denegado</h1>
+            <p>No tienes permisos de administrador.</p>
+            <a href="index.html" class="btn-back">Volver a GestiónPro</a>
+        </div>
+    </div>
+
+    <!-- Panel Admin -->
+    <div class="admin-container" id="admin-container" style="display:none;">
+        <header class="admin-header">
+            <div class="header-left">
+                <h1>🛡️ Panel de Administrador</h1>
+                <span class="admin-badge">ADMIN</span>
+            </div>
+            <div class="header-right">
+                <span id="admin-email"></span>
+                <a href="index.html" class="btn-app">📦 Ir a la App</a>
+                <button class="btn-logout" id="btn-admin-logout">🚪 Salir</button>
+            </div>
+        </header>
+
+        <!-- Estadísticas -->
+        <section class="stats-section">
+            <div class="stat-card">
+                <div class="stat-icon">👥</div>
+                <div class="stat-info">
+                    <span class="stat-value" id="stat-total-users">0</span>
+                    <span class="stat-label">Usuarios Totales</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">✅</div>
+                <div class="stat-info">
+                    <span class="stat-value" id="stat-active-users">0</span>
+                    <span class="stat-label">Activos</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🚫</div>
+                <div class="stat-info">
+                    <span class="stat-value" id="stat-blocked-users">0</span>
+                    <span class="stat-label">Bloqueados</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">📅</div>
+                <div class="stat-info">
+                    <span class="stat-value" id="stat-new-today">0</span>
+                    <span class="stat-label">Nuevos Hoy</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Filtros -->
+        <section class="filters-section">
+            <input type="text" id="search-users" placeholder="🔍 Buscar por nombre o correo..." class="search-input">
+            <select id="filter-status" class="filter-select">
+                <option value="all">Todos</option>
+                <option value="active">Activos</option>
+                <option value="blocked">Bloqueados</option>
+            </select>
+            <button class="btn-refresh" id="btn-refresh">🔄 Actualizar</button>
+        </section>
+
+        <!-- Tabla de Usuarios -->
+        <section class="users-section">
+            <div class="table-container">
+                <table id="users-table">
+                    <thead>
+                        <tr>
+                            <th>Usuario</th>
+                            <th>Correo</th>
+                            <th>Negocio</th>
+                            <th>Registro</th>
+                            <th>Plan</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="users-body">
+                    </tbody>
+                </table>
+            </div>
+            <p class="empty-message" id="empty-users" style="display:none;">No hay usuarios registrados.</p>
+        </section>
+
+        <!-- Toast -->
+        <div class="toast-container" id="toast-container"></div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="admin.js"></script>
+</body>
+</html>
