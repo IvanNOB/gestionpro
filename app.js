@@ -2292,9 +2292,9 @@ let editingMesaId = null;
 function initMesas() {
     document.getElementById('mesa-form').addEventListener('submit', handleMesaSubmit);
     document.getElementById('btn-cancel-mesa').addEventListener('click', cancelMesaEdit);
-    // Mostrar link de mesero
+    // Mostrar link de turno para empleados
     const linkInput = document.getElementById('mesero-link');
-    if (linkInput) linkInput.value = window.location.origin + '/mesero.html';
+    if (linkInput) linkInput.value = window.location.origin + window.location.pathname.replace('index.html', '') + 'turno.html';
     loadMesas();
 }
 
@@ -2941,4 +2941,23 @@ function showTrialExpiredMessage() {
             </div>
         </div>
     `;
+}
+
+
+
+// ==========================================
+// ABRIR PANTALLAS EXTERNAS CON ROL
+// ==========================================
+function openCocina() {
+    sessionStorage.setItem('activeRole', 'owner');
+    window.open('cocina.html', '_blank');
+}
+
+function openMesero() {
+    sessionStorage.setItem('activeRole', 'owner');
+    window.open('mesero.html', '_blank');
+}
+
+function openTurno() {
+    window.location.href = 'turno.html';
 }

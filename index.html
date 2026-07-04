@@ -36,7 +36,7 @@
             <div id="sidebar-slogan" style="display:none;padding:0 20px 8px;font-size:0.75rem;color:#94a3b8;"></div>
             <div class="user-info-bar">
                 <span class="user-display" id="user-display">Usuario</span>
-                <a href="turno.html" title="Cambiar turno" style="background:rgba(255,255,255,0.08);border:none;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:1rem;text-decoration:none;">👥</a>
+                <button onclick="openTurno()" title="Cambiar turno" style="background:rgba(255,255,255,0.08);border:none;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:1rem;">👥</button>
                 <button class="btn-logout" id="btn-logout" title="Cerrar sesión">🚪</button>
             </div>
             <ul class="nav-menu">
@@ -136,7 +136,7 @@
                 <div class="card" id="pending-orders-card">
                     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
                         <h3 style="margin-bottom:0;">🔔 Pedidos Pendientes</h3>
-                        <a href="cocina.html" target="_blank" class="btn btn-sm btn-outline">👨‍🍳 Pantalla Cocina</a>
+                        <a href="#" onclick="openCocina()" class="btn btn-sm btn-outline">👨‍🍳 Pantalla Cocina</a>
                     </div>
                     <div id="pending-orders-list">
                         <p class="empty-message" style="display:block;">No hay pedidos pendientes</p>
@@ -410,8 +410,9 @@
                 <div class="page-header">
                     <h2>🪑 Gestión de Mesas</h2>
                     <div class="header-actions">
-                        <a href="cocina.html" target="_blank" class="btn btn-sm btn-success">👨‍🍳 Pantalla Cocina</a>
-                        <a href="mesero.html" target="_blank" class="btn btn-sm btn-primary">📱 Modo Mesero</a>
+                        <button class="btn btn-sm btn-success" onclick="openCocina()">👨‍🍳 Pantalla Cocina</button>
+                        <button class="btn btn-sm btn-primary" onclick="openMesero()">📱 Modo Mesero</button>
+                        <button class="btn btn-sm btn-outline" onclick="openTurno()">👥 Cambiar Turno</button>
                     </div>
                 </div>
 
@@ -436,13 +437,13 @@
                 </div>
 
                 <div class="card">
-                    <h3>📱 Modo Mesero (para Tablet o Celular)</h3>
-                    <p class="card-description">Comparte este link con tus meseros. Ellos podrán tomar pedidos desde su celular o tablet y los pedidos se cobran automáticamente.</p>
+                    <h3>📱 Acceso para Empleados</h3>
+                    <p class="card-description">Comparte el link de turno con tus empleados. Ellos inician sesión con la cuenta del negocio y seleccionan su perfil con PIN.</p>
                     <div class="mesero-link-box">
                         <input type="text" id="mesero-link" readonly value="" style="flex:1;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:0.9rem;">
                         <button class="btn btn-sm btn-outline" onclick="copyMeseroLink()">📋 Copiar</button>
                     </div>
-                    <small style="color:var(--text-light);">El mesero debe iniciar sesión con la misma cuenta para ver los productos y mesas.</small>
+                    <small style="color:var(--text-light);">Los empleados deben iniciar sesión con la cuenta del negocio y luego seleccionar su turno con PIN.</small>
                 </div>
 
                 <div class="card">

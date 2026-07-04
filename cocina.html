@@ -101,6 +101,12 @@
         // Auth
         auth.onAuthStateChanged(async (user) => {
             if (user) {
+                // Solo dueño o cajero puede ver cocina
+                const activeRole = sessionStorage.getItem('activeRole');
+                if (activeRole === 'waiter') {
+                    window.location.href = 'mesero.html';
+                    return;
+                }
                 currentUser = user;
                 document.getElementById('loading').style.display = 'none';
                 listenOrders();

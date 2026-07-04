@@ -17,6 +17,13 @@ let settings = { businessName: 'Mi Negocio', customization: {} };
 document.addEventListener('DOMContentLoaded', () => {
     auth.onAuthStateChanged(async (user) => {
         if (user) {
+            // Verificar que pasó por el sistema de turnos o es dueño
+            const activeRole = sessionStorage.getItem('activeRole');
+            if (!activeRole) {
+                // No pasó por turno - redirigir a turno
+                window.location.href = 'turno.html';
+                return;
+            }
             currentUser = user;
             await loadData();
             document.getElementById('loading-screen').style.display = 'none';
