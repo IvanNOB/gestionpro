@@ -145,23 +145,25 @@ function renderUsersTable() {
             <td class="user-email">${escapeHtml(u.email || 'Sin correo')}</td>
             <td>${escapeHtml(u.settings?.businessName || u.businessName || '-')}</td>
             <td>${createdAt}</td>
-            <td><span class="plan-badge">${plan.toUpperCase()}</span></td>
+            <td><span class="plan-badge plan-${plan}">${plan.toUpperCase()}</span></td>
             <td><span class="status-badge ${isBlocked ? 'status-blocked' : 'status-active'}">${isBlocked ? '🚫 Bloqueado' : '✅ Activo'}</span></td>
             <td>
-                ${isAdminUser ? '<span style="color:#64748b;font-size:0.8rem;">Admin</span>' :
-                    (isBlocked
-                        ? `<button class="btn-block btn-unblock-user" onclick="unblockUser('${u.uid}')">✅ Desbloquear</button>`
-                        : `<button class="btn-block btn-block-user" onclick="blockUser('${u.uid}')">🚫 Bloquear</button>`
-                    )
-                }
-                ${!isAdminUser ? `<button class="btn-block" style="background:rgba(99,91,255,0.15);color:#93c5fd;border:1px solid rgba(99,91,255,0.3);margin-left:4px;" onclick="loadDemoForUser('${u.uid}', '${(u.businessName || '').replace(/'/g, '')}')">📦 Demo</button>` : ''}
-                ${!isAdminUser ? `<button class="btn-block" style="background:rgba(223,27,65,0.1);color:#fca5a5;border:1px solid rgba(223,27,65,0.2);margin-left:4px;" onclick="deleteUserAccount('${u.uid}', '${(u.businessName || u.email || '').replace(/'/g, '')}')">🗑️</button>` : ''}
-                ${!isAdminUser ? `<select onchange="changePlan('${u.uid}', this.value)" style="margin-left:6px;padding:4px 8px;border-radius:6px;border:1px solid #334155;background:#0f172a;color:#e2e8f0;font-size:0.75rem;">
-                    <option value="trial" ${plan==='trial'?'selected':''}>Prueba</option>
-                    <option value="basic" ${plan==='basic'?'selected':''}>Básico</option>
-                    <option value="restaurant" ${plan==='restaurant'?'selected':''}>Restaurante</option>
-                    <option value="premium" ${plan==='premium'?'selected':''}>Premium</option>
-                </select>` : ''}
+                ${isAdminUser ? '<span style="color:#64748b;font-size:0.75rem;">Admin</span>' : `
+                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                    ${isBlocked
+                        ? `<button class="btn-block btn-unblock-user" onclick="unblockUser('${u.uid}')" title="Desbloquear">✅</button>`
+                        : `<button class="btn-block btn-block-user" onclick="blockUser('${u.uid}')" title="Bloquear">🚫</button>`
+                    }
+                    <button class="btn-block" style="background:rgba(99,91,255,0.15);color:#93c5fd;border:1px solid rgba(99,91,255,0.3);" onclick="loadDemoForUser('${u.uid}', '${(u.businessName || '').replace(/'/g, '')}')" title="Cargar demo">📦</button>
+                    <button class="btn-block" style="background:rgba(223,27,65,0.1);color:#fca5a5;border:1px solid rgba(223,27,65,0.2);" onclick="deleteUserAccount('${u.uid}', '${(u.businessName || u.email || '').replace(/'/g, '')}')" title="Eliminar cuenta">🗑️</button>
+                    <select onchange="changePlan('${u.uid}', this.value)" style="padding:5px 8px;border-radius:6px;border:1px solid #334155;background:#0a0e1a;color:#e2e8f0;font-size:0.72rem;cursor:pointer;">
+                        <option value="trial" ${plan==='trial'?'selected':''}>Trial</option>
+                        <option value="basic" ${plan==='basic'?'selected':''}>Básico</option>
+                        <option value="restaurant" ${plan==='restaurant'?'selected':''}>Restaurant</option>
+                        <option value="premium" ${plan==='premium'?'selected':''}>Premium</option>
+                        <option value="free" ${plan==='free'?'selected':''}>Free</option>
+                    </select>
+                </div>`}
             </td>
         </tr>`;
     }).join('');
