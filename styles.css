@@ -1269,3 +1269,203 @@ tbody tr:hover {
     align-items: center;
     margin: 12px 0;
 }
+
+
+/* ==========================================
+   FIX: MODO OSCURO COMPLETO
+   ========================================== */
+[data-theme="dark"] body {
+    background: var(--bg);
+    color: var(--text);
+}
+
+[data-theme="dark"] .card {
+    background: var(--card-bg);
+    border-color: var(--border);
+}
+
+[data-theme="dark"] .stat-card {
+    background: var(--card-bg);
+    border-color: var(--border);
+}
+
+[data-theme="dark"] .stat-icon {
+    background: var(--bg);
+}
+
+[data-theme="dark"] .chart-card {
+    background: var(--card-bg);
+    border-color: var(--border);
+}
+
+[data-theme="dark"] .filters-card {
+    background: var(--card-bg);
+    border-color: var(--border);
+}
+
+[data-theme="dark"] .search-box input,
+[data-theme="dark"] .filter-select,
+[data-theme="dark"] .form-group input,
+[data-theme="dark"] .form-group select {
+    background: var(--bg);
+    color: var(--text);
+    border-color: var(--border);
+}
+
+[data-theme="dark"] .form-group input::placeholder {
+    color: var(--text-muted);
+}
+
+[data-theme="dark"] .table-container {
+    background: var(--card-bg);
+    border-color: var(--border);
+}
+
+[data-theme="dark"] table thead {
+    background: var(--bg);
+}
+
+[data-theme="dark"] table th {
+    color: var(--text-light);
+    border-color: var(--border);
+}
+
+[data-theme="dark"] table td {
+    color: var(--text);
+    border-color: var(--border);
+}
+
+[data-theme="dark"] table tr:hover {
+    background: rgba(37, 99, 235, 0.05);
+}
+
+[data-theme="dark"] .empty-message {
+    color: var(--text-muted);
+}
+
+[data-theme="dark"] .page-header h2 {
+    color: var(--text);
+}
+
+[data-theme="dark"] .suggested-price-box {
+    background: var(--success-light);
+    border-color: var(--success);
+}
+
+[data-theme="dark"] .suggested-price-box .label {
+    color: #4ade80;
+}
+
+[data-theme="dark"] .sale-summary {
+    background: var(--bg-alt);
+    border-color: var(--border);
+}
+
+[data-theme="dark"] .calc-results {
+    background: var(--bg);
+    border-color: var(--border);
+}
+
+[data-theme="dark"] .calc-result-item {
+    border-color: var(--border);
+}
+
+[data-theme="dark"] .history-item {
+    background: var(--card-bg);
+    border-color: var(--border);
+}
+
+[data-theme="dark"] .alert-card {
+    background: var(--card-bg);
+    border-color: var(--border);
+}
+
+[data-theme="dark"] .alerts-bar {
+    background: var(--warning-light);
+    color: var(--warning);
+    border-color: var(--border);
+}
+
+[data-theme="dark"] .ingredient-row {
+    background: var(--bg);
+    border-color: var(--border);
+}
+
+[data-theme="dark"] .ingredient-row select,
+[data-theme="dark"] .ingredient-row input {
+    background: var(--card-bg);
+    color: var(--text);
+    border-color: var(--border);
+}
+
+[data-theme="dark"] .recipe-cost-summary {
+    background: var(--success-light);
+}
+
+[data-theme="dark"] .mesa-admin-card {
+    background: var(--card-bg);
+    border-color: var(--border);
+}
+
+[data-theme="dark"] .mesero-link-box input {
+    background: var(--bg);
+    color: var(--text);
+    border-color: var(--border);
+}
+
+[data-theme="dark"] .goal-bar-bg {
+    background: var(--bg);
+}
+
+[data-theme="dark"] .btn-outline {
+    color: var(--text-light);
+    border-color: var(--border);
+}
+
+[data-theme="dark"] .btn-outline:hover {
+    background: var(--bg-alt);
+    color: var(--text);
+}
+
+[data-theme="dark"] .btn-secondary {
+    background: var(--bg);
+    color: var(--text-light);
+    border-color: var(--border);
+}
+
+[data-theme="dark"] .action-btn {
+    background: var(--bg);
+    border-color: var(--border);
+}
+
+[data-theme="dark"] .card-description {
+    color: var(--text-light);
+}
+
+[data-theme="dark"] .form-group label {
+    color: var(--text);
+}
+
+[data-theme="dark"] .form-group small {
+    color: var(--text-muted);
+}
+
+[data-theme="dark"] .date-display {
+    color: var(--text-light);
+}
+
+[data-theme="dark"] .settings-grid .card {
+    background: var(--card-bg);
+}
+
+[data-theme="dark"] .backup-info {
+    color: var(--text-muted);
+}
+
+[data-theme="dark"] #trial-banner {
+    left: 260px;
+}
+
+[data-theme="dark"] .main-content {
+    background: var(--bg);
+}

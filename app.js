@@ -2512,6 +2512,8 @@ function applyCustomization() {
     };
     if (document.documentElement.getAttribute('data-theme') !== 'dark') {
         root.style.setProperty('--bg', bgMap[customization.bgStyle] || '#f1f5f9');
+    } else {
+        root.style.setProperty('--bg', '#0f172a');
     }
 
     // Logo in sidebar
