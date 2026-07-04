@@ -77,6 +77,7 @@ async function initApp() {
         renderExpenses();
         showDate();
         showUserInfo();
+        checkActiveRole();
         loadCustomization();
         checkOnboarding();
         initPlanSystem();
@@ -111,8 +112,39 @@ function showBlockedMessage() {
 function showUserInfo() {
     const el = document.getElementById('user-display');
     if (el && currentUser) {
-        el.textContent = currentUser.displayName || currentUser.email;
+        const activeEmployee = sessionStorage.getItem('activeEmployee');
+        const activeRole = sessionStorage.getItem('activeRole');
+        if (activeEmployee && activeRole && activeRole !== 'owner') {
+            const roleNames = { cashier: '💰 Cajero', waiter: '📋 Mesero' };
+            el.textContent = `${activeEmployee} (${roleNames[activeRole] || activeRole})`;
+        } else {
+            el.textContent = currentUser.displayName || currentUser.email;
+        }
     }
+}
+
+function checkActiveRole() {
+    const activeRole = sessionStorage.getItem('activeRole');
+    if (activeRole && activeRole !== 'owner') {
+        applyRoleRestrictions(activeRole);
+    }
+}
+
+function applyRoleRestrictions(role) {
+    const hiddenForCashier = ['reports', 'settings', 'insumos', 'recipes'];
+    const hiddenForWaiter = ['inventory', 'reports', 'settings', 'expenses', 'insumos', 'recipes', 'clients', 'suppliers'];
+
+    const allNavLinks = document.querySelectorAll('.nav-link');
+    allNavLinks.forEach(link => {
+        const section = link.dataset.section;
+        if (!section) return;
+        if (role === 'cashier' && hiddenForCashier.includes(section)) {
+            link.parentElement.style.display = 'none';
+        }
+        if (role === 'waiter' && hiddenForWaiter.includes(section)) {
+            link.parentElement.style.display = 'none';
+        }
+    });
 }
 
 function initLogout() {
