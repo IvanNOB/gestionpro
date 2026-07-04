@@ -1420,7 +1420,7 @@ function renderCashClose() {
     const selectedDate = dateInput.value || new Date().toISOString().split('T')[0];
     const daySales = sales.filter(s => s.date.startsWith(selectedDate));
 
-    const methods = { 'Efectivo': 0, 'Tarjeta': 0, 'Transferencia': 0, 'Otro': 0 };
+    const methods = { 'Efectivo': 0, 'Nequi': 0, 'Daviplata': 0, 'Tarjeta': 0, 'Transferencia': 0, 'Bold': 0, 'Rappi Pay': 0, 'Fiado': 0, 'Otro': 0 };
     let total = 0, profit = 0, units = 0;
     daySales.forEach(s => {
         methods[s.method] = (methods[s.method] || 0) + s.total;
@@ -1434,9 +1434,13 @@ function renderCashClose() {
     setText('cash-count', daySales.length);
     setText('cash-units', units);
     setText('cash-efectivo', formatCurrency(methods['Efectivo']));
+    setText('cash-nequi', formatCurrency(methods['Nequi']));
+    setText('cash-daviplata', formatCurrency(methods['Daviplata']));
     setText('cash-tarjeta', formatCurrency(methods['Tarjeta']));
     setText('cash-transferencia', formatCurrency(methods['Transferencia']));
-    setText('cash-otro', formatCurrency(methods['Otro']));
+    setText('cash-bold', formatCurrency(methods['Bold']));
+    setText('cash-fiado', formatCurrency(methods['Fiado']));
+    setText('cash-otro', formatCurrency(methods['Otro'] + methods['Rappi Pay']));
 }
 
 
@@ -2835,7 +2839,7 @@ function showTrialBanner(daysLeft) {
     banner.style.cssText = 'position:fixed;top:0;left:260px;right:0;background:linear-gradient(135deg,#f59e0b,#d97706);color:white;padding:10px 20px;text-align:center;font-size:0.85rem;font-weight:600;z-index:999;display:flex;align-items:center;justify-content:center;gap:12px;';
     banner.innerHTML = `
         <span>⏳ Prueba gratis: te quedan <strong>${daysLeft} día${daysLeft !== 1 ? 's' : ''}</strong></span>
-        <a href="https://wa.me/573159756975?text=Hola%2C%20quiero%20activar%20mi%20plan%20de%20GestiónPro" target="_blank" style="background:white;color:#d97706;padding:6px 14px;border-radius:8px;text-decoration:none;font-weight:700;font-size:0.8rem;">Activar Plan</a>
+        <a href="pagar.html" target="_blank" style="background:white;color:#d97706;padding:6px 14px;border-radius:8px;text-decoration:none;font-weight:700;font-size:0.8rem;">Activar Plan</a>
     `;
     document.body.appendChild(banner);
     // Mover contenido principal
@@ -2856,7 +2860,8 @@ function showTrialExpiredMessage() {
                     <p style="margin-bottom:8px;">🍽️ <strong>Restaurante:</strong> $45.000/mes (+ Mesas + Cocina)</p>
                     <p style="margin-bottom:0;">👑 <strong>Premium:</strong> $65.000/mes (Todo incluido)</p>
                 </div>
-                <a href="https://wa.me/573159756975?text=Hola%2C%20quiero%20activar%20mi%20plan%20de%20GestiónPro.%20Mi%20correo%20es%3A%20${encodeURIComponent(currentUser?.email || '')}" target="_blank" style="display:block;padding:16px;background:linear-gradient(135deg,#16a34a,#15803d);color:white;border-radius:12px;font-size:1.1rem;font-weight:700;text-decoration:none;margin-bottom:12px;box-shadow:0 4px 12px rgba(22,163,74,0.3);">💬 Activar por WhatsApp</a>
+                <a href="pagar.html" style="display:block;padding:16px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:white;border-radius:12px;font-size:1.1rem;font-weight:700;text-decoration:none;margin-bottom:12px;box-shadow:0 4px 12px rgba(37,99,235,0.3);">💳 Ver Métodos de Pago</a>
+                <a href="https://wa.me/573159756975?text=Hola%2C%20quiero%20activar%20mi%20plan%20de%20GestiónPro.%20Mi%20correo%20es%3A%20${encodeURIComponent(currentUser?.email || '')}" target="_blank" style="display:block;padding:14px;background:linear-gradient(135deg,#25d366,#128c7e);color:white;border-radius:12px;font-size:1rem;font-weight:700;text-decoration:none;margin-bottom:12px;">💬 Hablar por WhatsApp</a>
                 <button onclick="auth.signOut().then(()=>window.location.href='login.html')" style="padding:12px 24px;background:#f1f5f9;color:#64748b;border:none;border-radius:10px;font-size:0.9rem;cursor:pointer;font-weight:600;">Cerrar Sesión</button>
             </div>
         </div>

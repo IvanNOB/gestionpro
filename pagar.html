@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GestiónPro - Pagar Suscripción</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f8fafc; min-height: 100vh; padding: 20px; }
+        
+        .container { max-width: 500px; margin: 0 auto; }
+        
+        .header { text-align: center; margin-bottom: 32px; padding-top: 20px; }
+        .header h1 { font-size: 1.8rem; color: #1e293b; margin-bottom: 8px; }
+        .header p { color: #64748b; font-size: 0.95rem; }
+        
+        .plan-summary { background: white; border: 2px solid #2563eb; border-radius: 16px; padding: 24px; margin-bottom: 24px; text-align: center; }
+        .plan-summary .plan-name { font-size: 1.3rem; font-weight: 800; color: #1e293b; }
+        .plan-summary .plan-price { font-size: 2rem; font-weight: 800; color: #2563eb; margin: 8px 0; }
+        .plan-summary .plan-period { color: #64748b; font-size: 0.9rem; }
+        
+        .payment-methods { margin-bottom: 24px; }
+        .payment-methods h2 { font-size: 1.1rem; color: #1e293b; margin-bottom: 16px; }
+        
+        .method-card { background: white; border: 2px solid #e2e8f0; border-radius: 14px; padding: 20px; margin-bottom: 12px; cursor: pointer; transition: all 0.2s; }
+        .method-card:hover { border-color: #2563eb; box-shadow: 0 4px 12px rgba(37,99,235,0.1); }
+        .method-card.active { border-color: #2563eb; background: #eff6ff; }
+        .method-card h3 { font-size: 1rem; color: #1e293b; margin-bottom: 6px; display: flex; align-items: center; gap: 10px; }
+        .method-card p { color: #64748b; font-size: 0.85rem; line-height: 1.5; }
+        .method-card .method-steps { margin-top: 12px; padding: 12px; background: #f8fafc; border-radius: 10px; display: none; }
+        .method-card.active .method-steps { display: block; }
+        .method-card .method-steps li { font-size: 0.85rem; color: #475569; margin-bottom: 6px; padding-left: 4px; }
+        .method-card .method-steps ol { padding-left: 20px; }
+        .method-number { font-size: 1.2rem; font-weight: 800; color: #2563eb; background: #eff6ff; padding: 8px 14px; border-radius: 8px; font-family: monospace; margin-top: 8px; display: inline-block; }
+        
+        .whatsapp-confirm { background: linear-gradient(135deg, #25d366, #128c7e); color: white; border: none; padding: 18px; border-radius: 14px; width: 100%; font-size: 1.1rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; text-decoration: none; margin-top: 24px; transition: transform 0.2s; }
+        .whatsapp-confirm:hover { transform: translateY(-2px); }
+        
+        .note { text-align: center; margin-top: 16px; color: #94a3b8; font-size: 0.8rem; }
+        
+        .back-link { display: block; text-align: center; margin-top: 20px; color: #2563eb; text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>💳 Pagar Suscripción</h1>
+            <p>Elige tu método de pago preferido</p>
+        </div>
+
+        <div class="plan-summary">
+            <div class="plan-name" id="pay-plan-name">Plan Restaurante</div>
+            <div class="plan-price" id="pay-plan-price">$45.000</div>
+            <div class="plan-period">COP / mes</div>
+        </div>
+
+        <div class="payment-methods">
+            <h2>Métodos de pago:</h2>
+
+            <div class="method-card" onclick="selectMethod(this, 'nequi')">
+                <h3>📱 Nequi</h3>
+                <p>Paga desde tu app Nequi en segundos</p>
+                <div class="method-steps">
+                    <ol>
+                        <li>Abre tu app <strong>Nequi</strong></li>
+                        <li>Ve a <strong>"Enviar dinero"</strong></li>
+                        <li>Envía al número:</li>
+                    </ol>
+                    <div class="method-number">315 975 6975</div>
+                    <ol start="4">
+                        <li>Monto: el valor de tu plan</li>
+                        <li>Envía captura por WhatsApp para activar</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="method-card" onclick="selectMethod(this, 'daviplata')">
+                <h3>📱 Daviplata</h3>
+                <p>Paga desde tu app Daviplata</p>
+                <div class="method-steps">
+                    <ol>
+                        <li>Abre tu app <strong>Daviplata</strong></li>
+                        <li>Ve a <strong>"Enviar plata"</strong></li>
+                        <li>Envía al número:</li>
+                    </ol>
+                    <div class="method-number">315 975 6975</div>
+                    <ol start="4">
+                        <li>Monto: el valor de tu plan</li>
+                        <li>Envía captura por WhatsApp para activar</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="method-card" onclick="selectMethod(this, 'transferencia')">
+                <h3>🏦 Transferencia Bancaria</h3>
+                <p>Desde cualquier banco (Bancolombia, Nequi, etc.)</p>
+                <div class="method-steps">
+                    <ol>
+                        <li>Haz una transferencia a:</li>
+                    </ol>
+                    <div class="method-number">Nequi: 315 975 6975</div>
+                    <ol start="2">
+                        <li>Monto: el valor de tu plan</li>
+                        <li>Envía el comprobante por WhatsApp</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="method-card" onclick="selectMethod(this, 'efectivo')">
+                <h3>💵 Efectivo (presencial)</h3>
+                <p>Paga en persona. Coordina por WhatsApp.</p>
+                <div class="method-steps">
+                    <ol>
+                        <li>Escríbenos por WhatsApp</li>
+                        <li>Coordinamos punto de encuentro</li>
+                        <li>Pagas en efectivo y se activa al instante</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <a href="https://wa.me/573159756975?text=Hola%2C%20ya%20hice%20el%20pago%20de%20mi%20plan%20GestiónPro.%20Te%20envío%20el%20comprobante." target="_blank" class="whatsapp-confirm">💬 Enviar comprobante por WhatsApp</a>
+
+        <p class="note">Tu plan se activa en menos de 1 hora después de confirmar el pago.</p>
+
+        <a href="landing.html" class="back-link">← Volver al inicio</a>
+    </div>
+
+    <script>
+        function selectMethod(el, method) {
+            document.querySelectorAll('.method-card').forEach(c => c.classList.remove('active'));
+            el.classList.add('active');
+        }
+
+        // Leer plan del URL si viene (ej: pagar.html?plan=restaurant)
+        const params = new URLSearchParams(window.location.search);
+        const plan = params.get('plan');
+        const plans = {
+            basic: { name: 'Plan Básico ☕', price: '$25.000' },
+            restaurant: { name: 'Plan Restaurante 🍽️', price: '$45.000' },
+            premium: { name: 'Plan Premium 👑', price: '$65.000' }
+        };
+        if (plan && plans[plan]) {
+            document.getElementById('pay-plan-name').textContent = plans[plan].name;
+            document.getElementById('pay-plan-price').textContent = plans[plan].price;
+        }
+    </script>
+</body>
+</html>

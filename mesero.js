@@ -274,8 +274,8 @@ async function payOrder() {
     if (!confirm(`¿Cobrar ${formatCurrency(total)} de ${mesa?.name}?`)) return;
     
     // Preguntar método de pago
-    const method = prompt('Método de pago:\n1 = Efectivo\n2 = Tarjeta\n3 = Transferencia', '1');
-    const methods = { '1': 'Efectivo', '2': 'Tarjeta', '3': 'Transferencia' };
+    const method = prompt('Método de pago:\n1 = Efectivo\n2 = Nequi\n3 = Daviplata\n4 = Tarjeta\n5 = Transferencia\n6 = Bold\n7 = Fiado', '1');
+    const methods = { '1': 'Efectivo', '2': 'Nequi', '3': 'Daviplata', '4': 'Tarjeta', '5': 'Transferencia', '6': 'Bold', '7': 'Fiado' };
     const payMethod = methods[method] || 'Efectivo';
     
     // Registrar cada item como venta
