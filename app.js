@@ -1,6 +1,7 @@
 // ==========================================
 // GESTIÓN PRO - APP COMPLETA CON FIREBASE
 // ==========================================
+// Versión optimizada con caché en memoria y mejoras de rendimiento
 
 // Estado Global
 let products = [];
@@ -25,6 +26,160 @@ let editingClientId = null;
 let editingSupplierId = null;
 let editingExpenseId = null;
 let charts = {};
+
+// ==========================================
+// SISTEMA DE CACHÉ EN MEMORIA (AVANZADO)
+// ==========================================
+const AppCache = {
+    _store: new Map(),
+    _ttl: new Map(),
+    _hits: 0,
+    _misses: 0,
+    _defaultTTL: 60000, // 1 minuto por defecto
+
+    /**
+     * Almacena un valor en caché con TTL opcional
+     * @param {string} key - Clave única
+     * @param {*} value - Valor a cachear
+     * @param {number} ttl - Tiempo de vida en ms (default: 60000)
+     */
+    set(key, value, ttl) {
+        this._store.set(key, value);
+        this._ttl.set(key, Date.now() + (ttl || this._defaultTTL));
+        // Limitar tamaño del caché a 500 entradas
+        if (this._store.size > 500) this._evictOldest();
+    },
+
+    /**
+     * Obtiene un valor del caché si existe y no ha expirado
+     * @param {string} key - Clave a buscar
+     * @returns {*|null} Valor cacheado o null
+     */
+    get(key) {
+        if (!this._store.has(key)) {
+            this._misses++;
+            return null;
+        }
+        if (Date.now() > this._ttl.get(key)) {
+            this._store.delete(key);
+            this._ttl.delete(key);
+            this._misses++;
+            return null;
+        }
+        this._hits++;
+        return this._store.get(key);
+    },
+
+    /**
+     * Obtiene valor del caché o ejecuta la función y cachea el resultado
+     * @param {string} key - Clave de caché
+     * @param {Function} fn - Función que genera el valor si no está en caché
+     * @param {number} ttl - TTL en ms
+     * @returns {*} Valor cacheado o recién generado
+     */
+    getOrSet(key, fn, ttl) {
+        const cached = this.get(key);
+        if (cached !== null) return cached;
+        const value = fn();
+        this.set(key, value, ttl);
+        return value;
+    },
+
+    invalidate(key) {
+        this._store.delete(key);
+        this._ttl.delete(key);
+    },
+
+    invalidatePrefix(prefix) {
+        for (const key of this._store.keys()) {
+            if (key.startsWith(prefix)) {
+                this._store.delete(key);
+                this._ttl.delete(key);
+            }
+        }
+    },
+
+    /**
+     * Invalida todas las cachés relacionadas con datos de negocio
+     * Llamar después de cada operación que modifica datos
+     */
+    invalidateBusinessData() {
+        this.invalidatePrefix('stats_');
+        this.invalidatePrefix('report_');
+        this.invalidatePrefix('chart_');
+        this.invalidatePrefix('sales_');
+    },
+
+    clear() {
+        this._store.clear();
+        this._ttl.clear();
+        this._hits = 0;
+        this._misses = 0;
+    },
+
+    /** Elimina las entradas más antiguas cuando el caché excede el límite */
+    _evictOldest() {
+        const entries = [...this._ttl.entries()].sort((a, b) => a[1] - b[1]);
+        const toRemove = entries.slice(0, Math.floor(entries.length * 0.2)); // Eliminar 20%
+        toRemove.forEach(([key]) => {
+            this._store.delete(key);
+            this._ttl.delete(key);
+        });
+    },
+
+    /** Estadísticas de rendimiento del caché */
+    getStats() {
+        const total = this._hits + this._misses;
+        return {
+            size: this._store.size,
+            hits: this._hits,
+            misses: this._misses,
+            hitRate: total > 0 ? ((this._hits / total) * 100).toFixed(1) + '%' : '0%'
+        };
+    }
+};
+
+// ==========================================
+// UTILIDADES DE RENDIMIENTO
+// ==========================================
+function debounce(fn, delay = 300) {
+    let timer;
+    return function(...args) {
+        clearTimeout(timer);
+        timer = setTimeout(() => fn.apply(this, args), delay);
+    };
+}
+
+function throttle(fn, limit = 200) {
+    let inThrottle = false;
+    let lastArgs = null;
+    return function(...args) {
+        if (!inThrottle) {
+            fn.apply(this, args);
+            inThrottle = true;
+            setTimeout(() => {
+                inThrottle = false;
+                if (lastArgs) {
+                    fn.apply(this, lastArgs);
+                    lastArgs = null;
+                }
+            }, limit);
+        } else {
+            lastArgs = args;
+        }
+    };
+}
+
+// Mapa indexado de productos por ID para búsquedas O(1)
+const productsIndex = new Map();
+
+function rebuildProductsIndex() {
+    productsIndex.clear();
+    products.forEach(p => productsIndex.set(p.id, p));
+    // Invalidar cachés dependientes de productos
+    AppCache.invalidatePrefix('stats_');
+    AppCache.invalidatePrefix('filtered_');
+}
 
 
 // ==========================================
@@ -229,6 +384,9 @@ async function loadAllData() {
         expenses = expensesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         insumos = insumosSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         recipes = recipesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        // Reconstruir índice de productos para búsquedas O(1)
+        rebuildProductsIndex();
     } catch (error) {
         console.error('Error cargando datos:', error);
         throw error;
@@ -634,6 +792,8 @@ function handleSaleSubmit(e) {
     saveSale(sale);
     saveProduct(products[idx]);
     deductInsumosFromSale(productId, qty);
+    // Invalidar caché de datos de negocio tras nueva venta
+    AppCache.invalidateBusinessData();
     renderAll();
     renderGoalProgress();
     showToast(`Venta registrada: ${qty}x ${product.name}`, 'success');
@@ -696,7 +856,9 @@ function printReceipt(sale) {
 // FILTROS
 // ==========================================
 function initFilters() {
-    document.getElementById('search-input').addEventListener('input', renderInventoryTable);
+    // Debounce en búsqueda para evitar renders excesivos
+    const debouncedRender = debounce(renderInventoryTable, 250);
+    document.getElementById('search-input').addEventListener('input', debouncedRender);
     document.getElementById('filter-category').addEventListener('change', renderInventoryTable);
     document.getElementById('filter-stock').addEventListener('change', renderInventoryTable);
     document.getElementById('sort-by').addEventListener('change', renderInventoryTable);
@@ -714,6 +876,9 @@ function updateCategoryFilter() {
 // RENDERIZADO
 // ==========================================
 function renderAll() {
+    // Invalidar caché de estadísticas al re-renderizar
+    AppCache.invalidatePrefix('stats_');
+    rebuildProductsIndex();
     renderInventoryTable();
     renderSalesTable();
     updateDashboardStats();
@@ -730,16 +895,22 @@ function renderInventoryTable() {
     const tbody = document.getElementById('inventory-body');
     const emptyMsg = document.getElementById('empty-message');
 
-    let filtered = [...products];
+    let filtered = products;
 
-    if (search) filtered = filtered.filter(p =>
-        p.name.toLowerCase().includes(search) || p.category.toLowerCase().includes(search) ||
-        (p.supplier && p.supplier.toLowerCase().includes(search))
-    );
-    if (catFilter) filtered = filtered.filter(p => p.category === catFilter);
-    if (stockFilter === 'low') filtered = filtered.filter(p => p.quantity > 0 && p.quantity <= (p.minStock || 5));
-    if (stockFilter === 'out') filtered = filtered.filter(p => p.quantity === 0);
-    if (stockFilter === 'ok') filtered = filtered.filter(p => p.quantity > (p.minStock || 5));
+    // Filtrado optimizado: aplicar filtros en un solo pass cuando sea posible
+    if (search || catFilter || stockFilter) {
+        filtered = products.filter(p => {
+            if (search && !(p.name.toLowerCase().includes(search) || p.category.toLowerCase().includes(search) ||
+                (p.supplier && p.supplier.toLowerCase().includes(search)))) return false;
+            if (catFilter && p.category !== catFilter) return false;
+            if (stockFilter === 'low' && !(p.quantity > 0 && p.quantity <= (p.minStock || 5))) return false;
+            if (stockFilter === 'out' && p.quantity !== 0) return false;
+            if (stockFilter === 'ok' && !(p.quantity > (p.minStock || 5))) return false;
+            return true;
+        });
+    } else {
+        filtered = [...products];
+    }
 
     switch(sortBy) {
         case 'name': filtered.sort((a,b) => a.name.localeCompare(b.name)); break;
@@ -757,7 +928,11 @@ function renderInventoryTable() {
     }
     emptyMsg.style.display = 'none';
 
-    tbody.innerHTML = filtered.map(p => {
+    // Usar DocumentFragment para batch DOM update
+    const fragment = document.createDocumentFragment();
+    const tempContainer = document.createElement('tbody');
+
+    tempContainer.innerHTML = filtered.map(p => {
         const profit = p.price - p.cost;
         const margin = ((profit / p.cost) * 100).toFixed(1);
         const suggested = calculateSuggestedPrice(p.cost, p.margin);
@@ -781,6 +956,8 @@ function renderInventoryTable() {
             </td>
         </tr>`;
     }).join('');
+
+    tbody.innerHTML = tempContainer.innerHTML;
 }
 
 
@@ -818,37 +995,56 @@ function renderSalesTable() {
 }
 
 // ==========================================
-// DASHBOARD STATS
+// DASHBOARD STATS (con caché)
 // ==========================================
 function updateDashboardStats() {
-    const totalProducts = products.length;
-    const totalStock = products.reduce((s,p) => s + p.quantity, 0);
-    const investment = products.reduce((s,p) => s + (p.cost * p.quantity), 0);
-    const revenue = products.reduce((s,p) => s + (p.price * p.quantity), 0);
-    const profit = revenue - investment;
+    const cacheKey = 'stats_dashboard';
+    const cached = AppCache.get(cacheKey);
 
     const today = new Date().toISOString().split('T')[0];
-    const salesToday = sales.filter(s => s.date.startsWith(today));
-    const salesTodayTotal = salesToday.reduce((s,v) => s + v.total, 0);
-
     const thisMonth = new Date().toISOString().slice(0,7);
-    const salesMonth = sales.filter(s => s.date.startsWith(thisMonth));
-    const salesMonthTotal = salesMonth.reduce((s,v) => s + v.total, 0);
 
-    const profitMonth = salesMonth.reduce((s,v) => s + v.profit, 0);
-    const expensesMonth = expenses.filter(e => e.date.startsWith(thisMonth)).reduce((s,e) => s + e.amount, 0);
-    const netProfitMonth = profitMonth - expensesMonth;
+    // Usar caché si está disponible y los datos no han cambiado
+    let stats;
+    if (cached && cached.productCount === products.length && cached.salesCount === sales.length && cached.expenseCount === expenses.length) {
+        stats = cached;
+    } else {
+        const totalProducts = products.length;
+        const totalStock = products.reduce((s,p) => s + p.quantity, 0);
+        const investment = products.reduce((s,p) => s + (p.cost * p.quantity), 0);
+        const revenue = products.reduce((s,p) => s + (p.price * p.quantity), 0);
+        const profit = revenue - investment;
 
-    setText('dash-total-products', totalProducts);
-    setText('dash-total-stock', totalStock);
-    setText('dash-investment', formatCurrency(investment));
-    setText('dash-profit', formatCurrency(profit));
-    setText('dash-sales-today', formatCurrency(salesTodayTotal));
-    setText('dash-sales-month', formatCurrency(salesMonthTotal));
-    setText('dash-expenses-month', formatCurrency(expensesMonth));
-    setText('dash-net-profit', formatCurrency(netProfitMonth));
+        const salesToday = sales.filter(s => s.date.startsWith(today));
+        const salesTodayTotal = salesToday.reduce((s,v) => s + v.total, 0);
+
+        const salesMonth = sales.filter(s => s.date.startsWith(thisMonth));
+        const salesMonthTotal = salesMonth.reduce((s,v) => s + v.total, 0);
+
+        const profitMonth = salesMonth.reduce((s,v) => s + v.profit, 0);
+        const expensesMonth = expenses.filter(e => e.date.startsWith(thisMonth)).reduce((s,e) => s + e.amount, 0);
+        const netProfitMonth = profitMonth - expensesMonth;
+
+        stats = {
+            totalProducts, totalStock, investment, profit,
+            salesTodayTotal, salesMonthTotal, expensesMonth, netProfitMonth,
+            productCount: products.length, salesCount: sales.length, expenseCount: expenses.length
+        };
+
+        // Cachear por 30 segundos
+        AppCache.set(cacheKey, stats, 30000);
+    }
+
+    setText('dash-total-products', stats.totalProducts);
+    setText('dash-total-stock', stats.totalStock);
+    setText('dash-investment', formatCurrency(stats.investment));
+    setText('dash-profit', formatCurrency(stats.profit));
+    setText('dash-sales-today', formatCurrency(stats.salesTodayTotal));
+    setText('dash-sales-month', formatCurrency(stats.salesMonthTotal));
+    setText('dash-expenses-month', formatCurrency(stats.expensesMonth));
+    setText('dash-net-profit', formatCurrency(stats.netProfitMonth));
     const netEl = document.getElementById('dash-net-profit');
-    if (netEl) netEl.style.color = netProfitMonth >= 0 ? 'var(--success)' : 'var(--danger)';
+    if (netEl) netEl.style.color = stats.netProfitMonth >= 0 ? 'var(--success)' : 'var(--danger)';
 }
 
 function setText(id, value) {
@@ -873,14 +1069,20 @@ function renderCharts() {
 function renderSalesWeekChart() {
     const ctx = document.getElementById('chart-sales-week');
     if (!ctx) return;
-    const last7 = [];
-    for (let i = 6; i >= 0; i--) {
-        const d = new Date(); d.setDate(d.getDate() - i);
-        const key = d.toISOString().split('T')[0];
-        const label = d.toLocaleDateString('es-MX', {weekday:'short', day:'numeric'});
-        const total = sales.filter(s => s.date.startsWith(key)).reduce((sum,s) => sum+s.total, 0);
-        last7.push({label, total});
-    }
+
+    // Cachear datos de ventas por día (se recalcula cada 60s)
+    const last7 = AppCache.getOrSet('chart_sales_week', () => {
+        const data = [];
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date(); d.setDate(d.getDate() - i);
+            const key = d.toISOString().split('T')[0];
+            const label = d.toLocaleDateString('es-MX', {weekday:'short', day:'numeric'});
+            const total = sales.filter(s => s.date.startsWith(key)).reduce((sum,s) => sum+s.total, 0);
+            data.push({label, total});
+        }
+        return data;
+    }, 60000);
+
     charts.salesWeek = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -927,7 +1129,11 @@ function renderProfitCategoryChart() {
     const ctx = document.getElementById('chart-profit-category');
     if (!ctx) return;
     const catProfit = {};
-    sales.forEach(s => { catProfit[getProduct(s.productId)?.category || 'Otro'] = (catProfit[getProduct(s.productId)?.category || 'Otro']||0) + s.profit; });
+    sales.forEach(s => {
+        const product = productsIndex.get(s.productId);
+        const category = product?.category || 'Otro';
+        catProfit[category] = (catProfit[category] || 0) + s.profit;
+    });
     const entries = Object.entries(catProfit).sort((a,b) => b[1]-a[1]);
     charts.profitCat = new Chart(ctx, {
         type: 'bar',
@@ -1084,29 +1290,44 @@ function checkAlerts() {
 }
 
 function generateAlerts() {
+    // Usar caché para alertas (se recalcula cada 30s o al cambiar datos)
+    const cacheKey = 'stats_alerts';
+    const cached = AppCache.get(cacheKey);
+    if (cached && cached.productCount === products.length && cached.insumoCount === insumos.length) {
+        return cached.alerts;
+    }
+
     const alerts = [];
+    const thirtyDaysAgo = new Date(Date.now() - 30*24*60*60*1000).toISOString();
+
+    // Pre-calcular ventas por producto una sola vez
+    const salesByProduct = new Map();
+    sales.forEach(s => {
+        if (!salesByProduct.has(s.productId)) salesByProduct.set(s.productId, []);
+        salesByProduct.get(s.productId).push(s);
+    });
+
     products.forEach(p => {
         if (p.quantity === 0) {
             alerts.push({ type: 'danger', title: `Sin stock: ${p.name}`, msg: 'Este producto se agotó. Reabastece pronto.' });
         } else if (p.quantity <= (p.minStock || 5)) {
             alerts.push({ type: 'warning', title: `Stock bajo: ${p.name}`, msg: `Solo quedan ${p.quantity} unidades (mínimo: ${p.minStock || 5}).` });
         }
-    });
-    products.forEach(p => {
+
         const margin = ((p.price - p.cost) / p.cost) * 100;
         if (margin < 10 && margin >= 0) {
             alerts.push({ type: 'info', title: `Margen bajo: ${p.name}`, msg: `Solo ${margin.toFixed(1)}% de margen. Considera aumentar el precio.` });
         } else if (margin < 0) {
             alerts.push({ type: 'danger', title: `Vendiendo a pérdida: ${p.name}`, msg: `El precio es menor al costo. ¡Estás perdiendo dinero!` });
         }
-    });
-    const thirtyDaysAgo = new Date(Date.now() - 30*24*60*60*1000).toISOString();
-    products.forEach(p => {
-        const lastSaleItem = sales.filter(s => s.productId === p.id).sort((a,b) => b.date.localeCompare(a.date))[0];
-        if (!lastSaleItem && new Date(p.createdAt) < new Date(thirtyDaysAgo)) {
+
+        // Productos sin movimiento - usar mapa pre-calculado
+        const productSales = salesByProduct.get(p.id);
+        if (!productSales && new Date(p.createdAt) < new Date(thirtyDaysAgo)) {
             alerts.push({ type: 'info', title: `Sin movimiento: ${p.name}`, msg: 'No se ha vendido en los últimos 30 días.' });
         }
     });
+
     // Alertas de insumos bajos
     insumos.forEach(i => {
         if (i.minStock && i.currentStock <= i.minStock) {
@@ -1117,6 +1338,9 @@ function generateAlerts() {
             }
         }
     });
+
+    // Cachear alertas por 30 segundos
+    AppCache.set(cacheKey, { alerts, productCount: products.length, insumoCount: insumos.length }, 30000);
     return alerts;
 }
 
@@ -1146,14 +1370,25 @@ function renderReports() {
 
 function renderTopProductsReport() {
     const tbody = document.getElementById('report-top-products');
-    const productStats = {};
-    products.forEach(p => {
-        const soldQty = sales.filter(s => s.productId === p.id).reduce((sum,s) => sum+s.quantity, 0);
-        const totalProfit = sales.filter(s => s.productId === p.id).reduce((sum,s) => sum+s.profit, 0);
-        const margin = ((p.price - p.cost) / p.cost * 100).toFixed(1);
-        productStats[p.id] = { name: p.name, margin, profitUnit: p.price - p.cost, sold: soldQty, totalProfit };
+
+    // Pre-calcular ventas por producto en un solo pass
+    const productSalesMap = new Map();
+    sales.forEach(s => {
+        if (!productSalesMap.has(s.productId)) {
+            productSalesMap.set(s.productId, { sold: 0, totalProfit: 0 });
+        }
+        const entry = productSalesMap.get(s.productId);
+        entry.sold += s.quantity;
+        entry.totalProfit += s.profit;
     });
-    const sorted = Object.values(productStats).sort((a,b) => b.totalProfit - a.totalProfit).slice(0,10);
+
+    const productStats = products.map(p => {
+        const salesData = productSalesMap.get(p.id) || { sold: 0, totalProfit: 0 };
+        const margin = ((p.price - p.cost) / p.cost * 100).toFixed(1);
+        return { name: p.name, margin, profitUnit: p.price - p.cost, sold: salesData.sold, totalProfit: salesData.totalProfit };
+    });
+
+    const sorted = productStats.sort((a,b) => b.totalProfit - a.totalProfit).slice(0,10);
     tbody.innerHTML = sorted.map((p, i) => `<tr>
         <td>${i+1}</td>
         <td><strong>${esc(p.name)}</strong></td>
@@ -1173,8 +1408,8 @@ function renderCategoryReport() {
         cats[p.category].investment += p.cost * p.quantity;
     });
     sales.forEach(s => {
-        const p = getProduct(s.productId);
-        const cat = p ? p.category : 'Otro';
+        const product = productsIndex.get(s.productId);
+        const cat = product ? product.category : 'Otro';
         if (!cats[cat]) cats[cat] = { count: 0, investment: 0, sales: 0, profit: 0 };
         cats[cat].sales += s.total;
         cats[cat].profit += s.profit;
@@ -1364,6 +1599,8 @@ function clearAllData() {
     if (confirm('⚠️ ¿BORRAR TODOS los datos? Esta acción NO se puede deshacer.')) {
         if (confirm('¿Estás REALMENTE seguro?')) {
             products = []; sales = []; history = []; clients = []; suppliers = []; expenses = [];
+            AppCache.clear(); // Limpiar todo el caché
+            rebuildProductsIndex();
             clearAllDataFromDB();
             renderAll(); renderHistory(); renderClients(); renderSuppliers(); renderExpenses();
             showToast('Todos los datos han sido borrados', 'warning');
@@ -1486,29 +1723,34 @@ function calcBreakEven() {
 function renderCashClose() {
     const dateInput = document.getElementById('cash-date');
     const selectedDate = dateInput.value || new Date().toISOString().split('T')[0];
-    const daySales = sales.filter(s => s.date.startsWith(selectedDate));
 
-    const methods = { 'Efectivo': 0, 'Nequi': 0, 'Daviplata': 0, 'Tarjeta': 0, 'Transferencia': 0, 'Bold': 0, 'Rappi Pay': 0, 'Fiado': 0, 'Otro': 0 };
-    let total = 0, profit = 0, units = 0;
-    daySales.forEach(s => {
-        methods[s.method] = (methods[s.method] || 0) + s.total;
-        total += s.total;
-        profit += s.profit;
-        units += s.quantity;
-    });
+    // Cachear cálculos del cierre de caja por fecha (30s TTL)
+    const cacheKey = `stats_cashclose_${selectedDate}`;
+    const stats = AppCache.getOrSet(cacheKey, () => {
+        const daySales = sales.filter(s => s.date.startsWith(selectedDate));
+        const methods = { 'Efectivo': 0, 'Nequi': 0, 'Daviplata': 0, 'Tarjeta': 0, 'Transferencia': 0, 'Bold': 0, 'Rappi Pay': 0, 'Fiado': 0, 'Otro': 0 };
+        let total = 0, profit = 0, units = 0;
+        daySales.forEach(s => {
+            methods[s.method] = (methods[s.method] || 0) + s.total;
+            total += s.total;
+            profit += s.profit;
+            units += s.quantity;
+        });
+        return { methods, total, profit, count: daySales.length, units };
+    }, 30000);
 
-    setText('cash-total', formatCurrency(total));
-    setText('cash-profit', formatCurrency(profit));
-    setText('cash-count', daySales.length);
-    setText('cash-units', units);
-    setText('cash-efectivo', formatCurrency(methods['Efectivo']));
-    setText('cash-nequi', formatCurrency(methods['Nequi']));
-    setText('cash-daviplata', formatCurrency(methods['Daviplata']));
-    setText('cash-tarjeta', formatCurrency(methods['Tarjeta']));
-    setText('cash-transferencia', formatCurrency(methods['Transferencia']));
-    setText('cash-bold', formatCurrency(methods['Bold']));
-    setText('cash-fiado', formatCurrency(methods['Fiado']));
-    setText('cash-otro', formatCurrency(methods['Otro'] + methods['Rappi Pay']));
+    setText('cash-total', formatCurrency(stats.total));
+    setText('cash-profit', formatCurrency(stats.profit));
+    setText('cash-count', stats.count);
+    setText('cash-units', stats.units);
+    setText('cash-efectivo', formatCurrency(stats.methods['Efectivo']));
+    setText('cash-nequi', formatCurrency(stats.methods['Nequi']));
+    setText('cash-daviplata', formatCurrency(stats.methods['Daviplata']));
+    setText('cash-tarjeta', formatCurrency(stats.methods['Tarjeta']));
+    setText('cash-transferencia', formatCurrency(stats.methods['Transferencia']));
+    setText('cash-bold', formatCurrency(stats.methods['Bold']));
+    setText('cash-fiado', formatCurrency(stats.methods['Fiado']));
+    setText('cash-otro', formatCurrency(stats.methods['Otro'] + stats.methods['Rappi Pay']));
 }
 
 
@@ -1522,7 +1764,12 @@ function renderGoalProgress() {
     if (goal <= 0) { container.style.display = 'none'; return; }
     container.style.display = 'block';
     const thisMonth = new Date().toISOString().slice(0, 7);
-    const monthSales = sales.filter(s => s.date.startsWith(thisMonth)).reduce((sum, s) => sum + s.total, 0);
+
+    // Cachear cálculo de ventas del mes (se invalida con cada venta nueva)
+    const monthSales = AppCache.getOrSet('sales_month_total', () => {
+        return sales.filter(s => s.date.startsWith(thisMonth)).reduce((sum, s) => sum + s.total, 0);
+    }, 30000);
+
     const pct = Math.min(100, (monthSales / goal) * 100);
 
     setText('goal-current', formatCurrency(monthSales));
@@ -1598,7 +1845,9 @@ function printCashClose() {
 function initClients() {
     document.getElementById('client-form').addEventListener('submit', handleClientSubmit);
     document.getElementById('btn-cancel-client').addEventListener('click', cancelClientEdit);
-    document.getElementById('client-search').addEventListener('input', renderClients);
+    // Debounce en búsqueda de clientes
+    const debouncedRenderClients = debounce(renderClients, 250);
+    document.getElementById('client-search').addEventListener('input', debouncedRenderClients);
 }
 
 function handleClientSubmit(e) {
@@ -1668,16 +1917,25 @@ function renderClients() {
     if (list.length === 0) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
     empty.style.display = 'none';
 
+    // Pre-calcular ventas por cliente en un solo pass
+    const salesByClient = new Map();
+    sales.forEach(s => {
+        const clientName = (s.client || '').toLowerCase();
+        if (!clientName) return;
+        if (!salesByClient.has(clientName)) salesByClient.set(clientName, { count: 0, total: 0 });
+        const entry = salesByClient.get(clientName);
+        entry.count++;
+        entry.total += s.total;
+    });
+
     tbody.innerHTML = list.map(c => {
-        const clientSales = sales.filter(s => (s.client||'').toLowerCase() === c.name.toLowerCase());
-        const totalCompras = clientSales.reduce((sum, s) => sum + s.total, 0);
-        const numCompras = clientSales.length;
+        const clientData = salesByClient.get(c.name.toLowerCase()) || { count: 0, total: 0 };
         return `<tr>
             <td><strong>${esc(c.name)}</strong></td>
             <td>${esc(c.phone || '-')}</td>
             <td>${esc(c.email || '-')}</td>
-            <td>${numCompras}</td>
-            <td class="profit-positive">${formatCurrency(totalCompras)}</td>
+            <td>${clientData.count}</td>
+            <td class="profit-positive">${formatCurrency(clientData.total)}</td>
             <td>
                 <button class="action-btn" onclick="editClient('${c.id}')" title="Editar">✏️</button>
                 <button class="action-btn" onclick="deleteClient('${c.id}')" title="Eliminar">🗑️</button>
@@ -1695,7 +1953,9 @@ function renderClients() {
 function initSuppliers() {
     document.getElementById('supplier-form').addEventListener('submit', handleSupplierSubmit);
     document.getElementById('btn-cancel-supplier').addEventListener('click', cancelSupplierEdit);
-    document.getElementById('supplier-search').addEventListener('input', renderSuppliers);
+    // Debounce en búsqueda de proveedores
+    const debouncedRenderSuppliers = debounce(renderSuppliers, 250);
+    document.getElementById('supplier-search').addEventListener('input', debouncedRenderSuppliers);
 }
 
 function handleSupplierSubmit(e) {
@@ -1881,7 +2141,7 @@ function renderExpenses() {
 // UTILIDADES
 // ==========================================
 function generateId() { return 'id_' + Date.now() + '_' + Math.random().toString(36).substr(2,9); }
-function getProduct(id) { return products.find(p => p.id === id); }
+function getProduct(id) { return productsIndex.get(id) || products.find(p => p.id === id); }
 function formatCurrency(amount) {
     amount = amount || 0;
     if (settings.currency === 'COP') {
@@ -1927,7 +2187,9 @@ let editingInsumoId = null;
 function initInsumos() {
     document.getElementById('insumo-form').addEventListener('submit', handleInsumoSubmit);
     document.getElementById('btn-cancel-insumo').addEventListener('click', cancelInsumoEdit);
-    document.getElementById('insumo-search').addEventListener('input', renderInsumos);
+    // Debounce en búsqueda de insumos
+    const debouncedRenderInsumos = debounce(renderInsumos, 250);
+    document.getElementById('insumo-search').addEventListener('input', debouncedRenderInsumos);
     renderInsumos();
 }
 
@@ -2646,6 +2908,8 @@ async function voidSale(saleId) {
     }
 
     addHistory('delete', `Venta anulada: ${sale.quantity}x ${sale.productName} (${formatCurrency(sale.total)})`);
+    // Invalidar caché tras anular venta
+    AppCache.invalidateBusinessData();
     renderAll();
     showToast('Venta anulada. Stock restaurado.', 'warning');
 }
