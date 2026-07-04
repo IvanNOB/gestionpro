@@ -40,22 +40,22 @@
 
 /* Dark Theme */
 [data-theme="dark"] {
-    --bg: #0c1222;
-    --bg-alt: #151d30;
-    --card-bg: #1a2238;
-    --sidebar-bg: #070d1a;
-    --text: #e2e8f0;
-    --text-light: #94a3b8;
-    --text-muted: #64748b;
-    --border: #253048;
-    --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
-    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
-    --shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.5);
-    --primary-light: #1e1b4b;
-    --success-light: #052e16;
-    --warning-light: #431407;
-    --danger-light: #350a0a;
-    --info-light: #0c4a6e;
+    --bg: #0d1117;
+    --bg-alt: #161b22;
+    --card-bg: #161b22;
+    --sidebar-bg: #010409;
+    --text: #f0f6fc;
+    --text-light: #8b949e;
+    --text-muted: #484f58;
+    --border: #21262d;
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.5), 0 3px 8px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 12px 28px rgba(0, 0, 0, 0.6);
+    --primary-light: rgba(99, 91, 255, 0.15);
+    --success-light: rgba(14, 165, 116, 0.12);
+    --warning-light: rgba(229, 111, 74, 0.12);
+    --danger-light: rgba(223, 27, 65, 0.12);
+    --info-light: rgba(8, 145, 178, 0.12);
 }
 
 /* Reset & Base */
@@ -1496,11 +1496,11 @@ tbody tr:hover {
 }
 
 [data-theme="dark"] tbody tr:nth-child(even) {
-    background: rgba(255, 255, 255, 0.02);
+    background: rgba(255, 255, 255, 0.03);
 }
 
 [data-theme="dark"] table tr:hover {
-    background: rgba(99, 91, 255, 0.05);
+    background: rgba(99, 91, 255, 0.06);
 }
 
 [data-theme="dark"] .empty-message {
@@ -1647,16 +1647,16 @@ tbody tr:hover {
 }
 
 [data-theme="dark"] .sidebar {
-    background: linear-gradient(180deg, #070d1a 0%, #0f172a 100%);
-    border-right-color: rgba(255, 255, 255, 0.04);
+    background: linear-gradient(180deg, #010409 0%, #0d1117 100%);
+    border-right-color: #21262d;
 }
 
 [data-theme="dark"] .nav-link:hover {
-    background: rgba(255, 255, 255, 0.04);
+    background: rgba(255, 255, 255, 0.06);
 }
 
 [data-theme="dark"] .nav-link.active {
-    background: rgba(99, 91, 255, 0.12);
+    background: rgba(99, 91, 255, 0.15);
 }
 
 [data-theme="dark"] .toast {
