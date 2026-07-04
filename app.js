@@ -2763,7 +2763,7 @@ function showOnboarding() {
 const PLANS = {
     trial: {
         name: 'Prueba Gratis',
-        days: 7,
+        days: 3,
         features: ['inventory', 'sales', 'cashclose', 'clients', 'suppliers', 'expenses', 'insumos', 'recipes', 'calculator', 'reports', 'alerts', 'history', 'settings', 'mesas', 'dashboard']
     },
     basic: {
@@ -2790,15 +2790,15 @@ function initPlanSystem() {
     const userPlan = settings.plan || 'trial';
     const registeredAt = settings.registeredAt || new Date().toISOString();
 
-    // Si es trial, verificar si expiró (7 días)
+    // Si es trial, verificar si expiró (3 días)
     if (userPlan === 'trial') {
         const daysSinceRegister = Math.floor((Date.now() - new Date(registeredAt).getTime()) / (1000 * 60 * 60 * 24));
-        if (daysSinceRegister >= 7) {
+        if (daysSinceRegister >= 3) {
             trialExpired = true;
             showTrialExpiredMessage();
             return;
         } else {
-            const daysLeft = 7 - daysSinceRegister;
+            const daysLeft = 3 - daysSinceRegister;
             showTrialBanner(daysLeft);
         }
     }
@@ -2855,7 +2855,7 @@ function showTrialExpiredMessage() {
             <div style="text-align:center;max-width:450px;background:white;padding:48px 32px;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
                 <div style="font-size:4rem;margin-bottom:16px;">⏰</div>
                 <h1 style="font-size:1.6rem;color:#1e293b;margin-bottom:12px;">Tu prueba gratis terminó</h1>
-                <p style="color:#64748b;margin-bottom:8px;line-height:1.5;">Tu período de 7 días gratuitos ha expirado. Para seguir usando GestiónPro, activa un plan.</p>
+                <p style="color:#64748b;margin-bottom:8px;line-height:1.5;">Tu período de 3 días gratuitos ha expirado. Para seguir usando GestiónPro, activa un plan.</p>
                 <div style="background:#f8fafc;border-radius:12px;padding:20px;margin:20px 0;text-align:left;">
                     <p style="font-weight:700;color:#1e293b;margin-bottom:12px;">Planes disponibles:</p>
                     <p style="margin-bottom:8px;">☕ <strong>Básico:</strong> $25.000/mes (Inventario + Ventas)</p>
