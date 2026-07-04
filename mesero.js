@@ -262,10 +262,8 @@ async function sendOrder() {
     
     await userCollection('orders').doc(orderDoc.id).set(orderDoc);
     
-    // Imprimir ticket de cocina
-    if (confirm('Pedido enviado. ¿Imprimir ticket para cocina?')) {
-        printKitchenTicket(mesa?.name || 'Mesa', items);
-    }
+    // Imprimir ticket de cocina automáticamente
+    printKitchenTicket(mesa?.name || 'Mesa', items);
     
     showToast('✅ Pedido enviado', 'success');
     showMesas();
@@ -278,12 +276,8 @@ async function payOrder() {
     const total = items.reduce((s, i) => s + (i.price * i.qty), 0);
     const mesa = mesas.find(m => m.id === currentMesaId);
     
-    if (!confirm(`¿Cobrar ${formatCurrency(total)} de ${mesa?.name}?`)) return;
-    
-    // Preguntar método de pago
-    const method = prompt('Método de pago:\n1 = Efectivo\n2 = Nequi\n3 = Daviplata\n4 = Tarjeta\n5 = Transferencia\n6 = Bold\n7 = Fiado', '1');
-    const methods = { '1': 'Efectivo', '2': 'Nequi', '3': 'Daviplata', '4': 'Tarjeta', '5': 'Transferencia', '6': 'Bold', '7': 'Fiado' };
-    const payMethod = methods[method] || 'Efectivo';
+    // Cobrar directamente sin ventana emergente
+    const payMethod = selectedPayMethod || 'Efectivo';
     
     // Registrar cada item como venta
     for (const item of items) {
@@ -342,12 +336,10 @@ function deductInsumos(productId, qty) {
 
 function clearCurrentOrder() {
     if (!orders[currentMesaId] || orders[currentMesaId].length === 0) return;
-    if (confirm('¿Borrar este pedido?')) {
-        delete orders[currentMesaId];
-        userCollection('orders').doc('order_' + currentMesaId).delete();
-        renderOrderItems();
-        showToast('Pedido eliminado', 'info');
-    }
+    delete orders[currentMesaId];
+    userCollection('orders').doc('order_' + currentMesaId).delete();
+    renderOrderItems();
+    showToast('Pedido eliminado', 'info');
 }
 
 // ==========================================
@@ -376,4 +368,19 @@ function printPreBill() {
     const mesa = mesas.find(m => m.id === currentMesaId);
     const total = items.reduce((s, i) => s + (i.price * i.qty), 0);
     printPreBillTicket(mesa?.name || 'Mesa', items, total);
+}
+
+
+
+// Método de pago seleccionado
+let selectedPayMethod = 'Efectivo';
+
+function selectPayMethod(btn, method) {
+    selectedPayMethod = method;
+    document.querySelectorAll('.pay-method-btn').forEach(b => {
+        b.style.background = 'var(--bg-glass, #222)';
+        b.style.color = 'var(--text-secondary, #aaa)';
+    });
+    btn.style.background = 'var(--accent-green, #10b981)';
+    btn.style.color = 'white';
 }

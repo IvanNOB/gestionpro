@@ -806,6 +806,13 @@
                 <p class="empty-order">Toca un producto para agregarlo</p>
             </div>
             <div class="order-footer">
+                <div style="display:flex;gap:6px;margin-bottom:10px;overflow-x:auto;">
+                    <button class="pay-method-btn active" onclick="selectPayMethod(this,'Efectivo')" style="padding:6px 10px;border-radius:8px;border:1px solid var(--border-glass,#333);background:var(--accent-green,#10b981);color:white;font-size:0.75rem;font-weight:600;cursor:pointer;white-space:nowrap;">💵 Efectivo</button>
+                    <button class="pay-method-btn" onclick="selectPayMethod(this,'Nequi')" style="padding:6px 10px;border-radius:8px;border:1px solid var(--border-glass,#333);background:var(--bg-glass,#222);color:var(--text-secondary,#aaa);font-size:0.75rem;font-weight:600;cursor:pointer;white-space:nowrap;">📱 Nequi</button>
+                    <button class="pay-method-btn" onclick="selectPayMethod(this,'Daviplata')" style="padding:6px 10px;border-radius:8px;border:1px solid var(--border-glass,#333);background:var(--bg-glass,#222);color:var(--text-secondary,#aaa);font-size:0.75rem;font-weight:600;cursor:pointer;white-space:nowrap;">📱 Daviplata</button>
+                    <button class="pay-method-btn" onclick="selectPayMethod(this,'Tarjeta')" style="padding:6px 10px;border-radius:8px;border:1px solid var(--border-glass,#333);background:var(--bg-glass,#222);color:var(--text-secondary,#aaa);font-size:0.75rem;font-weight:600;cursor:pointer;white-space:nowrap;">💳 Tarjeta</button>
+                    <button class="pay-method-btn" onclick="selectPayMethod(this,'Transferencia')" style="padding:6px 10px;border-radius:8px;border:1px solid var(--border-glass,#333);background:var(--bg-glass,#222);color:var(--text-secondary,#aaa);font-size:0.75rem;font-weight:600;cursor:pointer;white-space:nowrap;">🏦 Transf</button>
+                </div>
                 <div class="order-total">
                     <span>Total</span>
                     <span id="order-total-value">$0</span>
