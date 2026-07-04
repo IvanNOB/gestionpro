@@ -2817,18 +2817,9 @@ function applyPlanRestrictions(plan) {
         if (!section) return;
 
         if (planData.features.includes(section)) {
-            link.style.display = '';
-            link.style.opacity = '1';
-            link.style.pointerEvents = '';
-            link.removeAttribute('title');
+            link.parentElement.style.display = '';
         } else {
-            link.style.opacity = '0.4';
-            link.style.pointerEvents = 'none';
-            link.title = `Disponible en plan ${getPlanNameForFeature(section)}`;
-            // Agregar candado
-            if (!link.textContent.includes('🔒')) {
-                link.textContent = link.textContent + ' 🔒';
-            }
+            link.parentElement.style.display = 'none';
         }
     });
 }
