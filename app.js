@@ -150,6 +150,30 @@ function applyRoleRestrictions(role) {
             link.parentElement.style.display = 'none';
         }
     });
+
+    // Cajero: ocultar todos los botones de editar, eliminar y formularios
+    if (role === 'cashier') {
+        // Ocultar formularios de agregar
+        document.querySelectorAll('#product-form, #client-form, #supplier-form, #expense-form, #insumo-form, #recipe-form, #mesa-form, #employee-form').forEach(el => {
+            if (el) el.style.display = 'none';
+        });
+        // Ocultar botones de exportar/importar
+        document.querySelectorAll('#btn-export-csv, #btn-import-csv, #btn-export-sales, #btn-export-report, #btn-clear-history, #btn-clear-all, #btn-save-settings, #btn-backup, #btn-restore').forEach(el => {
+            if (el) el.style.display = 'none';
+        });
+        // Ocultar botones de acción en tablas (editar/eliminar)
+        setTimeout(() => {
+            document.querySelectorAll('.action-btn').forEach(btn => {
+                btn.style.display = 'none';
+            });
+        }, 500);
+        // Ocultar botón de anular ventas
+        setTimeout(() => {
+            document.querySelectorAll('[onclick*="voidSale"]').forEach(btn => {
+                btn.style.display = 'none';
+            });
+        }, 500);
+    }
 }
 
 function initLogout() {
