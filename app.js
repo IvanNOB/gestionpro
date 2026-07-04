@@ -380,8 +380,15 @@ function initTheme() {
 
 function applyTheme(theme) {
     document.documentElement.setAttribute('data-theme', theme);
+    // Remove any inline style overrides so CSS variables take effect
+    document.documentElement.style.removeProperty('--bg');
+    document.documentElement.style.removeProperty('--card-bg');
+    document.documentElement.style.removeProperty('--text');
+    document.documentElement.style.removeProperty('--border');
     const btn = document.getElementById('btn-theme');
     btn.textContent = theme === 'light' ? '🌙 Modo Oscuro' : '☀️ Modo Claro';
+    // Re-apply customization for the new theme
+    if (typeof applyCustomization === 'function') applyCustomization();
 }
 
 function showDate() {
@@ -2538,43 +2545,42 @@ function applyCustomization() {
     const root = document.documentElement;
 
     // Color principal
-    if (customization.color) {
+    if (customization.color && customization.color !== '#635bff') {
         root.style.setProperty('--primary', customization.color);
         root.style.setProperty('--primary-dark', adjustColor(customization.color, -20));
-        root.style.setProperty('--primary-light', adjustColor(customization.color, 80) + '20');
+        root.style.setProperty('--primary-light', customization.color + '15');
     }
 
     // Sidebar style
     const sidebar = document.getElementById('sidebar');
     if (sidebar) {
         const styles = {
-            'default': 'linear-gradient(180deg, #0f172a, #1e293b)',
+            'default': 'linear-gradient(180deg, #0f172a, #1a1f36)',
             'gradient-blue': 'linear-gradient(180deg, #1e3a5f, #0f172a)',
             'gradient-purple': 'linear-gradient(180deg, #4c1d95, #1e1b4b)',
             'gradient-green': 'linear-gradient(180deg, #064e3b, #0f172a)',
-            'gradient-dark': 'linear-gradient(180deg, #000000, #1e293b)',
-            'solid-primary': `linear-gradient(180deg, ${customization.color || '#2563eb'}, ${adjustColor(customization.color || '#2563eb', -40)})`
+            'gradient-dark': 'linear-gradient(180deg, #000000, #1a1f36)',
+            'solid-primary': `linear-gradient(180deg, ${customization.color || '#635bff'}, ${adjustColor(customization.color || '#635bff', -40)})`
         };
         const bg = styles[customization.sidebarStyle] || styles['default'];
         sidebar.style.background = bg;
     }
 
     // Border style
-    const radiusMap = { 'rounded': '16px', 'sharp': '4px', 'pill': '24px' };
-    root.style.setProperty('--radius', radiusMap[customization.borderStyle] || '16px');
-    root.style.setProperty('--radius-sm', customization.borderStyle === 'sharp' ? '2px' : customization.borderStyle === 'pill' ? '16px' : '10px');
+    const radiusMap = { 'rounded': '12px', 'sharp': '4px', 'pill': '20px' };
+    const radiusSmMap = { 'rounded': '8px', 'sharp': '2px', 'pill': '14px' };
+    root.style.setProperty('--radius', radiusMap[customization.borderStyle] || '12px');
+    root.style.setProperty('--radius-sm', radiusSmMap[customization.borderStyle] || '8px');
 
-    // Background style
-    const bgMap = {
-        'light': '#f1f5f9',
-        'white': '#ffffff',
-        'warm': '#fef7ed',
-        'cool': '#f0f4f8'
-    };
+    // Background style - only override in light mode
     if (document.documentElement.getAttribute('data-theme') !== 'dark') {
-        root.style.setProperty('--bg', bgMap[customization.bgStyle] || '#f1f5f9');
-    } else {
-        root.style.setProperty('--bg', '#0d1117');
+        const bgMap = {
+            'light': '#f6f8fa',
+            'white': '#ffffff',
+            'warm': '#faf8f5',
+            'cool': '#f4f6fb'
+        };
+        root.style.setProperty('--bg', bgMap[customization.bgStyle] || '#f6f8fa');
     }
 
     // Logo in sidebar
