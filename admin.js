@@ -154,6 +154,7 @@ function renderUsersTable() {
                         : `<button class="btn-block btn-block-user" onclick="blockUser('${u.uid}')">🚫 Bloquear</button>`
                     )
                 }
+                ${!isAdminUser ? `<button class="btn-block" style="background:rgba(99,91,255,0.15);color:#93c5fd;border:1px solid rgba(99,91,255,0.3);margin-left:4px;" onclick="loadDemoForUser('${u.uid}', '${(u.businessName || '').replace(/'/g, '')}')">📦 Demo</button>` : ''}
                 ${!isAdminUser ? `<select onchange="changePlan('${u.uid}', this.value)" style="margin-left:6px;padding:4px 8px;border-radius:6px;border:1px solid #334155;background:#0f172a;color:#e2e8f0;font-size:0.75rem;">
                     <option value="trial" ${plan==='trial'?'selected':''}>Prueba</option>
                     <option value="basic" ${plan==='basic'?'selected':''}>Básico</option>
@@ -251,4 +252,190 @@ async function changePlan(uid, newPlan) {
     } catch (error) {
         showToast('Error al cambiar plan: ' + error.message, 'error');
     }
+}
+
+
+
+// ==========================================
+// CARGAR DEMO REMOTA PARA UN USUARIO
+// ==========================================
+async function loadDemoForUser(uid, businessName) {
+    const demoType = prompt('¿Qué demo cargar?\n1 = Cafetería\n2 = Tienda\n3 = Restaurante\n4 = Heladería', '1');
+    if (!demoType) return;
+
+    const demoNames = { '1': 'Cafetería', '2': 'Tienda', '3': 'Restaurante', '4': 'Heladería' };
+    const demoName = demoNames[demoType] || 'Cafetería';
+
+    showToast(`Cargando demo "${demoName}" para ${businessName || uid}...`, 'info');
+
+    const userDoc = db.collection('users').doc(uid);
+
+    try {
+        const demos = getDemoData(demoType);
+
+        // Cargar productos
+        for (const p of demos.products) {
+            await userDoc.collection('products').doc(p.id).set(p);
+        }
+
+        // Cargar insumos
+        for (const i of demos.insumos) {
+            await userDoc.collection('insumos').doc(i.id).set(i);
+        }
+
+        // Cargar recetas
+        for (const r of demos.recipes) {
+            await userDoc.collection('recipes').doc(r.id).set(r);
+        }
+
+        // Cargar mesas
+        for (const m of demos.mesas) {
+            await userDoc.collection('mesas').doc(m.id).set(m);
+        }
+
+        // Cargar ventas de ejemplo
+        for (const s of demos.sales) {
+            await userDoc.collection('sales').doc(s.id).set(s);
+        }
+
+        // Actualizar settings
+        await userDoc.update({
+            'settings.businessName': `${demoName} ${businessName || 'Demo'}`,
+            'settings.monthlyGoal': 5000000
+        });
+
+        showToast(`✅ Demo "${demoName}" cargada exitosamente para ${businessName}`, 'success');
+    } catch (e) {
+        showToast('Error: ' + e.message, 'error');
+    }
+}
+
+function generateId() { return 'id_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9); }
+
+function getDemoData(type) {
+    const now = new Date().toISOString();
+    const daysAgo = (n) => { const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString(); };
+
+    // Productos base según tipo
+    const productSets = {
+        '1': [ // Cafetería
+            { name: 'Café Americano', cost: 800, price: 3000, qty: 100 },
+            { name: 'Café con Leche', cost: 1000, price: 3500, qty: 80 },
+            { name: 'Cappuccino', cost: 1200, price: 4000, qty: 70 },
+            { name: 'Latte', cost: 1300, price: 4000, qty: 60 },
+            { name: 'Mocaccino', cost: 1500, price: 4500, qty: 50 },
+            { name: 'Chocolate Caliente', cost: 1200, price: 3700, qty: 40 },
+            { name: 'Croissant', cost: 1500, price: 4000, qty: 30 },
+            { name: 'Muffin', cost: 1200, price: 3500, qty: 25 },
+            { name: 'Brownie', cost: 1000, price: 3000, qty: 30 },
+            { name: 'Sándwich de Pollo', cost: 3000, price: 7000, qty: 20 },
+        ],
+        '2': [ // Tienda
+            { name: 'Arroz x Libra', cost: 2500, price: 3500, qty: 50 },
+            { name: 'Aceite x Litro', cost: 8000, price: 11000, qty: 30 },
+            { name: 'Panela', cost: 2000, price: 3000, qty: 40 },
+            { name: 'Huevos x30', cost: 12000, price: 16000, qty: 20 },
+            { name: 'Leche x Litro', cost: 3500, price: 5000, qty: 25 },
+            { name: 'Pan Tajado', cost: 4000, price: 6000, qty: 20 },
+            { name: 'Gaseosa 350ml', cost: 1200, price: 2500, qty: 48 },
+            { name: 'Agua 600ml', cost: 800, price: 2000, qty: 48 },
+            { name: 'Jabón', cost: 3000, price: 5000, qty: 15 },
+            { name: 'Papel Higiénico x4', cost: 5000, price: 8000, qty: 20 },
+        ],
+        '3': [ // Restaurante
+            { name: 'Almuerzo Corriente', cost: 6000, price: 12000, qty: 50 },
+            { name: 'Bandeja Paisa', cost: 8000, price: 18000, qty: 30 },
+            { name: 'Sancocho', cost: 5000, price: 14000, qty: 25 },
+            { name: 'Arroz con Pollo', cost: 6500, price: 15000, qty: 30 },
+            { name: 'Carne Asada', cost: 9000, price: 20000, qty: 20 },
+            { name: 'Limonada', cost: 800, price: 3000, qty: 60 },
+            { name: 'Jugo Natural', cost: 1500, price: 4000, qty: 40 },
+            { name: 'Sopa del Día', cost: 2500, price: 6000, qty: 35 },
+            { name: 'Postre del Día', cost: 2000, price: 5000, qty: 20 },
+            { name: 'Agua Botella', cost: 800, price: 2000, qty: 48 },
+        ],
+        '4': [ // Heladería
+            { name: 'Helado Chocolate (bolita)', cost: 800, price: 3000, qty: 120 },
+            { name: 'Helado Vainilla (bolita)', cost: 750, price: 3000, qty: 100 },
+            { name: 'Helado Fresa (bolita)', cost: 850, price: 3000, qty: 80 },
+            { name: 'Helado Maracuyá (bolita)', cost: 900, price: 3000, qty: 60 },
+            { name: 'Cono Sencillo', cost: 300, price: 600, qty: 200 },
+            { name: 'Cono Doble', cost: 500, price: 1200, qty: 150 },
+            { name: 'Malteada', cost: 2500, price: 5500, qty: 30 },
+            { name: 'Sundae', cost: 3000, price: 7000, qty: 25 },
+            { name: 'Banana Split', cost: 3500, price: 8500, qty: 20 },
+            { name: 'Agua', cost: 800, price: 2000, qty: 48 },
+        ]
+    };
+
+    const selectedProducts = productSets[type] || productSets['1'];
+    const category = type === '2' ? 'Hogar' : 'Alimentos';
+
+    // Generar productos
+    const products = selectedProducts.map((p, i) => ({
+        id: generateId() + '_' + i,
+        name: p.name,
+        category: category,
+        quantity: p.qty,
+        cost: p.cost,
+        price: p.price,
+        margin: Math.round(((p.price - p.cost) / p.cost) * 100),
+        minStock: 5,
+        supplier: '',
+        createdAt: daysAgo(30),
+        updatedAt: now
+    }));
+
+    // Generar insumos básicos
+    const insumos = [
+        { id: generateId() + '_ins1', name: 'Insumo Principal', unit: 'g', purchasePrice: 25000, purchaseQty: 500, currentStock: 500, minStock: 50, costPerUnit: 50, createdAt: now },
+        { id: generateId() + '_ins2', name: 'Azúcar', unit: 'g', purchasePrice: 5000, purchaseQty: 1000, currentStock: 1000, minStock: 100, costPerUnit: 5, createdAt: now },
+        { id: generateId() + '_ins3', name: 'Agua', unit: 'ml', purchasePrice: 3000, purchaseQty: 20000, currentStock: 20000, minStock: 2000, costPerUnit: 0.15, createdAt: now },
+    ];
+
+    // Recetas para primer producto
+    const recipes = [{
+        id: generateId() + '_rec1',
+        productId: products[0].id,
+        productName: products[0].name,
+        ingredients: [
+            { insumoId: insumos[0].id, insumoName: insumos[0].name, quantity: 5, unit: 'g', cost: 250 },
+            { insumoId: insumos[1].id, insumoName: insumos[1].name, quantity: 3, unit: 'g', cost: 15 },
+        ],
+        totalCost: 265,
+        createdAt: now, updatedAt: now
+    }];
+
+    // Mesas
+    const mesas = [
+        { id: 'mesa_1', name: 'Mesa 1', capacity: 4, status: 'libre', createdAt: now },
+        { id: 'mesa_2', name: 'Mesa 2', capacity: 4, status: 'libre', createdAt: now },
+        { id: 'mesa_3', name: 'Mesa 3', capacity: 2, status: 'libre', createdAt: now },
+        { id: 'mesa_4', name: 'Mesa 4', capacity: 6, status: 'libre', createdAt: now },
+    ];
+
+    // Ventas de ejemplo (últimos 7 días)
+    const sales = [];
+    const methods = ['Efectivo', 'Nequi', 'Daviplata', 'Tarjeta'];
+    for (let day = 0; day < 7; day++) {
+        const numSales = Math.floor(Math.random() * 5) + 3;
+        for (let s = 0; s < numSales; s++) {
+            const prod = products[Math.floor(Math.random() * products.length)];
+            const qty = Math.floor(Math.random() * 3) + 1;
+            const saleDate = new Date(); saleDate.setDate(saleDate.getDate() - day);
+            saleDate.setHours(Math.floor(Math.random() * 10) + 8, Math.floor(Math.random() * 60));
+            sales.push({
+                id: generateId() + '_s' + day + s,
+                productId: prod.id, productName: prod.name,
+                quantity: qty, price: prod.price, cost: prod.cost,
+                discount: 0, discountAmount: 0,
+                total: prod.price * qty,
+                profit: (prod.price - prod.cost) * qty,
+                client: '', method: methods[Math.floor(Math.random() * methods.length)],
+                notes: '', date: saleDate.toISOString()
+            });
+        }
+    }
+
+    return { products, insumos, recipes, mesas, sales };
 }
