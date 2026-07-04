@@ -2790,7 +2790,7 @@ function initPlanSystem() {
     const userPlan = settings.plan || 'trial';
     const registeredAt = settings.registeredAt || new Date().toISOString();
 
-    // Si es trial, verificar si expiró (3 días)
+    // Si es trial, verificar si expiró (3 días) - solo prueba del plan Restaurante
     if (userPlan === 'trial') {
         const daysSinceRegister = Math.floor((Date.now() - new Date(registeredAt).getTime()) / (1000 * 60 * 60 * 24));
         if (daysSinceRegister >= 3) {
@@ -2801,10 +2801,13 @@ function initPlanSystem() {
             const daysLeft = 3 - daysSinceRegister;
             showTrialBanner(daysLeft);
         }
+        // Trial usa las features del plan Restaurante
+        currentPlan = 'trial';
+        applyPlanRestrictions('restaurant');
+    } else {
+        currentPlan = userPlan;
+        applyPlanRestrictions(currentPlan);
     }
-
-    currentPlan = userPlan;
-    applyPlanRestrictions(currentPlan);
 
     // Guardar fecha de registro si no existe
     if (!settings.registeredAt) {
