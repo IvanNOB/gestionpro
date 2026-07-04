@@ -125,6 +125,11 @@ function showUserInfo() {
 
 function checkActiveRole() {
     const activeRole = sessionStorage.getItem('activeRole');
+    if (activeRole === 'waiter') {
+        // Meseros NO tienen acceso al panel principal, redirigir
+        window.location.href = 'mesero.html';
+        return;
+    }
     if (activeRole && activeRole !== 'owner') {
         applyRoleRestrictions(activeRole);
     }

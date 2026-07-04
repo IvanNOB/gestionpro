@@ -153,7 +153,7 @@
             sessionStorage.setItem('activeRole', selectedEmployee.role);
             sessionStorage.setItem('activeEmployee', selectedEmployee.name);
 
-            // Redirigir según rol
+            // Meseros SIEMPRE van al panel de mesero, nunca al principal
             if (selectedEmployee.role === 'waiter') {
                 window.location.href = 'mesero.html';
             } else {
