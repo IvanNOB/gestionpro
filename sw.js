@@ -2,30 +2,10 @@
 // SERVICE WORKER - GestiónPro PWA
 // ==========================================
 
-const CACHE_NAME = 'gestionpro-v1';
-const ASSETS_TO_CACHE = [
-    '/',
-    '/index.html',
-    '/login.html',
-    '/styles.css',
-    '/login-styles.css',
-    '/app.js',
-    '/auth.js',
-    '/firebase-config.js',
-    '/manifest.json',
-    '/icons/icon-192.png',
-    '/icons/icon-512.png'
-];
+const CACHE_NAME = 'gestionpro-v2';
 
-// Instalar: cachear archivos básicos
+// Instalar: no pre-cachear, usar cache dinámico
 self.addEventListener('install', (event) => {
-    event.waitUntil(
-        caches.open(CACHE_NAME).then((cache) => {
-            return cache.addAll(ASSETS_TO_CACHE);
-        }).catch((err) => {
-            console.log('Cache error (no problem):', err);
-        })
-    );
     self.skipWaiting();
 });
 
@@ -48,14 +28,14 @@ self.addEventListener('fetch', (event) => {
     if (event.request.url.includes('firebasestorage') ||
         event.request.url.includes('googleapis') ||
         event.request.url.includes('firestore') ||
-        event.request.url.includes('identitytoolkit')) {
+        event.request.url.includes('identitytoolkit') ||
+        event.request.url.includes('gstatic.com')) {
         return;
     }
 
     event.respondWith(
         fetch(event.request)
             .then((response) => {
-                // Guardar copia en cache
                 if (response.status === 200) {
                     const clone = response.clone();
                     caches.open(CACHE_NAME).then((cache) => {
@@ -65,7 +45,6 @@ self.addEventListener('fetch', (event) => {
                 return response;
             })
             .catch(() => {
-                // Sin internet, buscar en cache
                 return caches.match(event.request);
             })
     );

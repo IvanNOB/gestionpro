@@ -2,7 +2,7 @@
     "name": "GestiónPro - Tu Negocio Completo",
     "short_name": "GestiónPro",
     "description": "Gestiona tu negocio: inventario, ventas, clientes y más",
-    "start_url": "/index.html",
+    "start_url": "./index.html",
     "display": "standalone",
     "background_color": "#1e293b",
     "theme_color": "#2563eb",
