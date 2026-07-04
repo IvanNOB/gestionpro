@@ -2492,7 +2492,7 @@ function applyCustomization() {
             'gradient-purple': 'linear-gradient(180deg, #4c1d95, #1e1b4b)',
             'gradient-green': 'linear-gradient(180deg, #064e3b, #0f172a)',
             'gradient-dark': 'linear-gradient(180deg, #000000, #1e293b)',
-            'solid-primary': customization.color || '#2563eb'
+            'solid-primary': `linear-gradient(180deg, ${customization.color || '#2563eb'}, ${adjustColor(customization.color || '#2563eb', -40)})`
         };
         const bg = styles[customization.sidebarStyle] || styles['default'];
         sidebar.style.background = bg;
@@ -2526,10 +2526,11 @@ function applyCustomization() {
         }
     }
 
-    // Slogan
-    const userDisplay = document.getElementById('user-display');
-    if (userDisplay && customization.slogan) {
-        userDisplay.textContent = customization.slogan;
+    // Slogan - show below business name, NOT in user display
+    const sloganEl = document.getElementById('sidebar-slogan');
+    if (sloganEl) {
+        sloganEl.textContent = customization.slogan || '';
+        sloganEl.style.display = customization.slogan ? 'block' : 'none';
     }
 }
 
