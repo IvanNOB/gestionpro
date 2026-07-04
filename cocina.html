@@ -1,238 +1,72 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GestiónPro - Pantalla Cocina</title>
-    <meta name="theme-color" content="#0f172a">
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
-        
-        .header { background: #1e293b; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #334155; }
-        .header h1 { font-size: 1.3rem; color: white; display: flex; align-items: center; gap: 10px; }
-        .header-right { display: flex; align-items: center; gap: 12px; }
-        .header-right button { background: #334155; border: none; color: white; padding: 10px 16px; border-radius: 8px; font-size: 0.85rem; cursor: pointer; }
-        .pending-count { background: #dc2626; color: white; padding: 4px 12px; border-radius: 20px; font-weight: 700; font-size: 0.9rem; }
-        .clock { color: #94a3b8; font-size: 0.9rem; }
-        
-        .orders-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; padding: 24px; }
-        
-        .order-card { background: #1e293b; border: 2px solid #334155; border-radius: 16px; overflow: hidden; transition: all 0.3s; }
-        .order-card.new { border-color: #f59e0b; animation: pulse 2s infinite; }
-        .order-card.preparing { border-color: #3b82f6; }
-        .order-card.ready { border-color: #16a34a; }
-        
-        @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(245,158,11,0.3); } 50% { box-shadow: 0 0 0 8px rgba(245,158,11,0); } }
-        
-        .order-card-header { padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #334155; }
-        .order-mesa { font-size: 1.1rem; font-weight: 700; color: #f8fafc; }
-        .order-time { font-size: 0.8rem; color: #94a3b8; }
-        .order-status-badge { padding: 4px 10px; border-radius: 12px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
-        .badge-new { background: rgba(245,158,11,0.2); color: #fbbf24; }
-        .badge-preparing { background: rgba(59,130,246,0.2); color: #93c5fd; }
-        .badge-ready { background: rgba(22,163,74,0.2); color: #4ade80; }
-        
-        .order-items-list { padding: 16px 20px; }
-        .order-item-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(51,65,85,0.5); }
-        .order-item-row:last-child { border-bottom: none; }
-        .item-qty { background: #334155; color: #f8fafc; width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; margin-right: 10px; }
-        .item-name { flex: 1; font-size: 0.95rem; color: #e2e8f0; }
-        
-        .order-card-actions { padding: 12px 20px 16px; display: flex; gap: 8px; }
-        .order-card-actions button { flex: 1; padding: 12px; border: none; border-radius: 10px; font-size: 0.9rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
-        .btn-prepare { background: #2563eb; color: white; }
-        .btn-prepare:hover { background: #1d4ed8; }
-        .btn-ready { background: #16a34a; color: white; }
-        .btn-ready:hover { background: #15803d; }
-        .btn-done { background: #334155; color: #94a3b8; }
-        .btn-done:hover { background: #475569; color: white; }
-        
-        .empty-kitchen { text-align: center; padding: 80px 20px; }
-        .empty-kitchen .icon { font-size: 4rem; margin-bottom: 16px; }
-        .empty-kitchen h2 { color: #475569; font-size: 1.3rem; margin-bottom: 8px; }
-        .empty-kitchen p { color: #334155; }
-        
-        .loading { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #0f172a; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 16px; z-index: 9999; }
-        .spinner { width: 48px; height: 48px; border: 4px solid #1e293b; border-top-color: #f59e0b; border-radius: 50%; animation: spin 0.7s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        
-        .sound-btn { background: #16a34a !important; }
-        .sound-btn.muted { background: #dc2626 !important; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GestiónPro - Cocina</title>
+<meta name="theme-color" content="#0f172a">
+<link rel="stylesheet" href="cocina-styles.css">
 </head>
 <body>
-    <div class="loading" id="loading">
-        <div class="spinner"></div>
-        <p>Conectando a cocina...</p>
-    </div>
 
-    <header class="header">
-        <h1>👨‍🍳 Cocina</h1>
-        <div class="header-right">
-            <span class="clock" id="clock"></span>
-            <span class="pending-count" id="pending-count">0 pedidos</span>
-            <button class="sound-btn" id="btn-sound" onclick="toggleSound()">🔔 Sonido</button>
-            <button onclick="location.reload()">🔄</button>
-            <button onclick="window.location.href='index.html'">🏠</button>
+<div class="loading" id="loading">
+    <div class="spinner"></div>
+    <p>Conectando a cocina...</p>
+</div>
+
+<header class="header">
+    <div class="header-left">
+        <h1>🍳 Cocina</h1>
+        <div class="header-stats" id="header-stats"></div>
+    </div>
+    <div class="header-right">
+        <span class="clock" id="clock"></span>
+        <button class="header-btn sound-btn" id="btn-sound" onclick="toggleSound()">🔔 Sonido</button>
+        <button class="header-btn" onclick="toggleFullscreen()">⛶</button>
+        <button class="header-btn" onclick="location.reload()">🔄</button>
+    </div>
+</header>
+
+<div class="kanban-container" id="kanban-container">
+    <div class="kanban-column col-new-bg">
+        <div class="column-header col-new-header">
+            <div class="col-header-left"><span class="col-icon">🔥</span><span class="col-title">Nuevos</span></div>
+            <span class="col-count count-new" id="count-new">0</span>
         </div>
-    </header>
-
-    <div class="orders-grid" id="orders-grid">
+        <div class="column-body" id="body-new"></div>
     </div>
+    <div class="kanban-column col-preparing-bg">
+        <div class="column-header col-preparing-header">
+            <div class="col-header-left"><span class="col-icon">👨‍🍳</span><span class="col-title">Preparando</span></div>
+            <span class="col-count count-preparing" id="count-preparing">0</span>
+        </div>
+        <div class="column-body" id="body-preparing"></div>
+    </div>
+    <div class="kanban-column col-ready-bg">
+        <div class="column-header col-ready-header">
+            <div class="col-header-left"><span class="col-icon">✅</span><span class="col-title">Listos</span></div>
+            <span class="col-count count-ready" id="count-ready">0</span>
+        </div>
+        <div class="column-body" id="body-ready"></div>
+    </div>
+</div>
 
-    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-    <script src="firebase-config.js"></script>
-    <script>
-        let currentUser = null;
-        let orders = [];
-        let soundEnabled = true;
+<div class="empty-kitchen" id="empty-kitchen" style="display:none;">
+    <div class="empty-animation">
+        <div class="chef-icon">👨‍🍳</div>
+        <div class="steam steam-1">~</div>
+        <div class="steam steam-2">~</div>
+        <div class="steam steam-3">~</div>
+    </div>
+    <h2>Sin pedidos pendientes</h2>
+    <p>Los nuevos pedidos aparecerán aquí automáticamente</p>
+    <span class="empty-sub">Relájate, la cocina está al día 🎉</span>
+</div>
 
-        function userDoc() { return db.collection('users').doc(currentUser.uid); }
-        function userCollection(name) { return userDoc().collection(name); }
-
-        // Clock
-        setInterval(() => {
-            document.getElementById('clock').textContent = new Date().toLocaleTimeString('es-CO', {hour:'2-digit', minute:'2-digit'});
-        }, 1000);
-
-        // Auth
-        auth.onAuthStateChanged(async (user) => {
-            if (user) {
-                // Solo dueño o cajero puede ver cocina
-                const activeRole = sessionStorage.getItem('activeRole');
-                if (activeRole === 'waiter') {
-                    window.location.href = 'mesero.html';
-                    return;
-                }
-                currentUser = user;
-                document.getElementById('loading').style.display = 'none';
-                listenOrders();
-            } else {
-                window.location.href = 'login.html';
-            }
-        });
-
-        // Listen to orders in real-time
-        function listenOrders() {
-            userCollection('orders').onSnapshot((snapshot) => {
-                orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter(o => o.status !== 'completed');
-                orders.sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''));
-                renderOrders();
-                
-                // Sound notification for new orders
-                const newOrders = orders.filter(o => o.status === 'active');
-                document.getElementById('pending-count').textContent = orders.length + ' pedido' + (orders.length !== 1 ? 's' : '');
-                
-                if (newOrders.length > 0 && soundEnabled) {
-                    playNotification();
-                }
-            });
-        }
-
-        function renderOrders() {
-            const grid = document.getElementById('orders-grid');
-
-            if (orders.length === 0) {
-                grid.innerHTML = `<div class="empty-kitchen">
-                    <div class="icon">👨‍🍳</div>
-                    <h2>Sin pedidos pendientes</h2>
-                    <p>Los nuevos pedidos aparecerán aquí automáticamente</p>
-                </div>`;
-                return;
-            }
-
-            grid.innerHTML = orders.map(o => {
-                const statusClass = o.status === 'active' ? 'new' : o.status === 'preparing' ? 'preparing' : 'ready';
-                const badgeClass = o.status === 'active' ? 'badge-new' : o.status === 'preparing' ? 'badge-preparing' : 'badge-ready';
-                const statusText = o.status === 'active' ? 'Nuevo' : o.status === 'preparing' ? 'Preparando' : 'Listo';
-                const time = o.createdAt ? new Date(o.createdAt).toLocaleTimeString('es-CO', {hour:'2-digit', minute:'2-digit'}) : '';
-                const items = o.items || [];
-
-                let actions = '';
-                if (o.status === 'active') {
-                    actions = `<button class="btn-prepare" onclick="updateStatus('${o.id}', 'preparing')">👨‍🍳 Preparando</button>`;
-                } else if (o.status === 'preparing') {
-                    actions = `<button class="btn-ready" onclick="updateStatus('${o.id}', 'ready')">✅ Listo</button>`;
-                } else {
-                    actions = `<button class="btn-done" onclick="updateStatus('${o.id}', 'completed')">🗑️ Quitar</button>`;
-                }
-
-                return `<div class="order-card ${statusClass}">
-                    <div class="order-card-header">
-                        <div>
-                            <div class="order-mesa">🪑 ${esc(o.mesaName || 'Mesa')}</div>
-                            <div class="order-time">⏰ ${time}</div>
-                        </div>
-                        <span class="order-status-badge ${badgeClass}">${statusText}</span>
-                    </div>
-                    <div class="order-items-list">
-                        ${items.map(i => `<div class="order-item-row">
-                            <span class="item-qty">${i.qty}</span>
-                            <span class="item-name">${esc(i.name)}</span>
-                        </div>`).join('')}
-                    </div>
-                    <div class="order-card-actions">${actions}</div>
-                </div>`;
-            }).join('');
-        }
-
-        async function updateStatus(orderId, newStatus) {
-            try {
-                if (newStatus === 'completed') {
-                    await userCollection('orders').doc(orderId).delete();
-                    showNotification('Pedido eliminado');
-                } else {
-                    await userCollection('orders').doc(orderId).update({ status: newStatus, updatedAt: new Date().toISOString() });
-                    showNotification(newStatus === 'preparing' ? '👨‍🍳 Preparando...' : '✅ ¡Listo para servir!');
-                }
-            } catch (e) {
-                console.error('Error actualizando pedido:', e);
-                // Si falla update, intentar con set merge
-                try {
-                    if (newStatus !== 'completed') {
-                        await userCollection('orders').doc(orderId).set({ status: newStatus, updatedAt: new Date().toISOString() }, { merge: true });
-                        showNotification(newStatus === 'preparing' ? '👨‍🍳 Preparando...' : '✅ ¡Listo!');
-                    }
-                } catch (e2) {
-                    showNotification('Error: ' + e2.message);
-                }
-            }
-        }
-
-        function showNotification(msg) {
-            const el = document.createElement('div');
-            el.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#16a34a;color:white;padding:12px 24px;border-radius:12px;font-weight:600;font-size:0.9rem;z-index:9999;animation:fadeUp 0.3s ease;';
-            el.textContent = msg;
-            document.body.appendChild(el);
-            setTimeout(() => el.remove(), 2500);
-        }
-
-        function toggleSound() {
-            soundEnabled = !soundEnabled;
-            const btn = document.getElementById('btn-sound');
-            btn.textContent = soundEnabled ? '🔔 Sonido' : '🔕 Silencio';
-            btn.className = soundEnabled ? 'sound-btn' : 'sound-btn muted';
-        }
-
-        function playNotification() {
-            try {
-                const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-                osc.frequency.value = 800;
-                gain.gain.value = 0.3;
-                osc.start();
-                setTimeout(() => { osc.frequency.value = 1000; }, 150);
-                setTimeout(() => { osc.stop(); ctx.close(); }, 300);
-            } catch(e) {}
-        }
-
-        function esc(text) { const d = document.createElement('div'); d.textContent = text || ''; return d.innerHTML; }
-    </script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="cocina-app.js"></script>
 </body>
 </html>
