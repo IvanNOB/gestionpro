@@ -79,6 +79,7 @@ async function initApp() {
         showUserInfo();
         loadCustomization();
         checkOnboarding();
+        initPlanSystem();
     } catch (error) {
         console.error('Error inicializando app:', error);
         showToast('Error cargando datos. Intenta recargar.', 'error');
@@ -2746,4 +2747,127 @@ function showOnboarding() {
 
     renderStep();
     document.body.appendChild(overlay);
+}
+
+
+
+// ==========================================
+// SISTEMA DE PLANES Y RESTRICCIONES
+// ==========================================
+const PLANS = {
+    trial: {
+        name: 'Prueba Gratis',
+        days: 7,
+        features: ['inventory', 'sales', 'cashclose', 'clients', 'suppliers', 'expenses', 'insumos', 'recipes', 'calculator', 'reports', 'alerts', 'history', 'settings', 'mesas', 'dashboard']
+    },
+    basic: {
+        name: 'Básico',
+        price: 25000,
+        features: ['inventory', 'sales', 'cashclose', 'clients', 'suppliers', 'expenses', 'calculator', 'reports', 'alerts', 'history', 'settings', 'dashboard']
+    },
+    restaurant: {
+        name: 'Restaurante',
+        price: 45000,
+        features: ['inventory', 'sales', 'cashclose', 'clients', 'suppliers', 'expenses', 'insumos', 'recipes', 'calculator', 'reports', 'alerts', 'history', 'settings', 'mesas', 'dashboard']
+    },
+    premium: {
+        name: 'Premium',
+        price: 65000,
+        features: ['inventory', 'sales', 'cashclose', 'clients', 'suppliers', 'expenses', 'insumos', 'recipes', 'calculator', 'reports', 'alerts', 'history', 'settings', 'mesas', 'dashboard']
+    }
+};
+
+let currentPlan = 'trial';
+let trialExpired = false;
+
+function initPlanSystem() {
+    const userPlan = settings.plan || 'trial';
+    const registeredAt = settings.registeredAt || new Date().toISOString();
+
+    // Si es trial, verificar si expiró (7 días)
+    if (userPlan === 'trial') {
+        const daysSinceRegister = Math.floor((Date.now() - new Date(registeredAt).getTime()) / (1000 * 60 * 60 * 24));
+        if (daysSinceRegister >= 7) {
+            trialExpired = true;
+            showTrialExpiredMessage();
+            return;
+        } else {
+            const daysLeft = 7 - daysSinceRegister;
+            showTrialBanner(daysLeft);
+        }
+    }
+
+    currentPlan = userPlan;
+    applyPlanRestrictions(currentPlan);
+
+    // Guardar fecha de registro si no existe
+    if (!settings.registeredAt) {
+        settings.registeredAt = new Date().toISOString();
+        saveSettings();
+    }
+}
+
+function applyPlanRestrictions(plan) {
+    const planData = PLANS[plan];
+    if (!planData) return;
+
+    const allNavLinks = document.querySelectorAll('.nav-link');
+    allNavLinks.forEach(link => {
+        const section = link.dataset.section;
+        if (!section) return;
+
+        if (planData.features.includes(section)) {
+            link.style.display = '';
+            link.style.opacity = '1';
+            link.style.pointerEvents = '';
+            link.removeAttribute('title');
+        } else {
+            link.style.opacity = '0.4';
+            link.style.pointerEvents = 'none';
+            link.title = `Disponible en plan ${getPlanNameForFeature(section)}`;
+            // Agregar candado
+            if (!link.textContent.includes('🔒')) {
+                link.textContent = link.textContent + ' 🔒';
+            }
+        }
+    });
+}
+
+function getPlanNameForFeature(feature) {
+    if (['insumos', 'recipes', 'mesas'].includes(feature)) return 'Restaurante ($45.000/mes)';
+    return 'Premium ($65.000/mes)';
+}
+
+function showTrialBanner(daysLeft) {
+    const banner = document.createElement('div');
+    banner.id = 'trial-banner';
+    banner.style.cssText = 'position:fixed;top:0;left:260px;right:0;background:linear-gradient(135deg,#f59e0b,#d97706);color:white;padding:10px 20px;text-align:center;font-size:0.85rem;font-weight:600;z-index:999;display:flex;align-items:center;justify-content:center;gap:12px;';
+    banner.innerHTML = `
+        <span>⏳ Prueba gratis: te quedan <strong>${daysLeft} día${daysLeft !== 1 ? 's' : ''}</strong></span>
+        <a href="https://wa.me/573159756975?text=Hola%2C%20quiero%20activar%20mi%20plan%20de%20GestiónPro" target="_blank" style="background:white;color:#d97706;padding:6px 14px;border-radius:8px;text-decoration:none;font-weight:700;font-size:0.8rem;">Activar Plan</a>
+    `;
+    document.body.appendChild(banner);
+    // Mover contenido principal
+    document.querySelector('.main-content').style.paddingTop = '70px';
+}
+
+function showTrialExpiredMessage() {
+    showAppLoading(false);
+    document.querySelector('.app-layout').innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#0f172a,#1e293b);padding:20px;">
+            <div style="text-align:center;max-width:450px;background:white;padding:48px 32px;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+                <div style="font-size:4rem;margin-bottom:16px;">⏰</div>
+                <h1 style="font-size:1.6rem;color:#1e293b;margin-bottom:12px;">Tu prueba gratis terminó</h1>
+                <p style="color:#64748b;margin-bottom:8px;line-height:1.5;">Tu período de 7 días gratuitos ha expirado. Para seguir usando GestiónPro, activa un plan.</p>
+                <div style="background:#f8fafc;border-radius:12px;padding:20px;margin:20px 0;text-align:left;">
+                    <p style="font-weight:700;color:#1e293b;margin-bottom:12px;">Planes disponibles:</p>
+                    <p style="margin-bottom:8px;">☕ <strong>Básico:</strong> $25.000/mes (Inventario + Ventas)</p>
+                    <p style="margin-bottom:8px;">🍽️ <strong>Restaurante:</strong> $45.000/mes (+ Mesas + Cocina)</p>
+                    <p style="margin-bottom:0;">👑 <strong>Premium:</strong> $65.000/mes (Todo incluido)</p>
+                </div>
+                <a href="https://wa.me/573159756975?text=Hola%2C%20quiero%20activar%20mi%20plan%20de%20GestiónPro.%20Mi%20correo%20es%3A%20${encodeURIComponent(currentUser?.email || '')}" target="_blank" style="display:block;padding:16px;background:linear-gradient(135deg,#16a34a,#15803d);color:white;border-radius:12px;font-size:1.1rem;font-weight:700;text-decoration:none;margin-bottom:12px;box-shadow:0 4px 12px rgba(22,163,74,0.3);">💬 Activar por WhatsApp</a>
+                <button onclick="auth.signOut().then(()=>window.location.href='login.html')" style="padding:12px 24px;background:#f1f5f9;color:#64748b;border:none;border-radius:10px;font-size:0.9rem;cursor:pointer;font-weight:600;">Cerrar Sesión</button>
+            </div>
+        </div>
+    `;
 }

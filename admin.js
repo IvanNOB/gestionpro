@@ -154,6 +154,12 @@ function renderUsersTable() {
                         : `<button class="btn-block btn-block-user" onclick="blockUser('${u.uid}')">🚫 Bloquear</button>`
                     )
                 }
+                ${!isAdminUser ? `<select onchange="changePlan('${u.uid}', this.value)" style="margin-left:6px;padding:4px 8px;border-radius:6px;border:1px solid #334155;background:#0f172a;color:#e2e8f0;font-size:0.75rem;">
+                    <option value="trial" ${plan==='trial'?'selected':''}>Prueba</option>
+                    <option value="basic" ${plan==='basic'?'selected':''}>Básico</option>
+                    <option value="restaurant" ${plan==='restaurant'?'selected':''}>Restaurante</option>
+                    <option value="premium" ${plan==='premium'?'selected':''}>Premium</option>
+                </select>` : ''}
             </td>
         </tr>`;
     }).join('');
@@ -222,4 +228,27 @@ function showToast(message, type = 'info') {
     toast.textContent = message;
     container.appendChild(toast);
     setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3000);
+}
+
+
+
+// ==========================================
+// CAMBIAR PLAN DE USUARIO
+// ==========================================
+async function changePlan(uid, newPlan) {
+    const user = allUsers.find(u => u.uid === uid);
+    if (!user) return;
+
+    try {
+        await db.collection('users').doc(uid).update({
+            plan: newPlan,
+            'settings.plan': newPlan,
+            planChangedAt: new Date().toISOString()
+        });
+        user.plan = newPlan;
+        renderUsersTable();
+        showToast(`Plan de "${user.businessName || user.email}" cambiado a: ${newPlan.toUpperCase()}`, 'success');
+    } catch (error) {
+        showToast('Error al cambiar plan: ' + error.message, 'error');
+    }
 }
