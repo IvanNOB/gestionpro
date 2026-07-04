@@ -155,6 +155,7 @@ function renderUsersTable() {
                     )
                 }
                 ${!isAdminUser ? `<button class="btn-block" style="background:rgba(99,91,255,0.15);color:#93c5fd;border:1px solid rgba(99,91,255,0.3);margin-left:4px;" onclick="loadDemoForUser('${u.uid}', '${(u.businessName || '').replace(/'/g, '')}')">📦 Demo</button>` : ''}
+                ${!isAdminUser ? `<button class="btn-block" style="background:rgba(223,27,65,0.1);color:#fca5a5;border:1px solid rgba(223,27,65,0.2);margin-left:4px;" onclick="deleteUserAccount('${u.uid}', '${(u.businessName || u.email || '').replace(/'/g, '')}')">🗑️</button>` : ''}
                 ${!isAdminUser ? `<select onchange="changePlan('${u.uid}', this.value)" style="margin-left:6px;padding:4px 8px;border-radius:6px;border:1px solid #334155;background:#0f172a;color:#e2e8f0;font-size:0.75rem;">
                     <option value="trial" ${plan==='trial'?'selected':''}>Prueba</option>
                     <option value="basic" ${plan==='basic'?'selected':''}>Básico</option>
@@ -438,4 +439,41 @@ function getDemoData(type) {
     }
 
     return { products, insumos, recipes, mesas, sales };
+}
+
+
+
+// ==========================================
+// ELIMINAR CUENTA DE USUARIO
+// ==========================================
+async function deleteUserAccount(uid, name) {
+    if (!confirm(`⚠️ ¿Eliminar la cuenta de "${name}"?\n\nSe borrarán TODOS sus datos:\n- Productos\n- Ventas\n- Insumos\n- Recetas\n- Mesas\n- Clientes\n- Todo\n\n¡Esta acción NO se puede deshacer!`)) return;
+    if (!confirm(`¿Estás SEGURO? Se eliminará "${name}" permanentemente.`)) return;
+
+    showToast(`Eliminando cuenta de ${name}...`, 'info');
+
+    try {
+        const userRef = db.collection('users').doc(uid);
+        
+        // Borrar todas las subcolecciones
+        const collections = ['products', 'sales', 'history', 'clients', 'suppliers', 'expenses', 'insumos', 'recipes', 'mesas', 'orders', 'employees'];
+        for (const col of collections) {
+            const snap = await userRef.collection(col).get();
+            const batch = db.batch();
+            snap.docs.forEach(doc => batch.delete(doc.ref));
+            if (snap.docs.length > 0) await batch.commit();
+        }
+
+        // Borrar el documento del usuario
+        await userRef.delete();
+
+        // Quitar de la lista local
+        allUsers = allUsers.filter(u => u.uid !== uid);
+        updateStats();
+        renderUsersTable();
+
+        showToast(`✅ Cuenta de "${name}" eliminada completamente`, 'success');
+    } catch (e) {
+        showToast('Error eliminando: ' + e.message, 'error');
+    }
 }
