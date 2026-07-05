@@ -1002,67 +1002,72 @@
                     </div>
 
                     <div class="card">
-                        <h3>🍦 Ganancia por Caja de Helado</h3>
-                        <p class="card-description">Calcula cuántas bolitas salen de una caja según su peso y cuánto ganas vendiéndolas.</p>
+                        <h3>⚖️ Calculadora de Precio por Gramos</h3>
+                        <p class="card-description">Calcula el precio por gramo de un producto para saber exactamente cuánto cobrar por cualquier cantidad.</p>
                         <div class="form-grid">
                             <div class="form-group">
-                                <label>Peso de la Caja (gramos)</label>
-                                <input type="number" id="ice-box-weight" min="0" step="1" placeholder="Ej: 4000">
-                                <small>Varía según la caja</small>
+                                <label>Nombre del Producto</label>
+                                <input type="text" id="gram-product-name" placeholder="Ej: Queso mozzarella">
                             </div>
                             <div class="form-group">
-                                <label>Costo de la Caja ($)</label>
-                                <input type="number" id="ice-box-cost" min="0" step="0.01" placeholder="Lo que te cuesta la caja">
+                                <label>Peso Total del Paquete (gramos)</label>
+                                <input type="number" id="gram-total-weight" min="1" step="1" placeholder="Ej: 1000">
+                                <small>Peso total que compraste</small>
                             </div>
                             <div class="form-group">
-                                <label>Peso de cada Bolita (gramos)</label>
-                                <input type="number" id="ice-scoop-weight" min="1" step="1" value="100" placeholder="100">
-                                <small>Peso de cada bola de helado</small>
+                                <label>Costo del Paquete ($)</label>
+                                <input type="number" id="gram-total-cost" min="0" step="0.01" placeholder="Ej: 25000">
+                                <small>Lo que pagaste por el paquete</small>
                             </div>
                             <div class="form-group">
-                                <label>Precio de Venta por Bolita ($)</label>
-                                <input type="number" id="ice-scoop-price" min="0" step="0.01" placeholder="Ej: 3000">
+                                <label>Margen de Ganancia (%)</label>
+                                <input type="number" id="gram-margin" min="0" max="500" value="30" placeholder="30">
+                                <small>Porcentaje de ganancia deseada</small>
                             </div>
                             <div class="form-group">
-                                <label>Costo Extra por Bolita ($)</label>
-                                <input type="number" id="ice-extra-cost" min="0" step="0.01" value="0" placeholder="0">
-                                <small>Cono, vaso, cuchara, servilleta</small>
-                            </div>
-                            <div class="form-group">
-                                <label>Desperdicio / Merma (%)</label>
-                                <input type="number" id="ice-waste" min="0" max="100" value="5" placeholder="5">
-                                <small>Helado que se pierde al servir</small>
+                                <label>Cantidad a Vender (gramos)</label>
+                                <input type="number" id="gram-sell-weight" min="1" step="1" placeholder="Ej: 100">
+                                <small>Cuántos gramos quieres vender</small>
                             </div>
                         </div>
-                        <button class="btn btn-primary" id="btn-ice">🍦 Calcular Ganancia</button>
-                        <div class="calc-results" id="ice-results" style="display:none;">
+                        <button class="btn btn-primary" id="btn-gram-calc">⚖️ Calcular Precio</button>
+                        <div class="calc-results" id="gram-results" style="display:none;">
                             <div class="calc-result-item highlight">
-                                <span>🍨 Bolitas que salen:</span>
-                                <span id="ice-scoops">0</span>
+                                <span>💲 Costo por gramo:</span>
+                                <span id="gram-cost-per-g">$0</span>
                             </div>
-                            <div class="calc-result-item">
-                                <span>💵 Ingreso total (todas las bolitas):</span>
-                                <span id="ice-revenue">$0</span>
-                            </div>
-                            <div class="calc-result-item">
-                                <span>📉 Costo total (caja + extras):</span>
-                                <span id="ice-total-cost">$0</span>
+                            <div class="calc-result-item highlight">
+                                <span>🏷️ Precio de venta por gramo:</span>
+                                <span id="gram-price-per-g">$0</span>
                             </div>
                             <div class="calc-result-item success">
-                                <span>💰 Ganancia total por caja:</span>
-                                <span id="ice-profit">$0</span>
-                            </div>
-                            <div class="calc-result-item success">
-                                <span>📈 Ganancia por bolita:</span>
-                                <span id="ice-profit-scoop">$0</span>
+                                <span>🧾 Precio a cobrar (por la cantidad):</span>
+                                <span id="gram-sell-price">$0</span>
                             </div>
                             <div class="calc-result-item">
-                                <span>📊 Margen de ganancia:</span>
-                                <span id="ice-margin">0%</span>
+                                <span>📦 Costo de esa cantidad:</span>
+                                <span id="gram-sell-cost">$0</span>
+                            </div>
+                            <div class="calc-result-item success">
+                                <span>💰 Ganancia por esa venta:</span>
+                                <span id="gram-sell-profit">$0</span>
+                            </div>
+                            <div class="calc-result-item">
+                                <span>📊 Porciones que salen del paquete:</span>
+                                <span id="gram-portions">0</span>
                             </div>
                             <div class="form-actions" style="margin-top:14px;">
-                                <button type="button" class="btn btn-success" id="btn-ice-save">💾 Guardar como producto (vender por bolita)</button>
+                                <button type="button" class="btn btn-success" id="btn-gram-save">💾 Guardar resultado</button>
                             </div>
+                        </div>
+
+                        <!-- Historial de cálculos guardados -->
+                        <div class="gram-history-section" style="margin-top:24px;">
+                            <h4 style="margin-bottom:12px; color:var(--text);">📋 Resultados Guardados</h4>
+                            <div id="gram-history-list" style="display:flex; flex-direction:column; gap:8px;">
+                                <p id="empty-gram-history" style="color:var(--text-light); font-size:0.9rem;">No hay cálculos guardados aún. Calcula y guarda para tener tu referencia de precios.</p>
+                            </div>
+                            <button class="btn" id="btn-clear-gram-history" style="margin-top:12px; background:var(--danger); color:white; display:none;">🗑️ Limpiar historial</button>
                         </div>
                     </div>
                 </div>
