@@ -1376,11 +1376,15 @@
     <script src="app.js"></script>
     <script src="tickets.js"></script>
     <script>
-        // Registrar Service Worker para PWA
+        // Service Worker desactivado - para que los cambios se reflejen al instante
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js')
-                .then(() => console.log('SW registrado'))
-                .catch((err) => console.log('SW error:', err));
+            navigator.serviceWorker.getRegistrations().then(registrations => {
+                registrations.forEach(reg => reg.unregister());
+            });
+            // Limpiar caches existentes
+            if ('caches' in window) {
+                caches.keys().then(keys => keys.forEach(key => caches.delete(key)));
+            }
         }
     </script>
 </body>
