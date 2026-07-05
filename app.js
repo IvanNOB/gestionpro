@@ -578,6 +578,18 @@ function initForms() {
     // Subida de imagen de producto
     document.getElementById('product-image-file').addEventListener('change', handleProductImageUpload);
 
+    // Categoría personalizada
+    document.getElementById('product-category').addEventListener('change', (e) => {
+        const customInput = document.getElementById('product-category-custom');
+        if (e.target.value === '__custom__') {
+            customInput.style.display = 'block';
+            customInput.focus();
+        } else {
+            customInput.style.display = 'none';
+            customInput.value = '';
+        }
+    });
+
     // Ventas
     const saleForm = document.getElementById('sale-form');
     saleForm.addEventListener('submit', handleSaleSubmit);
@@ -628,7 +640,9 @@ function useSuggestedPrice() {
 function handleProductSubmit(e) {
     e.preventDefault();
     const name = document.getElementById('product-name').value.trim();
-    const category = document.getElementById('product-category').value;
+    const categorySelect = document.getElementById('product-category').value;
+    const categoryCustom = document.getElementById('product-category-custom').value.trim();
+    const category = categorySelect === '__custom__' ? categoryCustom : categorySelect;
     const quantity = parseInt(document.getElementById('product-quantity').value) || 0;
     const cost = parseFloat(document.getElementById('product-cost').value) || 0;
     const margin = parseFloat(document.getElementById('profit-margin').value) || 30;
@@ -770,6 +784,15 @@ function editProduct(id) {
     editingId = id;
     document.getElementById('product-name').value = p.name;
     document.getElementById('product-category').value = p.category;
+    // Si la categoría no está en el select, mostrar campo personalizado
+    const catSelect = document.getElementById('product-category');
+    if (catSelect.value !== p.category) {
+        catSelect.value = '__custom__';
+        document.getElementById('product-category-custom').style.display = 'block';
+        document.getElementById('product-category-custom').value = p.category;
+    } else {
+        document.getElementById('product-category-custom').style.display = 'none';
+    }
     document.getElementById('product-quantity').value = p.quantity;
     document.getElementById('product-cost').value = p.cost;
     document.getElementById('profit-margin').value = p.margin;

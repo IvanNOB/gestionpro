@@ -217,19 +217,24 @@
                                 <label for="product-category">Categoría</label>
                                 <select id="product-category" required>
                                     <option value="">Seleccionar...</option>
+                                    <option value="Platos Fuertes">🍖 Platos Fuertes</option>
+                                    <option value="Entradas">🥗 Entradas</option>
+                                    <option value="Bebidas">🥤 Bebidas</option>
+                                    <option value="Postres">🍰 Postres</option>
+                                    <option value="Desayunos">🍳 Desayunos</option>
+                                    <option value="Snacks">🍿 Snacks</option>
+                                    <option value="Cafetería">☕ Cafetería</option>
+                                    <option value="Alimentos">🍔 Alimentos</option>
                                     <option value="Ropa">👕 Ropa</option>
                                     <option value="Electrónica">📱 Electrónica</option>
-                                    <option value="Alimentos">🍔 Alimentos</option>
                                     <option value="Hogar">🏠 Hogar</option>
                                     <option value="Belleza">💄 Belleza</option>
-                                    <option value="Deportes">⚽ Deportes</option>
                                     <option value="Accesorios">💍 Accesorios</option>
-                                    <option value="Tecnología">💻 Tecnología</option>
-                                    <option value="Salud">💊 Salud</option>
-                                    <option value="Mascotas">🐾 Mascotas</option>
-                                    <option value="Papelería">📝 Papelería</option>
                                     <option value="Otro">📦 Otro</option>
+                                    <option value="__custom__">✏️ Escribir otra...</option>
                                 </select>
+                                <input type="text" id="product-category-custom" placeholder="Escribe tu categoría..." autocomplete="off" style="display:none;margin-top:8px;">
+                                <small>Si no ves tu categoría, selecciona "Escribir otra"</small>
                             </div>
                             <div class="form-group">
                                 <label for="product-quantity">Cantidad en Stock</label>
