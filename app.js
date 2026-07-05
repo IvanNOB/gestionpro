@@ -3328,6 +3328,131 @@ function getPlanNameForFeature(feature) {
 }
 
 // ==========================================
+// PRODUCTOS DE PRUEBA (con fotos y descripciones)
+// ==========================================
+async function loadDemoProducts() {
+    if (!confirm('¿Cargar productos de prueba con fotos? (No borra los productos actuales)')) return;
+
+    const demoProducts = [
+        {
+            name: 'Hamburguesa Clásica',
+            category: 'Alimentos',
+            quantity: 50,
+            cost: 8000,
+            margin: 50,
+            price: 12000,
+            minStock: 5,
+            supplier: '',
+            description: 'Carne 150g, lechuga, tomate, cebolla, salsa especial, pan artesanal',
+            image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&h=300&fit=crop'
+        },
+        {
+            name: 'Pizza Margarita',
+            category: 'Alimentos',
+            quantity: 30,
+            cost: 10000,
+            margin: 60,
+            price: 16000,
+            minStock: 5,
+            supplier: '',
+            description: 'Masa artesanal, salsa de tomate italiano, mozzarella fresca, albahaca',
+            image: 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=400&h=300&fit=crop'
+        },
+        {
+            name: 'Tacos al Pastor',
+            category: 'Alimentos',
+            quantity: 80,
+            cost: 3000,
+            margin: 65,
+            price: 5000,
+            minStock: 10,
+            supplier: '',
+            description: '3 tacos con carne al pastor, piña, cilantro, cebolla y salsa verde',
+            image: 'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=400&h=300&fit=crop'
+        },
+        {
+            name: 'Ensalada César',
+            category: 'Alimentos',
+            quantity: 25,
+            cost: 6000,
+            margin: 55,
+            price: 9500,
+            minStock: 5,
+            supplier: '',
+            description: 'Lechuga romana, pollo grillado, crutones, parmesano, aderezo césar',
+            image: 'https://images.unsplash.com/photo-1546793665-c74683f339c1?w=400&h=300&fit=crop'
+        },
+        {
+            name: 'Limonada Natural',
+            category: 'Alimentos',
+            quantity: 100,
+            cost: 1500,
+            margin: 100,
+            price: 3000,
+            minStock: 10,
+            supplier: '',
+            description: 'Limón fresco exprimido, agua, hielo, endulzada al gusto',
+            image: 'https://images.unsplash.com/photo-1621263764928-df1444c5e859?w=400&h=300&fit=crop'
+        },
+        {
+            name: 'Café Latte',
+            category: 'Alimentos',
+            quantity: 60,
+            cost: 2000,
+            margin: 75,
+            price: 3500,
+            minStock: 10,
+            supplier: '',
+            description: 'Espresso doble con leche vaporizada y arte latte',
+            image: 'https://images.unsplash.com/photo-1534778101976-62847782c213?w=400&h=300&fit=crop'
+        },
+        {
+            name: 'Brownie con Helado',
+            category: 'Alimentos',
+            quantity: 20,
+            cost: 4000,
+            margin: 62,
+            price: 6500,
+            minStock: 5,
+            supplier: '',
+            description: 'Brownie de chocolate caliente con helado de vainilla y salsa de chocolate',
+            image: 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?w=400&h=300&fit=crop'
+        },
+        {
+            name: 'Alitas BBQ',
+            category: 'Alimentos',
+            quantity: 40,
+            cost: 7000,
+            margin: 57,
+            price: 11000,
+            minStock: 5,
+            supplier: '',
+            description: '8 alitas crujientes bañadas en salsa BBQ ahumada, con palitos de apio',
+            image: 'https://images.unsplash.com/photo-1567620832903-9fc6debc209f?w=400&h=300&fit=crop'
+        }
+    ];
+
+    showAppLoading(true);
+    let count = 0;
+    for (const p of demoProducts) {
+        const product = {
+            ...p,
+            id: generateId(),
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+        products.push(product);
+        await saveProduct(product);
+        count++;
+    }
+    rebuildProductsIndex();
+    renderAll();
+    showAppLoading(false);
+    showToast(`✅ ${count} productos de prueba cargados con fotos`, 'success');
+}
+
+
+// ==========================================
 // ABRIR PANTALLAS EXTERNAS CON ROL
 // ==========================================
 function openCocina() {
