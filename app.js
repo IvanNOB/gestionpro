@@ -644,6 +644,8 @@ function handleProductSubmit(e) {
     const product = {
         id: editingId || generateId(),
         name, category, quantity, cost, margin, price, minStock, supplier,
+        description: document.getElementById('product-description').value.trim(),
+        image: document.getElementById('product-image').value.trim(),
         createdAt: editingId ? getProduct(editingId)?.createdAt : new Date().toISOString(),
         updatedAt: new Date().toISOString()
     };
@@ -694,6 +696,8 @@ function editProduct(id) {
     document.getElementById('product-price').value = p.price;
     document.getElementById('product-min-stock').value = p.minStock || 5;
     document.getElementById('product-supplier').value = p.supplier || '';
+    document.getElementById('product-description').value = p.description || '';
+    document.getElementById('product-image').value = p.image || '';
     document.getElementById('btn-submit').textContent = 'Actualizar Producto';
     document.getElementById('btn-cancel').style.display = 'inline-block';
     document.getElementById('form-title').textContent = '✏️ Editar Producto';
