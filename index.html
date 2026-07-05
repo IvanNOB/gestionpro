@@ -860,12 +860,27 @@
             <section class="page" id="page-calculator">
                 <div class="page-header">
                     <h2>🧮 Calculadora de Costos</h2>
+                    <p style="color:var(--text-light);font-size:0.9rem;margin-top:4px;">Herramientas para calcular precios, simular ganancias y encontrar tu punto de equilibrio</p>
+                </div>
+
+                <!-- Tabs de navegación -->
+                <div class="calc-tabs" style="display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap;">
+                    <button class="calc-tab active" onclick="switchCalcTab('precio')" id="tab-precio">💰 Precio Final</button>
+                    <button class="calc-tab" onclick="switchCalcTab('gramos')" id="tab-gramos">⚖️ Precio x Gramos</button>
+                    <button class="calc-tab" onclick="switchCalcTab('simulador')" id="tab-simulador">📊 Simulador</button>
+                    <button class="calc-tab" onclick="switchCalcTab('equilibrio')" id="tab-equilibrio">🎯 Punto de Equilibrio</button>
                 </div>
 
                 <div class="calculator-grid">
-                    <div class="card">
-                        <h3>💰 Calculadora de Precio Final</h3>
-                        <p class="card-description">Calcula el precio final incluyendo todos los costos adicionales.</p>
+                    <!-- CALCULADORA DE PRECIO FINAL -->
+                    <div class="card calc-panel" id="panel-precio">
+                        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+                            <div style="width:48px;height:48px;background:linear-gradient(135deg,#2563eb,#1d4ed8);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">💰</div>
+                            <div>
+                                <h3 style="margin:0;font-size:1.1rem;">Calculadora de Precio Final</h3>
+                                <p class="card-description" style="margin:2px 0 0;">Incluye todos los costos para definir tu precio ideal</p>
+                            </div>
+                        </div>
                         <div class="form-grid">
                             <div class="form-group">
                                 <label>Costo del Producto ($)</label>
@@ -924,9 +939,14 @@
                         </div>
                     </div>
 
-                    <div class="card">
-                        <h3>📊 Simulador de Ganancias</h3>
-                        <p class="card-description">Simula cuánto ganarías vendiendo X unidades.</p>
+                    <div class="card calc-panel" id="panel-simulador" style="display:none;">
+                        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+                            <div style="width:48px;height:48px;background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">📊</div>
+                            <div>
+                                <h3 style="margin:0;font-size:1.1rem;">Simulador de Ganancias</h3>
+                                <p class="card-description" style="margin:2px 0 0;">Simula cuánto ganarías vendiendo X unidades</p>
+                            </div>
+                        </div>
                         <div class="form-grid">
                             <div class="form-group">
                                 <label>Precio de Venta ($)</label>
@@ -965,9 +985,14 @@
                             </div>
                         </div>
                     </div>
-                    <div class="card">
-                        <h3>⚖️ Punto de Equilibrio</h3>
-                        <p class="card-description">¿Cuántas unidades debes vender para no perder dinero?</p>
+                    <div class="card calc-panel" id="panel-equilibrio" style="display:none;">
+                        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+                            <div style="width:48px;height:48px;background:linear-gradient(135deg,#8b5cf6,#7c3aed);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">🎯</div>
+                            <div>
+                                <h3 style="margin:0;font-size:1.1rem;">Punto de Equilibrio</h3>
+                                <p class="card-description" style="margin:2px 0 0;">¿Cuántas unidades debes vender para no perder?</p>
+                            </div>
+                        </div>
                         <div class="form-grid">
                             <div class="form-group">
                                 <label>Costos Fijos Mensuales ($)</label>
@@ -1001,9 +1026,14 @@
                         </div>
                     </div>
 
-                    <div class="card">
-                        <h3>⚖️ Calculadora de Precio por Gramos</h3>
-                        <p class="card-description">Calcula el precio por gramo de un producto para saber exactamente cuánto cobrar por cualquier cantidad.</p>
+                    <div class="card calc-panel" id="panel-gramos" style="display:none;">
+                        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+                            <div style="width:48px;height:48px;background:linear-gradient(135deg,#16a34a,#15803d);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">⚖️</div>
+                            <div>
+                                <h3 style="margin:0;font-size:1.1rem;">Calculadora de Precio por Gramos</h3>
+                                <p class="card-description" style="margin:2px 0 0;">Saber cuánto cobrar por cualquier cantidad en gramos</p>
+                            </div>
+                        </div>
                         <div class="form-grid">
                             <div class="form-group">
                                 <label>Nombre del Producto</label>

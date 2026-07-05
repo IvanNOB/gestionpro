@@ -1160,6 +1160,16 @@ function initCalculator() {
     loadGramHistory();
 }
 
+// Tabs de calculadora
+function switchCalcTab(tab) {
+    document.querySelectorAll('.calc-panel').forEach(p => p.style.display = 'none');
+    document.querySelectorAll('.calc-tab').forEach(t => t.classList.remove('active'));
+    const panel = document.getElementById('panel-' + tab);
+    const tabBtn = document.getElementById('tab-' + tab);
+    if (panel) panel.style.display = 'block';
+    if (tabBtn) tabBtn.classList.add('active');
+}
+
 // ==========================================
 // CALCULADORA DE PRECIO POR GRAMOS
 // ==========================================
