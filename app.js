@@ -2489,6 +2489,15 @@ function initRecipes() {
     renderRecipes();
 }
 
+function showNewProductInRecipe() {
+    const section = document.getElementById('recipe-new-product');
+    section.style.display = section.style.display === 'none' ? 'block' : 'none';
+    // Si se muestra el mini-form, quitar selección del select
+    if (section.style.display !== 'none') {
+        document.getElementById('recipe-product').value = '';
+    }
+}
+
 function updateRecipeProductList() {
     const select = document.getElementById('recipe-product');
     if (!select) return;
@@ -2544,7 +2553,56 @@ function calcRecipeCost() {
 
 function handleRecipeSubmit(e) {
     e.preventDefault();
-    const productId = document.getElementById('recipe-product').value;
+    let productId = document.getElementById('recipe-product').value;
+
+    // Si están creando un producto nuevo desde aquí
+    const newProductSection = document.getElementById('recipe-new-product');
+    if (newProductSection.style.display !== 'none' && !productId) {
+        const newName = document.getElementById('recipe-new-name').value.trim();
+        const newCategory = document.getElementById('recipe-new-category').value;
+        const newPrice = parseFloat(document.getElementById('recipe-new-price').value) || 0;
+        const newStock = parseInt(document.getElementById('recipe-new-stock').value) || 50;
+
+        if (!newName) { showToast('Ponle nombre al producto', 'error'); return; }
+        if (newPrice <= 0) { showToast('Ingresa el precio de venta', 'error'); return; }
+
+        // Calcular costo con los ingredientes
+        const rows = document.querySelectorAll('.ingredient-row');
+        let recipeCost = 0;
+        rows.forEach(row => {
+            const insumoId = row.querySelector('.ing-insumo').value;
+            const qty = parseFloat(row.querySelector('.ing-qty').value) || 0;
+            if (insumoId && qty > 0) {
+                const insumo = insumos.find(i => i.id === insumoId);
+                if (insumo) recipeCost += (insumo.purchasePrice / insumo.purchaseQty) * qty;
+            }
+        });
+
+        // Crear el producto
+        const newProduct = {
+            id: generateId(),
+            name: newName,
+            category: newCategory,
+            quantity: newStock,
+            cost: Math.round(recipeCost * 100) / 100,
+            margin: newPrice > 0 && recipeCost > 0 ? Math.round(((newPrice - recipeCost) / recipeCost) * 100) : 30,
+            price: newPrice,
+            minStock: 5,
+            supplier: '',
+            description: '',
+            image: '',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+
+        products.push(newProduct);
+        saveProduct(newProduct);
+        rebuildProductsIndex();
+        productId = newProduct.id;
+        updateRecipeProductList();
+        showToast(`Producto "${newName}" creado`, 'success');
+    }
+
     if (!productId) { showToast('Selecciona un producto', 'error'); return; }
 
     const rows = document.querySelectorAll('.ingredient-row');
