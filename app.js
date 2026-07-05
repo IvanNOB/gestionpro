@@ -577,6 +577,9 @@ function initForms() {
     costInput.addEventListener('input', updateSuggestedPrice);
     marginInput.addEventListener('input', updateSuggestedPrice);
 
+    // Subida de imagen de producto
+    document.getElementById('product-image-file').addEventListener('change', handleProductImageUpload);
+
     // Ventas
     const saleForm = document.getElementById('sale-form');
     saleForm.addEventListener('submit', handleSaleSubmit);
@@ -682,6 +685,90 @@ function cancelEdit() {
     document.getElementById('btn-cancel').style.display = 'none';
     document.getElementById('form-title').textContent = '➕ Agregar Producto';
     document.getElementById('suggested-price-box').style.display = 'none';
+    removeProductImage();
+}
+
+// ==========================================
+// SUBIDA DE IMÁGENES DE PRODUCTOS
+// ==========================================
+async function handleProductImageUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validar tipo y tamaño
+    if (!file.type.startsWith('image/')) {
+        showToast('Solo se permiten imágenes', 'error');
+        return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+        showToast('La imagen debe pesar menos de 5MB', 'error');
+        return;
+    }
+
+    // Mostrar nombre y preview local mientras sube
+    document.getElementById('product-image-filename').textContent = '⏳ Subiendo...';
+
+    // Comprimir imagen antes de subir
+    const compressedFile = await compressImage(file, 800, 0.7);
+
+    try {
+        const fileName = `products/${currentUser.uid}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+        const ref = storage.ref(fileName);
+        const snapshot = await ref.put(compressedFile);
+        const url = await snapshot.ref.getDownloadURL();
+
+        // Guardar URL en el campo oculto
+        document.getElementById('product-image').value = url;
+        document.getElementById('product-image-filename').textContent = '✅ ' + file.name;
+
+        // Mostrar preview
+        document.getElementById('product-image-preview').style.display = 'flex';
+        document.getElementById('product-image-preview-img').src = url;
+
+        showToast('Foto subida correctamente', 'success');
+    } catch (err) {
+        console.error('Error subiendo imagen:', err);
+        document.getElementById('product-image-filename').textContent = '❌ Error al subir';
+        showToast('Error al subir la imagen. Verifica que Firebase Storage esté activado.', 'error');
+    }
+}
+
+function removeProductImage() {
+    document.getElementById('product-image').value = '';
+    document.getElementById('product-image-file').value = '';
+    document.getElementById('product-image-filename').textContent = 'Sin imagen';
+    document.getElementById('product-image-preview').style.display = 'none';
+    document.getElementById('product-image-preview-img').src = '';
+}
+
+function compressImage(file, maxWidth, quality) {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+
+                if (width > maxWidth) {
+                    height = (height * maxWidth) / width;
+                    width = maxWidth;
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                canvas.toBlob((blob) => {
+                    resolve(blob);
+                }, 'image/jpeg', quality);
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
 }
 
 function editProduct(id) {
@@ -698,6 +785,14 @@ function editProduct(id) {
     document.getElementById('product-supplier').value = p.supplier || '';
     document.getElementById('product-description').value = p.description || '';
     document.getElementById('product-image').value = p.image || '';
+    // Mostrar preview si tiene imagen
+    if (p.image) {
+        document.getElementById('product-image-preview').style.display = 'flex';
+        document.getElementById('product-image-preview-img').src = p.image;
+        document.getElementById('product-image-filename').textContent = '✅ Imagen actual';
+    } else {
+        removeProductImage();
+    }
     document.getElementById('btn-submit').textContent = 'Actualizar Producto';
     document.getElementById('btn-cancel').style.display = 'inline-block';
     document.getElementById('form-title').textContent = '✏️ Editar Producto';
