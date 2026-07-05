@@ -291,6 +291,7 @@ function checkActiveRole() {
 }
 
 function applyRoleRestrictions(role) {
+    currentRole = role;
     const hiddenForCashier = ['reports', 'settings', 'insumos', 'recipes'];
     const hiddenForWaiter = ['inventory', 'reports', 'settings', 'expenses', 'insumos', 'recipes', 'clients', 'suppliers'];
 
@@ -3008,23 +3009,7 @@ async function saveEmployee(emp) {
 }
 
 // Aplicar restricciones de rol al menú
-function applyRoleRestrictions(role) {
-    currentRole = role;
-    const hiddenForCashier = ['page-reports', 'page-settings'];
-    const hiddenForWaiter = ['page-inventory', 'page-reports', 'page-settings', 'page-expenses', 'page-insumos', 'page-recipes', 'page-clients', 'page-suppliers'];
-
-    const allNavLinks = document.querySelectorAll('.nav-link');
-    allNavLinks.forEach(link => {
-        const section = link.dataset.section;
-        link.style.display = '';
-        if (role === 'cashier' && hiddenForCashier.includes('page-' + section)) {
-            link.style.display = 'none';
-        }
-        if (role === 'waiter' && hiddenForWaiter.includes('page-' + section)) {
-            link.style.display = 'none';
-        }
-    });
-}
+// Aplicar restricciones de rol al menú (usa la función unificada definida arriba)
 
 
 
