@@ -1154,81 +1154,159 @@ function initCalculator() {
     document.getElementById('btn-calculate').addEventListener('click', calculate);
     document.getElementById('btn-simulate').addEventListener('click', simulate);
     document.getElementById('btn-breakeven').addEventListener('click', calcBreakEven);
-    document.getElementById('btn-ice').addEventListener('click', calcIceCream);
-    document.getElementById('btn-ice-save').addEventListener('click', saveIceProduct);
+    document.getElementById('btn-gram-calc').addEventListener('click', calcPricePerGram);
+    document.getElementById('btn-gram-save').addEventListener('click', saveGramResult);
+    document.getElementById('btn-clear-gram-history').addEventListener('click', clearGramHistory);
+    loadGramHistory();
 }
 
-let lastIceCalc = null;
+// ==========================================
+// CALCULADORA DE PRECIO POR GRAMOS
+// ==========================================
+let gramHistory = [];
+let lastGramCalc = null;
 
-function calcIceCream() {
-    const boxWeight = parseFloat(document.getElementById('ice-box-weight').value) || 0;
-    const boxCost = parseFloat(document.getElementById('ice-box-cost').value) || 0;
-    const scoopWeight = parseFloat(document.getElementById('ice-scoop-weight').value) || 0;
-    const scoopPrice = parseFloat(document.getElementById('ice-scoop-price').value) || 0;
-    const extraCost = parseFloat(document.getElementById('ice-extra-cost').value) || 0;
-    const waste = parseFloat(document.getElementById('ice-waste').value) || 0;
-    const results = document.getElementById('ice-results');
+function calcPricePerGram() {
+    const name = document.getElementById('gram-product-name').value.trim() || 'Producto';
+    const totalWeight = parseFloat(document.getElementById('gram-total-weight').value) || 0;
+    const totalCost = parseFloat(document.getElementById('gram-total-cost').value) || 0;
+    const margin = parseFloat(document.getElementById('gram-margin').value) || 0;
+    const sellWeight = parseFloat(document.getElementById('gram-sell-weight').value) || 0;
+    const results = document.getElementById('gram-results');
 
-    if (boxWeight <= 0 || scoopWeight <= 0) {
-        showToast('Ingresa el peso de la caja y de la bolita', 'error');
+    if (totalWeight <= 0 || totalCost <= 0) {
+        showToast('Ingresa el peso total y el costo del paquete', 'error');
+        return;
+    }
+    if (sellWeight <= 0) {
+        showToast('Ingresa la cantidad de gramos que quieres vender', 'error');
         return;
     }
 
-    const usableWeight = boxWeight * (1 - waste / 100);
-    const scoops = Math.floor(usableWeight / scoopWeight);
-    const revenue = scoops * scoopPrice;
-    const totalCost = boxCost + (extraCost * scoops);
-    const profit = revenue - totalCost;
-    const profitPerScoop = scoops > 0 ? profit / scoops : 0;
-    const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
+    const costPerGram = totalCost / totalWeight;
+    const pricePerGram = costPerGram * (1 + margin / 100);
+    const sellPrice = pricePerGram * sellWeight;
+    const sellCost = costPerGram * sellWeight;
+    const sellProfit = sellPrice - sellCost;
+    const portions = Math.floor(totalWeight / sellWeight);
 
-    document.getElementById('ice-scoops').textContent = scoops.toLocaleString('es-CO') + ' bolitas';
-    document.getElementById('ice-revenue').textContent = formatCurrency(revenue);
-    document.getElementById('ice-total-cost').textContent = formatCurrency(totalCost);
-    document.getElementById('ice-profit').textContent = formatCurrency(profit);
-    document.getElementById('ice-profit-scoop').textContent = formatCurrency(profitPerScoop);
-    document.getElementById('ice-margin').textContent = margin.toFixed(1) + '%';
+    document.getElementById('gram-cost-per-g').textContent = formatCurrency(costPerGram);
+    document.getElementById('gram-price-per-g').textContent = formatCurrency(pricePerGram);
+    document.getElementById('gram-sell-price').textContent = formatCurrency(sellPrice);
+    document.getElementById('gram-sell-cost').textContent = formatCurrency(sellCost);
+    document.getElementById('gram-sell-profit').textContent = formatCurrency(sellProfit);
+    document.getElementById('gram-portions').textContent = portions + ' porciones';
 
-    const profitEl = document.getElementById('ice-profit');
-    profitEl.parentElement.className = 'calc-result-item ' + (profit >= 0 ? 'success' : '');
-    profitEl.style.color = profit >= 0 ? 'var(--success)' : 'var(--danger)';
-
-    const costPerScoop = scoops > 0 ? (boxCost / scoops) + extraCost : 0;
-    lastIceCalc = { scoops, scoopPrice, costPerScoop };
+    lastGramCalc = { name, totalWeight, totalCost, margin, sellWeight, costPerGram, pricePerGram, sellPrice, sellCost, sellProfit, portions };
     results.style.display = 'block';
 }
 
-
-function saveIceProduct() {
-    if (!lastIceCalc || lastIceCalc.scoops <= 0) {
-        showToast('Primero calcula la caja de helado', 'error');
+function saveGramResult() {
+    if (!lastGramCalc) {
+        showToast('Primero calcula el precio por gramos', 'error');
         return;
     }
-    const name = prompt('Nombre del producto (bolita de helado):', 'Helado - bolita');
-    if (!name || !name.trim()) return;
 
-    const cost = Math.round(lastIceCalc.costPerScoop * 100) / 100;
-    const price = lastIceCalc.scoopPrice;
-    const margin = cost > 0 ? Math.round(((price - cost) / cost) * 100) : settings.defaultMargin;
-
-    const product = {
+    const entry = {
         id: generateId(),
-        name: name.trim(),
-        category: 'Alimentos',
-        quantity: lastIceCalc.scoops,
-        cost: cost,
-        margin: margin,
-        price: price,
-        minStock: 5,
-        supplier: '',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        ...lastGramCalc,
+        date: new Date().toISOString()
     };
-    products.push(product);
-    saveProduct(product);
-    renderAll();
-    addHistory('add', `Producto creado desde calculadora de helado: ${product.name} (x${product.quantity} bolitas)`);
-    showToast(`"${product.name}" agregado al inventario (${product.quantity} bolitas)`, 'success');
+
+    gramHistory.unshift(entry);
+    if (gramHistory.length > 20) gramHistory = gramHistory.slice(0, 20);
+
+    // Guardar en Firestore
+    saveGramHistoryToDB();
+    renderGramHistory();
+    showToast(`Resultado de "${lastGramCalc.name}" guardado`, 'success');
+}
+
+function loadGramHistory() {
+    // Cargar del localStorage como fallback rápido, luego de Firestore
+    try {
+        const local = localStorage.getItem('gramHistory');
+        if (local) gramHistory = JSON.parse(local);
+        renderGramHistory();
+    } catch(e) {}
+
+    // Si hay usuario, intentar cargar de Firestore
+    if (currentUser) {
+        userCollection('gramHistory').orderBy('date', 'desc').limit(20).get().then(snap => {
+            if (!snap.empty) {
+                gramHistory = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderGramHistory();
+            }
+        }).catch(() => {});
+    }
+}
+
+async function saveGramHistoryToDB() {
+    try {
+        localStorage.setItem('gramHistory', JSON.stringify(gramHistory));
+        if (currentUser && gramHistory.length > 0) {
+            const latest = gramHistory[0];
+            await userCollection('gramHistory').doc(latest.id).set(latest);
+        }
+    } catch(e) { console.error('Error guardando historial de gramos:', e); }
+}
+
+function clearGramHistory() {
+    if (!confirm('¿Limpiar todo el historial de cálculos?')) return;
+    gramHistory = [];
+    localStorage.removeItem('gramHistory');
+    if (currentUser) {
+        userCollection('gramHistory').get().then(snap => {
+            const batch = db.batch();
+            snap.docs.forEach(doc => batch.delete(doc.ref));
+            batch.commit();
+        }).catch(() => {});
+    }
+    renderGramHistory();
+    showToast('Historial limpiado', 'info');
+}
+
+function renderGramHistory() {
+    const container = document.getElementById('gram-history-list');
+    const empty = document.getElementById('empty-gram-history');
+    const btnClear = document.getElementById('btn-clear-gram-history');
+
+    if (gramHistory.length === 0) {
+        container.innerHTML = '';
+        container.appendChild(empty);
+        empty.style.display = 'block';
+        btnClear.style.display = 'none';
+        return;
+    }
+
+    empty.style.display = 'none';
+    btnClear.style.display = 'inline-block';
+
+    container.innerHTML = gramHistory.map(item => {
+        const date = new Date(item.date).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+        return `<div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+            <div style="flex:1;">
+                <div style="font-weight:700;color:var(--text);font-size:0.95rem;">⚖️ ${esc(item.name)}</div>
+                <div style="font-size:0.8rem;color:var(--text-light);margin-top:4px;">
+                    ${item.sellWeight}g → <strong style="color:var(--success);">${formatCurrency(item.sellPrice)}</strong> | 
+                    Costo/g: ${formatCurrency(item.costPerGram)} | 
+                    Ganancia: ${formatCurrency(item.sellProfit)}
+                </div>
+                <div style="font-size:0.7rem;color:var(--text-light);margin-top:2px;">${date} • ${item.portions} porciones del paquete</div>
+            </div>
+            <button class="action-btn" onclick="deleteGramHistoryItem('${item.id}')" title="Eliminar" style="opacity:0.6;">🗑️</button>
+        </div>`;
+    }).join('');
+}
+
+function deleteGramHistoryItem(id) {
+    gramHistory = gramHistory.filter(h => h.id !== id);
+    localStorage.setItem('gramHistory', JSON.stringify(gramHistory));
+    if (currentUser) {
+        userCollection('gramHistory').doc(id).delete().catch(() => {});
+    }
+    renderGramHistory();
+    showToast('Cálculo eliminado', 'info');
 }
 
 function calculate() {
