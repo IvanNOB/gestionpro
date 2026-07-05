@@ -3185,18 +3185,8 @@ function initPlanSystem() {
     const userPlan = settings.plan || 'trial';
     const registeredAt = settings.registeredAt || new Date().toISOString();
 
-    // Si es trial, verificar si expiró (3 días) - solo prueba del plan Restaurante
+    // Si es trial, dar acceso completo sin banners ni restricciones
     if (userPlan === 'trial') {
-        const daysSinceRegister = Math.floor((Date.now() - new Date(registeredAt).getTime()) / (1000 * 60 * 60 * 24));
-        if (daysSinceRegister >= 3) {
-            trialExpired = true;
-            showTrialExpiredMessage();
-            return;
-        } else {
-            const daysLeft = 3 - daysSinceRegister;
-            showTrialBanner(daysLeft);
-        }
-        // Trial usa las features del plan Restaurante
         currentPlan = 'trial';
         applyPlanRestrictions('restaurant');
     } else {
@@ -3232,51 +3222,6 @@ function getPlanNameForFeature(feature) {
     if (['insumos', 'recipes', 'mesas'].includes(feature)) return 'Restaurante ($45.000/mes)';
     return 'Premium ($65.000/mes)';
 }
-
-function showTrialBanner(daysLeft) {
-    const banner = document.createElement('div');
-    banner.id = 'trial-banner';
-    banner.style.cssText = 'position:fixed;top:0;left:260px;right:0;background:linear-gradient(135deg,#f59e0b,#d97706);color:white;padding:10px 20px;text-align:center;font-size:0.85rem;font-weight:600;z-index:999;display:flex;align-items:center;justify-content:center;gap:12px;';
-    banner.innerHTML = `
-        <span>⏳ Prueba gratis: te quedan <strong>${daysLeft} día${daysLeft !== 1 ? 's' : ''}</strong></span>
-        <a href="https://wa.me/573159756975?text=Hola%2C%20quiero%20activar%20mi%20plan%20de%20GestiónPro" target="_blank" style="background:white;color:#d97706;padding:6px 14px;border-radius:8px;text-decoration:none;font-weight:700;font-size:0.8rem;">Activar Plan</a>
-    `;
-    document.body.appendChild(banner);
-    // Mover contenido principal
-    document.querySelector('.main-content').style.paddingTop = '70px';
-}
-
-function showTrialExpiredMessage() {
-    showAppLoading(false);
-    document.querySelector('.app-layout').innerHTML = `
-        <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#0f172a,#1e293b);padding:20px;">
-            <div style="text-align:center;max-width:500px;background:white;padding:48px 32px;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
-                <div style="font-size:4rem;margin-bottom:16px;">⏰</div>
-                <h1 style="font-size:1.6rem;color:#1e293b;margin-bottom:12px;">Tu prueba gratis terminó</h1>
-                <p style="color:#64748b;margin-bottom:8px;line-height:1.5;">Tu período de 3 días gratuitos ha expirado. Para seguir usando GestiónPro, activa un plan.</p>
-                <div style="background:#f8fafc;border-radius:12px;padding:20px;margin:20px 0;text-align:left;">
-                    <p style="font-weight:700;color:#1e293b;margin-bottom:12px;">Planes disponibles:</p>
-                    <p style="margin-bottom:8px;">☕ <strong>Básico:</strong> $25.000/mes (Inventario + Ventas)</p>
-                    <p style="margin-bottom:8px;">🍽️ <strong>Restaurante:</strong> $45.000/mes (+ Mesas + Cocina)</p>
-                    <p style="margin-bottom:0;">👑 <strong>Premium:</strong> $65.000/mes (Todo incluido)</p>
-                </div>
-                <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:20px;margin:16px 0;text-align:left;">
-                    <p style="font-weight:700;color:#166534;margin-bottom:12px;">💳 Métodos de pago:</p>
-                    <p style="margin-bottom:8px;color:#475569;">📱 <strong>Nequi:</strong> 315 975 6975</p>
-                    <p style="margin-bottom:8px;color:#475569;">📱 <strong>Daviplata:</strong> 315 975 6975</p>
-                    <p style="margin-bottom:8px;color:#475569;">🏦 <strong>Transferencia:</strong> Nequi 315 975 6975</p>
-                    <p style="margin-bottom:0;color:#475569;">💵 <strong>Efectivo:</strong> Coordinar por WhatsApp</p>
-                </div>
-                <p style="color:#64748b;font-size:0.85rem;margin-bottom:16px;">Paga y envía el comprobante por WhatsApp. Se activa en menos de 1 hora.</p>
-                <a href="https://wa.me/573159756975?text=Hola%2C%20ya%20hice%20el%20pago%20de%20mi%20plan%20GestiónPro.%20Mi%20correo%20es%3A%20${encodeURIComponent(currentUser?.email || '')}" target="_blank" style="display:block;padding:16px;background:linear-gradient(135deg,#25d366,#128c7e);color:white;border-radius:12px;font-size:1.1rem;font-weight:700;text-decoration:none;margin-bottom:12px;">💬 Enviar comprobante por WhatsApp</a>
-                <a href="https://wa.me/573159756975?text=Hola%2C%20quiero%20activar%20mi%20plan%20de%20GestiónPro.%20Mi%20correo%20es%3A%20${encodeURIComponent(currentUser?.email || '')}" target="_blank" style="display:block;padding:14px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:white;border-radius:12px;font-size:1rem;font-weight:700;text-decoration:none;margin-bottom:12px;">💬 Quiero información de planes</a>
-                <button onclick="auth.signOut().then(()=>window.location.href='login.html')" style="padding:12px 24px;background:#f1f5f9;color:#64748b;border:none;border-radius:10px;font-size:0.9rem;cursor:pointer;font-weight:600;">Cerrar Sesión</button>
-            </div>
-        </div>
-    `;
-}
-
-
 
 // ==========================================
 // ABRIR PANTALLAS EXTERNAS CON ROL
