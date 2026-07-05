@@ -7,53 +7,61 @@
 <meta name="theme-color" content="#1e293b">
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f8fafc; min-height: 100vh; }
+body { font-family: 'Georgia', 'Times New Roman', serif; background: #faf8f5; color: #2c2c2c; min-height: 100vh; }
 
-.menu-header { background: linear-gradient(135deg, #1e293b, #334155); color: white; padding: 36px 20px; text-align: center; position: relative; overflow: hidden; }
-.menu-header::before { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(255,255,255,0.03) 0%, transparent 70%); }
+.menu-header { background: linear-gradient(135deg, #1e293b, #334155); color: white; padding: 36px 20px; text-align: center; }
 .menu-logo { width: 70px; height: 70px; border-radius: 16px; margin-bottom: 12px; object-fit: cover; border: 3px solid rgba(255,255,255,0.2); }
-.menu-header h1 { font-size: 1.8rem; font-weight: 800; margin-bottom: 6px; position: relative; }
-.menu-header p { color: #94a3b8; font-size: 0.95rem; position: relative; }
+.menu-header h1 { font-size: 1.8rem; font-weight: 700; margin-bottom: 4px; font-family: 'Georgia', serif; letter-spacing: 0.5px; }
+.menu-header p { color: #cbd5e1; font-size: 0.9rem; font-family: -apple-system, sans-serif; }
 
-.menu-container { max-width: 700px; margin: 0 auto; padding: 20px; }
+.menu-container { max-width: 750px; margin: 0 auto; padding: 24px 16px; }
 
-.category-section { margin-bottom: 32px; }
-.category-title { font-size: 1.2rem; font-weight: 800; color: #1e293b; padding: 16px 0 12px; border-bottom: 3px solid #2563eb; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
+.category-section { margin-bottom: 36px; }
+.category-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid #e0dcd5; }
+.category-title { font-size: 1.5rem; font-weight: 700; color: #1a1a1a; font-family: 'Georgia', serif; }
+.category-count { font-size: 0.85rem; color: #8b7e6a; font-family: -apple-system, sans-serif; }
 
-.menu-item { display: flex; gap: 14px; padding: 16px; margin-bottom: 12px; background: white; border-radius: 14px; border: 1px solid #e2e8f0; transition: all 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
-.menu-item:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.08); }
-.menu-item-unavailable { opacity: 0.5; }
+.products-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 
-.menu-item-img { width: 80px; height: 80px; border-radius: 12px; object-fit: cover; flex-shrink: 0; background: #f1f5f9; }
-.menu-item-placeholder { width: 80px; height: 80px; border-radius: 12px; flex-shrink: 0; background: linear-gradient(135deg, #f1f5f9, #e2e8f0); display: flex; align-items: center; justify-content: center; font-size: 2rem; }
+.product-card { background: #fff; border: 1px solid #e8e3da; border-radius: 16px; overflow: hidden; transition: all 0.2s; }
+.product-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.08); transform: translateY(-2px); }
 
-.menu-item-content { flex: 1; display: flex; flex-direction: column; justify-content: center; min-width: 0; }
-.menu-item-name { font-weight: 700; font-size: 1rem; color: #1e293b; margin-bottom: 4px; }
-.menu-item-desc { font-size: 0.82rem; color: #64748b; line-height: 1.4; margin-bottom: 6px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.menu-item-price { font-weight: 800; font-size: 1.1rem; color: #2563eb; }
-.menu-item-unavailable .menu-item-price { color: #94a3b8; text-decoration: line-through; }
-.out-badge { font-size: 0.7rem; background: #fee2e2; color: #dc2626; padding: 2px 8px; border-radius: 8px; font-weight: 600; margin-left: 8px; }
+.product-card-img { width: 100%; aspect-ratio: 4/3; object-fit: cover; background: #f0ebe3; display: block; }
+.product-card-placeholder { width: 100%; aspect-ratio: 4/3; background: linear-gradient(180deg, #f0ebe3, #e8e3da); display: flex; align-items: center; justify-content: center; font-size: 2.5rem; }
 
-.menu-footer { text-align: center; padding: 32px 20px; color: #94a3b8; font-size: 0.8rem; }
-.menu-footer a { color: #2563eb; text-decoration: none; }
+.product-card-body { padding: 14px 16px 16px; }
+.product-card-top { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 6px; gap: 8px; }
+.product-card-name { font-size: 1rem; font-weight: 700; color: #1a1a1a; font-family: 'Georgia', serif; line-height: 1.3; }
+.product-card-price { font-size: 1rem; font-weight: 700; color: #c0392b; white-space: nowrap; font-family: -apple-system, sans-serif; }
+
+.product-card-desc { font-size: 0.82rem; color: #6b5e4f; line-height: 1.5; font-family: -apple-system, sans-serif; margin-bottom: 8px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+
+.product-badge { display: inline-block; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; padding: 3px 8px; border-radius: 4px; font-family: -apple-system, sans-serif; }
+.badge-popular { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+.badge-new { background: #ecfdf5; color: #065f46; border: 1px solid #6ee7b7; }
+.badge-out { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+
+.product-card-unavailable { opacity: 0.5; }
+.product-card-unavailable .product-card-price { text-decoration: line-through; color: #999; }
+
+.menu-footer { text-align: center; padding: 32px 20px; color: #8b7e6a; font-size: 0.8rem; font-family: -apple-system, sans-serif; }
 
 .loading-menu { text-align: center; padding: 80px 20px; }
-.loading-menu .spinner { width: 44px; height: 44px; border: 4px solid #e2e8f0; border-top-color: #2563eb; border-radius: 50%; animation: spin 0.7s linear infinite; margin: 0 auto 16px; }
+.loading-menu .spinner { width: 44px; height: 44px; border: 3px solid #e8e3da; border-top-color: #1e293b; border-radius: 50%; animation: spin 0.7s linear infinite; margin: 0 auto 16px; }
 @keyframes spin { to { transform: rotate(360deg); } }
+.loading-menu p { color: #8b7e6a; font-family: -apple-system, sans-serif; }
 
-.error-menu { text-align: center; padding: 80px 20px; color: #dc2626; }
+.error-menu { text-align: center; padding: 80px 20px; color: #c0392b; font-family: -apple-system, sans-serif; }
 
-/* Sin productos con foto: layout compacto */
-.menu-item.no-image { padding: 12px 16px; }
-.menu-item.no-image .menu-item-content { flex-direction: row; align-items: center; justify-content: space-between; }
-.menu-item.no-image .menu-item-name { margin-bottom: 0; }
-.menu-item.no-image .menu-item-price { margin-left: 12px; }
-
-@media (max-width: 480px) {
-    .menu-item-img, .menu-item-placeholder { width: 65px; height: 65px; }
+@media (max-width: 500px) {
+    .products-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+    .product-card-body { padding: 10px 12px 12px; }
+    .product-card-name { font-size: 0.9rem; }
+    .product-card-price { font-size: 0.9rem; }
+    .product-card-desc { font-size: 0.75rem; }
+    .category-title { font-size: 1.3rem; }
     .menu-header { padding: 28px 16px; }
     .menu-header h1 { font-size: 1.5rem; }
-    .menu-container { padding: 12px; }
 }
 </style>
 </head>
@@ -71,7 +79,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
     </div>
     <div class="menu-container" id="menu-items"></div>
     <div class="menu-footer">
-        <p>Menú digital por <a href="#">GestiónPro</a></p>
+        <p>Menú digital por GestiónPro</p>
     </div>
 </div>
 
@@ -84,112 +92,107 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 <script>
-    const params = new URLSearchParams(window.location.search);
-    const userId = params.get('u');
+const params = new URLSearchParams(window.location.search);
+const userId = params.get('u');
 
-    if (!userId) {
+if (!userId) {
+    document.getElementById('loading-menu').style.display = 'none';
+    document.getElementById('error-menu').style.display = 'block';
+} else {
+    loadMenu(userId);
+}
+
+async function loadMenu(uid) {
+    try {
+        const userDoc = await db.collection('users').doc(uid).get();
+        const productsSnap = await db.collection('users').doc(uid).collection('products').get();
+
+        if (!userDoc.exists) throw new Error('Usuario no encontrado');
+
+        const userData = userDoc.data();
+        const settings = userData.settings || {};
+        const products = productsSnap.docs.map(doc => doc.data());
+
+        // Header
+        document.getElementById('menu-business-name').textContent = settings.businessName || 'Mi Negocio';
+        document.title = (settings.businessName || 'Mi Negocio') + ' - Menú';
+        if (settings.customization?.slogan) {
+            document.getElementById('menu-slogan').textContent = settings.customization.slogan;
+        }
+        if (settings.customization?.logo) {
+            const img = document.createElement('img');
+            img.src = settings.customization.logo;
+            img.className = 'menu-logo';
+            document.getElementById('menu-header').prepend(img);
+        }
+        if (settings.customization?.color) {
+            document.querySelector('.menu-header').style.background = `linear-gradient(135deg, ${settings.customization.color}, #1e293b)`;
+        }
+
+        // Agrupar por categoría
+        const categories = {};
+        products.forEach(p => {
+            if (!categories[p.category]) categories[p.category] = [];
+            categories[p.category].push(p);
+        });
+
+        // Render
+        const container = document.getElementById('menu-items');
+        const catPlaceholders = { 'Alimentos':'🍽️', 'Bebidas':'🥤', 'Ropa':'👕', 'Electrónica':'📱', 'Hogar':'🏠', 'Belleza':'💄', 'Deportes':'⚽', 'Otro':'📦' };
+
+        let html = '';
+        Object.entries(categories).sort((a, b) => a[0].localeCompare(b[0])).forEach(([cat, items]) => {
+            const availableCount = items.filter(p => p.quantity > 0).length;
+            html += `<div class="category-section">`;
+            html += `<div class="category-header">
+                <span class="category-title">${esc(cat)}</span>
+                <span class="category-count">${String(availableCount).padStart(2, '0')}</span>
+            </div>`;
+            html += `<div class="products-grid">`;
+
+            items.sort((a, b) => a.name.localeCompare(b.name)).forEach(p => {
+                const unavailable = p.quantity <= 0;
+                const currency = settings.currency === 'COP' ? '$' + Math.round(p.price).toLocaleString('es-CO') : '$' + p.price.toFixed(2);
+                const hasImage = p.image && p.image.trim();
+                const placeholder = catPlaceholders[cat] || '📦';
+
+                let imageHtml = hasImage
+                    ? `<img class="product-card-img" src="${esc(p.image)}" alt="${esc(p.name)}" loading="lazy" onerror="this.outerHTML='<div class=product-card-placeholder>${placeholder}</div>'">`
+                    : `<div class="product-card-placeholder">${placeholder}</div>`;
+
+                let badgeHtml = '';
+                if (unavailable) {
+                    badgeHtml = `<span class="product-badge badge-out">Agotado</span>`;
+                }
+
+                html += `<div class="product-card ${unavailable ? 'product-card-unavailable' : ''}">
+                    ${imageHtml}
+                    <div class="product-card-body">
+                        <div class="product-card-top">
+                            <span class="product-card-name">${esc(p.name)}</span>
+                            <span class="product-card-price">${currency}</span>
+                        </div>
+                        ${p.description ? `<div class="product-card-desc">${esc(p.description)}</div>` : ''}
+                        ${badgeHtml}
+                    </div>
+                </div>`;
+            });
+
+            html += `</div></div>`;
+        });
+
+        container.innerHTML = html;
+        document.getElementById('loading-menu').style.display = 'none';
+        document.getElementById('menu-content').style.display = 'block';
+
+    } catch (e) {
+        console.error(e);
         document.getElementById('loading-menu').style.display = 'none';
         document.getElementById('error-menu').style.display = 'block';
-    } else {
-        loadMenu(userId);
     }
+}
 
-    async function loadMenu(uid) {
-        try {
-            const userDoc = await db.collection('users').doc(uid).get();
-            const productsSnap = await db.collection('users').doc(uid).collection('products').get();
-
-            if (!userDoc.exists) throw new Error('Usuario no encontrado');
-
-            const userData = userDoc.data();
-            const settings = userData.settings || {};
-            const products = productsSnap.docs.map(doc => doc.data());
-
-            // Header
-            document.getElementById('menu-business-name').textContent = settings.businessName || 'Mi Negocio';
-            if (settings.customization?.slogan) {
-                document.getElementById('menu-slogan').textContent = settings.customization.slogan;
-            }
-            if (settings.customization?.logo) {
-                const img = document.createElement('img');
-                img.src = settings.customization.logo;
-                img.className = 'menu-logo';
-                document.getElementById('menu-header').prepend(img);
-            }
-            if (settings.customization?.color) {
-                document.querySelector('.menu-header').style.background = `linear-gradient(135deg, ${settings.customization.color}, #1e293b)`;
-                document.documentElement.style.setProperty('--accent', settings.customization.color);
-            }
-
-            // Título de la página
-            document.title = (settings.businessName || 'Mi Negocio') + ' - Menú';
-
-            // Agrupar por categoría
-            const categories = {};
-            products.forEach(p => {
-                if (!categories[p.category]) categories[p.category] = [];
-                categories[p.category].push(p);
-            });
-
-            // Render
-            const container = document.getElementById('menu-items');
-            const catIcons = { 'Alimentos':'🍽️', 'Bebidas':'🥤', 'Ropa':'👕', 'Electrónica':'📱', 'Hogar':'🏠', 'Belleza':'💄', 'Deportes':'⚽', 'Accesorios':'💍', 'Tecnología':'💻', 'Salud':'💊', 'Mascotas':'🐾', 'Papelería':'📝', 'Otro':'📦' };
-            const catPlaceholders = { 'Alimentos':'🍽️', 'Bebidas':'🥤', 'Ropa':'👕', 'Electrónica':'📱', 'Hogar':'🏠', 'Belleza':'💄', 'Otro':'📦' };
-
-            let html = '';
-            Object.entries(categories).sort((a, b) => a[0].localeCompare(b[0])).forEach(([cat, items]) => {
-                html += `<div class="category-section">`;
-                html += `<div class="category-title">${catIcons[cat] || '📦'} ${cat}</div>`;
-
-                items.sort((a, b) => a.name.localeCompare(b.name)).forEach(p => {
-                    const unavailable = p.quantity <= 0;
-                    const currency = settings.currency === 'COP' ? '$' + Math.round(p.price).toLocaleString('es-CO') : '$' + p.price.toFixed(2);
-                    const hasImage = p.image && p.image.trim();
-                    const hasDesc = p.description && p.description.trim();
-                    const placeholder = catPlaceholders[cat] || '📦';
-
-                    let imageHtml = '';
-                    if (hasImage) {
-                        imageHtml = `<img class="menu-item-img" src="${esc(p.image)}" alt="${esc(p.name)}" loading="lazy" onerror="this.style.display='none'">`;
-                    } else if (hasDesc) {
-                        imageHtml = `<div class="menu-item-placeholder">${placeholder}</div>`;
-                    }
-
-                    if (hasImage || hasDesc) {
-                        html += `<div class="menu-item ${unavailable ? 'menu-item-unavailable' : ''}">
-                            ${imageHtml}
-                            <div class="menu-item-content">
-                                <div class="menu-item-name">${esc(p.name)}${unavailable ? '<span class="out-badge">Agotado</span>' : ''}</div>
-                                ${hasDesc ? `<div class="menu-item-desc">${esc(p.description)}</div>` : ''}
-                                <div class="menu-item-price">${currency}</div>
-                            </div>
-                        </div>`;
-                    } else {
-                        html += `<div class="menu-item no-image ${unavailable ? 'menu-item-unavailable' : ''}">
-                            <div class="menu-item-content">
-                                <div class="menu-item-name">${esc(p.name)}${unavailable ? '<span class="out-badge">Agotado</span>' : ''}</div>
-                                <div class="menu-item-price">${currency}</div>
-                            </div>
-                        </div>`;
-                    }
-                });
-
-                html += `</div>`;
-            });
-
-            container.innerHTML = html;
-
-            document.getElementById('loading-menu').style.display = 'none';
-            document.getElementById('menu-content').style.display = 'block';
-
-        } catch (e) {
-            console.error(e);
-            document.getElementById('loading-menu').style.display = 'none';
-            document.getElementById('error-menu').style.display = 'block';
-        }
-    }
-
-    function esc(text) { const d = document.createElement('div'); d.textContent = text || ''; return d.innerHTML; }
+function esc(text) { const d = document.createElement('div'); d.textContent = text || ''; return d.innerHTML; }
 </script>
 </body>
 </html>
