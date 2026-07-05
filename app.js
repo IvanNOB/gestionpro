@@ -2795,7 +2795,7 @@ async function loadMesas() {
         mesasList = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         renderMesasAdmin();
         // Generate menu link and QR
-        const menuUrl = window.location.origin + '/menu.html?u=' + currentUser.uid;
+        const menuUrl = window.location.origin + window.location.pathname.replace(/[^/]*$/, '') + 'menu.html?u=' + currentUser.uid;
         const menuLinkEl = document.getElementById('menu-link');
         if (menuLinkEl) menuLinkEl.value = menuUrl;
         const qrEl = document.getElementById('menu-qr');
