@@ -3,7 +3,7 @@
 // Estrategias: Cache-First, Network-First, Stale-While-Revalidate
 // ==========================================
 
-const CACHE_VERSION = 'v3';
+const CACHE_VERSION = 'v4';
 const STATIC_CACHE = `gestionpro-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `gestionpro-dynamic-${CACHE_VERSION}`;
 const MAX_DYNAMIC_CACHE_SIZE = 50;
@@ -13,13 +13,25 @@ const PRECACHE_ASSETS = [
     './',
     './index.html',
     './login.html',
+    './landing.html',
+    './cocina.html',
+    './mesero.html',
+    './turno.html',
+    './admin.html',
+    './admin-login.html',
+    './menu.html',
+    './pagar.html',
+    './terminos.html',
     './styles.css',
     './login-styles.css',
     './admin-styles.css',
+    './cocina-styles.css',
     './app.js',
     './auth.js',
     './firebase-config.js',
+    './cocina-app.js',
     './mesero.js',
+    './admin.js',
     './tickets.js',
     './manifest.json',
     './icons/icon-192.png',
