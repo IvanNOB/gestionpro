@@ -336,10 +336,8 @@ function initLogout() {
     const btn = document.getElementById('btn-logout');
     if (btn) {
         btn.addEventListener('click', async () => {
-            if (confirm('¿Cerrar sesión?')) {
-                await auth.signOut();
-                window.location.href = 'login.html';
-            }
+            await auth.signOut();
+            window.location.href = 'login.html';
         });
     }
 }
@@ -798,13 +796,11 @@ function editProduct(id) {
 function deleteProduct(id) {
     const p = getProduct(id);
     if (!p) return;
-    if (confirm(`¿Eliminar "${p.name}"?`)) {
-        products = products.filter(pr => pr.id !== id);
-        addHistory('delete', `Producto eliminado: ${p.name}`);
-        deleteProductFromDB(id);
-        renderAll();
-        showToast(`"${p.name}" eliminado`, 'warning');
-    }
+    products = products.filter(pr => pr.id !== id);
+    addHistory('delete', `Producto eliminado: ${p.name}`);
+    deleteProductFromDB(id);
+    renderAll();
+    showToast(`"${p.name}" eliminado`, 'warning');
 }
 
 
@@ -897,9 +893,7 @@ function handleSaleSubmit(e) {
     document.getElementById('sale-summary').style.display = 'none';
     document.getElementById('sale-discount-row').style.display = 'none';
     updateSaleProductList();
-    if (confirm('Venta registrada. ¿Quieres imprimir el ticket?')) {
-        printSaleTicket(sale);
-    }
+    printSaleTicket(sale);
 }
 
 
@@ -1356,7 +1350,6 @@ async function saveGramHistoryToDB() {
 }
 
 function clearGramHistory() {
-    if (!confirm('¿Limpiar todo el historial de cálculos?')) return;
     gramHistory = [];
     localStorage.removeItem('gramHistory');
     if (currentUser) {
@@ -1665,12 +1658,10 @@ function renderHistory() {
 }
 
 function clearHistory() {
-    if (confirm('¿Limpiar todo el historial?')) {
-        history = [];
-        clearHistoryFromDB();
-        renderHistory();
-        showToast('Historial limpiado', 'info');
-    }
+    history = [];
+    clearHistoryFromDB();
+    renderHistory();
+    showToast('Historial limpiado', 'info');
 }
 
 
@@ -2080,12 +2071,10 @@ function cancelClientEdit() {
 function deleteClient(id) {
     const c = clients.find(x => x.id === id);
     if (!c) return;
-    if (confirm(`¿Eliminar al cliente "${c.name}"?`)) {
-        clients = clients.filter(x => x.id !== id);
-        deleteClientFromDB(id);
-        renderClients();
-        showToast('Cliente eliminado', 'warning');
-    }
+    clients = clients.filter(x => x.id !== id);
+    deleteClientFromDB(id);
+    renderClients();
+    showToast('Cliente eliminado', 'warning');
 }
 
 
@@ -2189,12 +2178,10 @@ function cancelSupplierEdit() {
 function deleteSupplier(id) {
     const s = suppliers.find(x => x.id === id);
     if (!s) return;
-    if (confirm(`¿Eliminar al proveedor "${s.name}"?`)) {
-        suppliers = suppliers.filter(x => x.id !== id);
-        deleteSupplierFromDB(id);
-        renderSuppliers();
-        showToast('Proveedor eliminado', 'warning');
-    }
+    suppliers = suppliers.filter(x => x.id !== id);
+    deleteSupplierFromDB(id);
+    renderSuppliers();
+    showToast('Proveedor eliminado', 'warning');
 }
 
 function renderSuppliers() {
@@ -2282,13 +2269,11 @@ function cancelExpenseEdit() {
 function deleteExpense(id) {
     const x = expenses.find(e => e.id === id);
     if (!x) return;
-    if (confirm(`¿Eliminar el gasto "${x.concept}"?`)) {
-        expenses = expenses.filter(e => e.id !== id);
-        deleteExpenseFromDB(id);
-        renderExpenses();
-        updateDashboardStats();
-        showToast('Gasto eliminado', 'warning');
-    }
+    expenses = expenses.filter(e => e.id !== id);
+    deleteExpenseFromDB(id);
+    renderExpenses();
+    updateDashboardStats();
+    showToast('Gasto eliminado', 'warning');
 }
 
 
@@ -2433,12 +2418,10 @@ function cancelInsumoEdit() {
 function deleteInsumo(id) {
     const i = insumos.find(x => x.id === id);
     if (!i) return;
-    if (confirm(`¿Eliminar insumo "${i.name}"?`)) {
-        insumos = insumos.filter(x => x.id !== id);
-        deleteInsumoFromDB(id);
-        renderInsumos();
-        showToast('Insumo eliminado', 'warning');
-    }
+    insumos = insumos.filter(x => x.id !== id);
+    deleteInsumoFromDB(id);
+    renderInsumos();
+    showToast('Insumo eliminado', 'warning');
 }
 
 function restockInsumo(id) {
@@ -2651,12 +2634,10 @@ function cancelRecipeEdit() {
 function deleteRecipe(id) {
     const r = recipes.find(x => x.id === id);
     if (!r) return;
-    if (confirm(`¿Eliminar receta de "${r.productName}"?`)) {
-        recipes = recipes.filter(x => x.id !== id);
-        deleteRecipeFromDB(id);
-        renderRecipes();
-        showToast('Receta eliminada', 'warning');
-    }
+    recipes = recipes.filter(x => x.id !== id);
+    deleteRecipeFromDB(id);
+    renderRecipes();
+    showToast('Receta eliminada', 'warning');
 }
 
 function renderRecipeIngredients() {
@@ -2806,12 +2787,10 @@ function cancelMesaEdit() {
 function deleteMesa(id) {
     const m = mesasList.find(x => x.id === id);
     if (!m) return;
-    if (confirm(`¿Eliminar "${m.name}"?`)) {
-        mesasList = mesasList.filter(x => x.id !== id);
-        userCollection('mesas').doc(id).delete();
-        renderMesasAdmin();
-        showToast('Mesa eliminada', 'warning');
-    }
+    mesasList = mesasList.filter(x => x.id !== id);
+    userCollection('mesas').doc(id).delete();
+    renderMesasAdmin();
+    showToast('Mesa eliminada', 'warning');
 }
 
 async function saveMesa(mesa) {
@@ -3064,8 +3043,6 @@ async function voidSale(saleId) {
     if (!sale) return;
     if (sale.voided) { showToast('Esta venta ya fue anulada', 'info'); return; }
 
-    if (!confirm(`¿Anular la venta de ${sale.quantity}x "${sale.productName}" por ${formatCurrency(sale.total)}?\n\nSe devolverá el stock al inventario.`)) return;
-
     // Marcar como anulada
     sale.voided = true;
     sale.voidedAt = new Date().toISOString();
@@ -3142,12 +3119,10 @@ function handleEmployeeSubmit(e) {
 function deleteEmployee(id) {
     const emp = employees.find(e => e.id === id);
     if (!emp) return;
-    if (confirm(`¿Eliminar a "${emp.name}"?`)) {
-        employees = employees.filter(e => e.id !== id);
-        userCollection('employees').doc(id).delete();
-        renderEmployees();
-        showToast('Empleado eliminado', 'warning');
-    }
+    employees = employees.filter(e => e.id !== id);
+    userCollection('employees').doc(id).delete();
+    renderEmployees();
+    showToast('Empleado eliminado', 'warning');
 }
 
 function toggleEmployeeActive(id) {
@@ -3331,7 +3306,6 @@ function getPlanNameForFeature(feature) {
 // PRODUCTOS DE PRUEBA (con fotos y descripciones)
 // ==========================================
 async function loadDemoProducts() {
-    if (!confirm('¿Cargar productos de prueba con fotos? (No borra los productos actuales)')) return;
 
     const demoProducts = [
         {
