@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GestiónPro - Fichas de Productos</title>
+<meta name="theme-color" content="#0f0f1a">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f0f1a; color: #f1f5f9; min-height: 100vh; }
+
+.header { background: linear-gradient(135deg, #1a1a2e, #16213e); padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(99,102,241,0.2); position: sticky; top: 0; z-index: 100; }
+.header h1 { font-size: 1.2rem; font-weight: 700; color: #f1f5f9; }
+.header-btns { display: flex; gap: 8px; }
+.header-btns button { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); color: #f1f5f9; padding: 8px 14px; border-radius: 10px; font-size: 0.85rem; cursor: pointer; }
+
+.search-bar { padding: 16px 20px; position: sticky; top: 54px; z-index: 99; background: #0f0f1a; }
+.search-input { width: 100%; padding: 12px 16px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; color: #f1f5f9; font-size: 0.95rem; outline: none; }
+.search-input::placeholder { color: #64748b; }
+.search-input:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
+
+.category-title { padding: 16px 20px 8px; font-size: 1rem; font-weight: 700; color: #6366f1; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid rgba(99,102,241,0.15); margin: 0 16px; }
+
+.fichas-grid { padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; }
+
+.ficha-card { display: flex; gap: 14px; padding: 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; transition: all 0.2s; }
+.ficha-card:active { transform: scale(0.98); background: rgba(255,255,255,0.08); }
+
+.ficha-img { width: 70px; height: 70px; border-radius: 12px; object-fit: cover; flex-shrink: 0; background: rgba(255,255,255,0.05); }
+.ficha-placeholder { width: 70px; height: 70px; border-radius: 12px; flex-shrink: 0; background: linear-gradient(135deg, rgba(99,102,241,0.2), rgba(99,102,241,0.05)); display: flex; align-items: center; justify-content: center; font-size: 1.8rem; }
+
+.ficha-info { flex: 1; display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+.ficha-name { font-weight: 700; font-size: 1rem; color: #f1f5f9; margin-bottom: 4px; }
+.ficha-desc { font-size: 0.82rem; color: #94a3b8; line-height: 1.4; }
+.ficha-price { font-size: 0.85rem; font-weight: 700; color: #10b981; margin-top: 4px; }
+.ficha-stock { font-size: 0.75rem; color: #64748b; margin-top: 2px; }
+.ficha-stock.low { color: #f59e0b; }
+.ficha-stock.out { color: #ef4444; }
+
+.empty-state { text-align: center; padding: 60px 20px; color: #64748b; }
+.empty-state .icon { font-size: 3rem; margin-bottom: 12px; }
+
+.loading { position: fixed; inset: 0; background: #0f0f1a; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 12px; z-index: 9999; }
+.spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1); border-top-color: #6366f1; border-radius: 50%; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.print-btn { position: fixed; bottom: 20px; right: 20px; background: linear-gradient(135deg, #6366f1, #4f46e5); color: white; border: none; padding: 14px 20px; border-radius: 14px; font-size: 0.9rem; font-weight: 700; cursor: pointer; box-shadow: 0 4px 20px rgba(99,102,241,0.4); z-index: 100; display: flex; align-items: center; gap: 8px; }
+.print-btn:active { transform: scale(0.95); }
+
+@media print {
+    body { background: white; color: #1e293b; }
+    .header, .search-bar, .print-btn { display: none; }
+    .ficha-card { border: 1px solid #e2e8f0; break-inside: avoid; }
+    .ficha-name { color: #1e293b; }
+    .ficha-desc { color: #475569; }
+    .ficha-price { color: #16a34a; }
+    .category-title { color: #1e293b; border-color: #e2e8f0; }
+}
+</style>
+</head>
+<body>
+
+<div class="loading" id="loading">
+    <div class="spinner"></div>
+    <p style="color:#94a3b8;">Cargando fichas...</p>
+</div>
+
+<header class="header">
+    <h1>📖 Fichas de Productos</h1>
+    <div class="header-btns">
+        <button onclick="window.history.back()">← Volver</button>
+        <button onclick="location.reload()">🔄</button>
+    </div>
+</header>
+
+<div class="search-bar">
+    <input type="text" class="search-input" id="search" placeholder="🔍 Buscar producto..." oninput="filterFichas()">
+</div>
+
+<div id="fichas-container"></div>
+
+<button class="print-btn" onclick="window.print()">🖨️ Imprimir</button>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+let allProducts = [];
+let currentUser = null;
+
+auth.onAuthStateChanged((user) => {
+    if (user) {
+        currentUser = user;
+        loadProducts();
+    } else {
+        window.location.href = 'login.html';
+    }
+});
+
+async function loadProducts() {
+    try {
+        const snap = await db.collection('users').doc(currentUser.uid).collection('products').get();
+        allProducts = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        allProducts.sort((a, b) => a.name.localeCompare(b.name));
+        renderFichas(allProducts);
+        document.getElementById('loading').style.display = 'none';
+    } catch (e) {
+        console.error(e);
+        document.getElementById('loading').innerHTML = '<p style="color:#ef4444;">Error cargando productos</p>';
+    }
+}
+
+function renderFichas(products) {
+    const container = document.getElementById('fichas-container');
+
+    if (products.length === 0) {
+        container.innerHTML = `<div class="empty-state"><div class="icon">📖</div><p>No hay productos para mostrar</p></div>`;
+        return;
+    }
+
+    // Agrupar por categoría
+    const categories = {};
+    products.forEach(p => {
+        if (!categories[p.category]) categories[p.category] = [];
+        categories[p.category].push(p);
+    });
+
+    const catIcons = { 'Alimentos':'🍽️', 'Bebidas':'🥤', 'Ropa':'👕', 'Electrónica':'📱', 'Hogar':'🏠', 'Belleza':'💄', 'Deportes':'⚽', 'Otro':'📦' };
+
+    let html = '';
+    Object.entries(categories).sort((a, b) => a[0].localeCompare(b[0])).forEach(([cat, items]) => {
+        html += `<div class="category-title">${catIcons[cat] || '📦'} ${cat}</div>`;
+        html += `<div class="fichas-grid">`;
+
+        items.forEach(p => {
+            const hasImage = p.image && p.image.trim();
+            const placeholder = catIcons[p.category] || '📦';
+
+            let stockClass = '';
+            let stockText = `${p.quantity} disponibles`;
+            if (p.quantity === 0) { stockClass = 'out'; stockText = 'AGOTADO'; }
+            else if (p.quantity <= (p.minStock || 5)) { stockClass = 'low'; stockText = `⚠️ Quedan ${p.quantity}`; }
+
+            const currency = '$' + Math.round(p.price).toLocaleString('es-CO');
+
+            html += `<div class="ficha-card">
+                ${hasImage 
+                    ? `<img class="ficha-img" src="${esc(p.image)}" alt="${esc(p.name)}" loading="lazy" onerror="this.style.display='none'">`
+                    : `<div class="ficha-placeholder">${placeholder}</div>`
+                }
+                <div class="ficha-info">
+                    <div class="ficha-name">${esc(p.name)}</div>
+                    ${p.description ? `<div class="ficha-desc">${esc(p.description)}</div>` : `<div class="ficha-desc" style="font-style:italic;color:#475569;">Sin descripción</div>`}
+                    <div class="ficha-price">${currency}</div>
+                    <div class="ficha-stock ${stockClass}">${stockText}</div>
+                </div>
+            </div>`;
+        });
+
+        html += `</div>`;
+    });
+
+    container.innerHTML = html;
+}
+
+function filterFichas() {
+    const query = document.getElementById('search').value.toLowerCase().trim();
+    if (!query) {
+        renderFichas(allProducts);
+        return;
+    }
+    const filtered = allProducts.filter(p => 
+        p.name.toLowerCase().includes(query) || 
+        (p.description || '').toLowerCase().includes(query) ||
+        (p.category || '').toLowerCase().includes(query)
+    );
+    renderFichas(filtered);
+}
+
+function esc(text) { const d = document.createElement('div'); d.textContent = text || ''; return d.innerHTML; }
+</script>
+</body>
+</html>
