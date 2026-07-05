@@ -700,36 +700,30 @@ async function handleProductImageUpload(e) {
         showToast('Solo se permiten imágenes', 'error');
         return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-        showToast('La imagen debe pesar menos de 5MB', 'error');
+    if (file.size > 10 * 1024 * 1024) {
+        showToast('La imagen debe pesar menos de 10MB', 'error');
         return;
     }
 
-    // Mostrar nombre y preview local mientras sube
-    document.getElementById('product-image-filename').textContent = '⏳ Subiendo...';
-
-    // Comprimir imagen antes de subir
-    const compressedFile = await compressImage(file, 800, 0.7);
+    document.getElementById('product-image-filename').textContent = '⏳ Procesando...';
 
     try {
-        const fileName = `products/${currentUser.uid}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-        const ref = storage.ref(fileName);
-        const snapshot = await ref.put(compressedFile);
-        const url = await snapshot.ref.getDownloadURL();
+        // Comprimir y convertir a Base64 (sin necesidad de Firebase Storage)
+        const base64 = await imageToBase64(file, 400, 0.6);
 
-        // Guardar URL en el campo oculto
-        document.getElementById('product-image').value = url;
+        // Guardar en el campo oculto
+        document.getElementById('product-image').value = base64;
         document.getElementById('product-image-filename').textContent = '✅ ' + file.name;
 
         // Mostrar preview
         document.getElementById('product-image-preview').style.display = 'flex';
-        document.getElementById('product-image-preview-img').src = url;
+        document.getElementById('product-image-preview-img').src = base64;
 
-        showToast('Foto subida correctamente', 'success');
+        showToast('Foto lista', 'success');
     } catch (err) {
-        console.error('Error subiendo imagen:', err);
-        document.getElementById('product-image-filename').textContent = '❌ Error al subir';
-        showToast('Error al subir la imagen. Verifica que Firebase Storage esté activado.', 'error');
+        console.error('Error procesando imagen:', err);
+        document.getElementById('product-image-filename').textContent = '❌ Error';
+        showToast('Error al procesar la imagen', 'error');
     }
 }
 
@@ -741,8 +735,8 @@ function removeProductImage() {
     document.getElementById('product-image-preview-img').src = '';
 }
 
-function compressImage(file, maxWidth, quality) {
-    return new Promise((resolve) => {
+function imageToBase64(file, maxWidth, quality) {
+    return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = (e) => {
             const img = new Image();
@@ -761,12 +755,13 @@ function compressImage(file, maxWidth, quality) {
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, width, height);
 
-                canvas.toBlob((blob) => {
-                    resolve(blob);
-                }, 'image/jpeg', quality);
+                const base64 = canvas.toDataURL('image/jpeg', quality);
+                resolve(base64);
             };
+            img.onerror = reject;
             img.src = e.target.result;
         };
+        reader.onerror = reject;
         reader.readAsDataURL(file);
     });
 }

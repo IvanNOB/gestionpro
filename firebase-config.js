@@ -27,7 +27,6 @@ firebase.initializeApp(firebaseConfig);
 // Referencias globales
 const auth = firebase.auth();
 const db = firebase.firestore();
-const storage = firebase.storage();
 
 // Configurar persistencia de Firestore (datos offline)
 db.enablePersistence({ synchronizeTabs: true }).catch((err) => {
