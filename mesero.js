@@ -155,13 +155,23 @@ function renderProducts(category = '', search = '') {
         grid.innerHTML = '<p style="text-align:center;color:var(--text-muted, #64748b);padding:20px;grid-column:1/-1;">No se encontraron productos</p>';
         return;
     }
-    grid.innerHTML = filtered.map(p => `
-        <div class="product-btn" onclick="addToOrder('${p.id}')">
+    grid.innerHTML = filtered.map(p => {
+        const hasImage = p.image && p.image.trim();
+        const hasDesc = p.description && p.description.trim();
+        const imgHtml = hasImage 
+            ? `<img src="${esc(p.image)}" style="width:100%;height:80px;object-fit:cover;border-radius:10px;margin-bottom:8px;" loading="lazy" onerror="this.style.display='none'">`
+            : '';
+        const descHtml = hasDesc 
+            ? `<div style="font-size:0.7rem;color:var(--text-secondary,#94a3b8);margin-top:4px;line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${esc(p.description)}</div>` 
+            : '';
+        return `<div class="product-btn ${hasImage ? 'with-image' : ''}" onclick="addToOrder('${p.id}')">
+            ${imgHtml}
             <div class="prod-name">${esc(p.name)}</div>
             <div class="prod-price">${formatCurrency(p.price)}</div>
+            ${descHtml}
             <div class="prod-stock">${p.quantity > 5 ? 'Stock: ' + p.quantity : '⚠️ ' + p.quantity}</div>
-        </div>
-    `).join('');
+        </div>`;
+    }).join('');
 }
 
 // ==========================================
