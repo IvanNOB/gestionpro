@@ -412,5 +412,10 @@ function applyMeseroRoleRestrictions(role) {
         if (btnPrebill) btnPrebill.style.display = 'none';
         payMethods.forEach(btn => btn.style.display = 'none');
     }
-    // Caja y Dueño pueden cobrar (no se oculta nada)
+
+    // Solo el dueño puede ver el botón de ir al panel principal
+    if (role === 'owner') {
+        const btnHome = document.getElementById('btn-home-mesero');
+        if (btnHome) btnHome.style.display = '';
+    }
 }
