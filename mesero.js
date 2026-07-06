@@ -413,6 +413,12 @@ function applyMeseroRoleRestrictions(role) {
         payMethods.forEach(btn => btn.style.display = 'none');
     }
 
+    // Caja y Dueño pueden ver la cocina
+    if (role === 'caja' || role === 'owner') {
+        const btnCocina = document.getElementById('btn-cocina-mesero');
+        if (btnCocina) btnCocina.style.display = '';
+    }
+
     // Solo el dueño puede ver el botón de ir al panel principal
     if (role === 'owner') {
         const btnHome = document.getElementById('btn-home-mesero');
