@@ -3,16 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GestiónPro - Cambio de Turno</title>
+    <title>GestiónPro - Seleccionar Perfil</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #0f172a, #1e293b); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
-        
-        .container { max-width: 400px; width: 100%; }
+        .container { max-width: 420px; width: 100%; }
         .card { background: white; border-radius: 20px; padding: 40px 32px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); text-align: center; }
         .card h1 { font-size: 1.5rem; color: #1e293b; margin-bottom: 8px; }
         .card p { color: #64748b; font-size: 0.9rem; margin-bottom: 24px; }
-        
         .employees-list { margin-bottom: 24px; }
         .employee-btn { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px 16px; background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 12px; cursor: pointer; margin-bottom: 8px; transition: all 0.2s; text-align: left; font-size: 0.95rem; }
         .employee-btn:hover { border-color: #2563eb; background: #eff6ff; }
@@ -21,24 +19,17 @@
         .employee-btn .emp-info { flex: 1; }
         .employee-btn .emp-name { font-weight: 700; color: #1e293b; }
         .employee-btn .emp-role { font-size: 0.8rem; color: #64748b; }
-        
         .pin-section { display: none; margin-bottom: 20px; }
         .pin-section.active { display: block; }
         .pin-section label { display: block; font-size: 0.85rem; font-weight: 600; color: #475569; margin-bottom: 8px; }
         .pin-input { width: 100%; padding: 16px; text-align: center; font-size: 1.5rem; font-weight: 700; letter-spacing: 12px; border: 2px solid #e2e8f0; border-radius: 12px; outline: none; }
         .pin-input:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
-        
         .btn-enter { width: 100%; padding: 16px; background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; border: none; border-radius: 12px; font-size: 1.05rem; font-weight: 700; cursor: pointer; margin-bottom: 12px; box-shadow: 0 4px 12px rgba(37,99,235,0.3); transition: all 0.2s; }
         .btn-enter:hover { transform: translateY(-2px); }
         .btn-enter:disabled { opacity: 0.5; transform: none; cursor: not-allowed; }
-        
-        .btn-owner { width: 100%; padding: 12px; background: #f1f5f9; color: #64748b; border: none; border-radius: 10px; font-size: 0.9rem; cursor: pointer; font-weight: 600; }
-        
         .error-msg { display: none; background: #fef2f2; color: #dc2626; padding: 12px; border-radius: 10px; font-size: 0.85rem; margin-bottom: 16px; }
-        
         .no-pin-msg { font-size: 0.8rem; color: #94a3b8; margin-top: 8px; }
-        
-        .loading { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15,23,42,0.9); display: none; align-items: center; justify-content: center; z-index: 999; }
+        .loading { position: fixed; inset: 0; background: rgba(15,23,42,0.9); display: none; align-items: center; justify-content: center; z-index: 999; }
         .loading.active { display: flex; }
         .spinner { width: 40px; height: 40px; border: 4px solid #334155; border-top-color: #2563eb; border-radius: 50%; animation: spin 0.7s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -46,26 +37,20 @@
 </head>
 <body>
     <div class="loading" id="loading"><div class="spinner"></div></div>
-    
     <div class="container">
         <div class="card">
-            <h1>👥 Cambio de Turno</h1>
-            <p>Selecciona tu perfil para continuar</p>
-            
+            <h1>👥 ¿Quién va a usar el sistema?</h1>
+            <p>Selecciona tu perfil e ingresa tu PIN</p>
             <div class="employees-list" id="employees-list">
-                <p style="color:#94a3b8;">Cargando empleados...</p>
+                <p style="color:#94a3b8;">Cargando...</p>
             </div>
-            
             <div class="pin-section" id="pin-section">
                 <label>Ingresa tu PIN:</label>
-                <input type="password" class="pin-input" id="pin-input" maxlength="4" placeholder="••••" inputmode="numeric">
+                <input type="password" class="pin-input" id="pin-input" maxlength="6" placeholder="••••" inputmode="numeric">
             </div>
-            
             <div class="error-msg" id="error-msg"></div>
-            
             <button class="btn-enter" id="btn-enter" disabled onclick="enterWithRole()">Entrar</button>
-            
-            <p class="no-pin-msg">Selecciona tu perfil e ingresa tu PIN para continuar.</p>
+            <p class="no-pin-msg">Todos deben ingresar con PIN. Si no tienes, pídelo al dueño.</p>
         </div>
     </div>
 
@@ -93,24 +78,21 @@
                 employees = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter(e => e.active !== false);
                 renderEmployees();
             } catch (e) {
-                document.getElementById('employees-list').innerHTML = '<p style="color:#dc2626;">Error cargando empleados</p>';
+                document.getElementById('employees-list').innerHTML = '<p style="color:#dc2626;">Error cargando perfiles</p>';
             }
         }
 
         function renderEmployees() {
             const list = document.getElementById('employees-list');
+            const roleIcons = { owner: '👑', caja: '💰', waiter: '📋' };
+            const roleNames = { owner: 'Dueño', caja: 'Caja', waiter: 'Mesero' };
 
-            const roleIcons = { owner: '👑', cashier: '💰', waiter: '📋' };
-            const roleNames = { owner: 'Dueño', cashier: 'Cajero', waiter: 'Mesero' };
+            if (employees.length === 0) {
+                list.innerHTML = '<p style="color:#94a3b8;">No hay perfiles registrados. El dueño debe agregarlos en Ajustes → Empleados.</p>';
+                return;
+            }
 
-            // Siempre agregar al dueño como primera opción
-            const ownerName = currentUser.displayName || currentUser.email.split('@')[0];
-            let allUsers = [{ id: '__owner__', name: ownerName, role: 'owner', pin: '' }];
-            
-            // Agregar empleados registrados
-            allUsers = allUsers.concat(employees);
-
-            list.innerHTML = allUsers.map(emp => `
+            list.innerHTML = employees.map(emp => `
                 <button class="employee-btn" onclick="selectEmployee('${emp.id}')">
                     <span class="emp-icon">${roleIcons[emp.role] || '👤'}</span>
                     <div class="emp-info">
@@ -123,15 +105,13 @@
 
         function selectEmployee(id) {
             selectedEmployee = employees.find(e => e.id === id);
+            if (!selectedEmployee) return;
             document.querySelectorAll('.employee-btn').forEach(b => b.classList.remove('selected'));
             event.currentTarget.classList.add('selected');
-            
-            if (selectedEmployee.pin) {
-                document.getElementById('pin-section').classList.add('active');
-                document.getElementById('pin-input').focus();
-            } else {
-                document.getElementById('pin-section').classList.remove('active');
-            }
+            // Siempre pedir PIN
+            document.getElementById('pin-section').classList.add('active');
+            document.getElementById('pin-input').value = '';
+            document.getElementById('pin-input').focus();
             document.getElementById('btn-enter').disabled = false;
             document.getElementById('error-msg').style.display = 'none';
         }
@@ -139,55 +119,28 @@
         function enterWithRole() {
             if (!selectedEmployee) return;
 
-            // Si es el dueño, entrar directo
-            if (selectedEmployee.id === '__owner__') {
-                sessionStorage.setItem('activeRole', 'owner');
-                sessionStorage.setItem('activeEmployee', selectedEmployee.name);
-                window.location.href = 'index.html';
+            // Verificar PIN (obligatorio para todos)
+            const inputPin = document.getElementById('pin-input').value;
+            if (!inputPin || inputPin !== selectedEmployee.pin) {
+                document.getElementById('error-msg').textContent = 'PIN incorrecto';
+                document.getElementById('error-msg').style.display = 'block';
+                document.getElementById('pin-input').value = '';
+                document.getElementById('pin-input').focus();
                 return;
             }
 
-            // Verificar PIN si tiene
-            if (selectedEmployee.pin) {
-                const inputPin = document.getElementById('pin-input').value;
-                if (inputPin !== selectedEmployee.pin) {
-                    document.getElementById('error-msg').textContent = 'PIN incorrecto';
-                    document.getElementById('error-msg').style.display = 'block';
-                    document.getElementById('pin-input').value = '';
-                    document.getElementById('pin-input').focus();
-                    return;
-                }
-            }
-
-            // Guardar rol activo en sessionStorage y redirigir
+            // Guardar rol activo
             sessionStorage.setItem('activeRole', selectedEmployee.role);
             sessionStorage.setItem('activeEmployee', selectedEmployee.name);
 
+            // Redirigir según rol
             if (selectedEmployee.role === 'waiter') {
+                window.location.href = 'mesero.html';
+            } else if (selectedEmployee.role === 'caja') {
                 window.location.href = 'mesero.html';
             } else {
                 window.location.href = 'index.html';
             }
-        }
-
-        function selectEmployee(id) {
-
-            selectedEmployee = employees.find(e => e.id === id);
-            if (!selectedEmployee && id === '__owner__') {
-                const ownerName = currentUser.displayName || currentUser.email.split('@')[0];
-                selectedEmployee = { id: '__owner__', name: ownerName, role: 'owner', pin: '' };
-            }
-            document.querySelectorAll('.employee-btn').forEach(b => b.classList.remove('selected'));
-            event.currentTarget.classList.add('selected');
-            
-            if (selectedEmployee && selectedEmployee.pin) {
-                document.getElementById('pin-section').classList.add('active');
-                document.getElementById('pin-input').focus();
-            } else {
-                document.getElementById('pin-section').classList.remove('active');
-            }
-            document.getElementById('btn-enter').disabled = false;
-            document.getElementById('error-msg').style.display = 'none';
         }
     </script>
 </body>

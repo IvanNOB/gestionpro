@@ -836,9 +836,7 @@
             </div>
             <div class="order-footer">
                 <div style="display:flex;gap:6px;margin-bottom:10px;overflow-x:auto;">
-                    <button class="pay-method-btn active" onclick="selectPayMethod(this,'Efectivo')" style="padding:6px 10px;border-radius:8px;border:1px solid var(--border-glass,#333);background:var(--accent-green,#10b981);color:white;font-size:0.75rem;font-weight:600;cursor:pointer;white-space:nowrap;">💵 Efectivo</button>
-                    <button class="pay-method-btn" onclick="selectPayMethod(this,'Nequi')" style="padding:6px 10px;border-radius:8px;border:1px solid var(--border-glass,#333);background:var(--bg-glass,#222);color:var(--text-secondary,#aaa);font-size:0.75rem;font-weight:600;cursor:pointer;white-space:nowrap;">📱 Nequi</button>
-                    <button class="pay-method-btn" onclick="selectPayMethod(this,'Daviplata')" style="padding:6px 10px;border-radius:8px;border:1px solid var(--border-glass,#333);background:var(--bg-glass,#222);color:var(--text-secondary,#aaa);font-size:0.75rem;font-weight:600;cursor:pointer;white-space:nowrap;">📱 Daviplata</button>
+                    <button class="pay-method-btn active" onclick="selectPayMethod(this,'Efectivo')" id="pay-methods-section" style="padding:6px 10px;border-radius:8px;border:1px solid var(--border-glass,#333);background:var(--accent-green,#10b981);color:white;font-size:0.75rem;font-weight:600;cursor:pointer;white-space:nowrap;">💵 Efectivo</button>
                     <button class="pay-method-btn" onclick="selectPayMethod(this,'Tarjeta')" style="padding:6px 10px;border-radius:8px;border:1px solid var(--border-glass,#333);background:var(--bg-glass,#222);color:var(--text-secondary,#aaa);font-size:0.75rem;font-weight:600;cursor:pointer;white-space:nowrap;">💳 Tarjeta</button>
                     <button class="pay-method-btn" onclick="selectPayMethod(this,'Transferencia')" style="padding:6px 10px;border-radius:8px;border:1px solid var(--border-glass,#333);background:var(--bg-glass,#222);color:var(--text-secondary,#aaa);font-size:0.75rem;font-weight:600;cursor:pointer;white-space:nowrap;">🏦 Transf</button>
                 </div>
@@ -849,8 +847,8 @@
                 <div class="order-actions">
                     <button class="btn-cancel-order" onclick="clearCurrentOrder()" aria-label="Cancelar">🗑️</button>
                     <button class="btn-send" onclick="sendOrder()">📤 Enviar</button>
-                    <button class="btn-prebill" onclick="printPreBill()">🧾 Pre</button>
-                    <button class="btn-pay" onclick="payOrder()">💰 Cobrar</button>
+                    <button class="btn-prebill" id="btn-prebill" onclick="printPreBill()">🧾 Pre</button>
+                    <button class="btn-pay" id="btn-cobrar" onclick="payOrder()">💰 Cobrar</button>
                 </div>
             </div>
         </div><!-- /order-panel -->

@@ -28,6 +28,8 @@ document.addEventListener('DOMContentLoaded', () => {
             await loadData();
             document.getElementById('loading-screen').style.display = 'none';
             renderMesas();
+            // Aplicar restricciones según rol
+            applyMeseroRoleRestrictions(activeRole);
         } else {
             window.location.href = 'login.html';
         }
@@ -393,4 +395,22 @@ function selectPayMethod(btn, method) {
     });
     btn.style.background = 'var(--accent-green, #10b981)';
     btn.style.color = 'white';
+}
+
+
+// ==========================================
+// RESTRICCIONES POR ROL EN MESERO
+// ==========================================
+function applyMeseroRoleRestrictions(role) {
+    // Mesero: solo puede tomar pedidos y enviar, NO puede cobrar
+    if (role === 'waiter') {
+        const btnCobrar = document.getElementById('btn-cobrar');
+        const btnPrebill = document.getElementById('btn-prebill');
+        const payMethods = document.querySelectorAll('.pay-method-btn');
+        
+        if (btnCobrar) btnCobrar.style.display = 'none';
+        if (btnPrebill) btnPrebill.style.display = 'none';
+        payMethods.forEach(btn => btn.style.display = 'none');
+    }
+    // Caja y Dueño pueden cobrar (no se oculta nada)
 }

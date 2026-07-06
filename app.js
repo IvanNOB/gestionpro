@@ -270,7 +270,7 @@ function showUserInfo() {
         const activeEmployee = sessionStorage.getItem('activeEmployee');
         const activeRole = sessionStorage.getItem('activeRole');
         if (activeEmployee && activeRole && activeRole !== 'owner') {
-            const roleNames = { cashier: '💰 Cajero', waiter: '📋 Mesero' };
+            const roleNames = { caja: '💰 Caja', waiter: '📋 Mesero' };
             el.textContent = `${activeEmployee} (${roleNames[activeRole] || activeRole})`;
         } else {
             el.textContent = currentUser.displayName || currentUser.email;
@@ -292,14 +292,14 @@ function checkActiveRole() {
 
 function applyRoleRestrictions(role) {
     currentRole = role;
-    const hiddenForCashier = ['reports', 'settings', 'insumos', 'recipes'];
-    const hiddenForWaiter = ['inventory', 'reports', 'settings', 'expenses', 'insumos', 'recipes', 'clients', 'suppliers'];
+    const hiddenForCaja = ['reports', 'settings', 'insumos', 'recipes'];
+    const hiddenForWaiter = ['inventory', 'reports', 'settings', 'expenses', 'insumos', 'recipes', 'clients', 'suppliers', 'cashclose', 'calculator', 'history'];
 
     const allNavLinks = document.querySelectorAll('.nav-link');
     allNavLinks.forEach(link => {
         const section = link.dataset.section;
         if (!section) return;
-        if (role === 'cashier' && hiddenForCashier.includes(section)) {
+        if (role === 'caja' && hiddenForCaja.includes(section)) {
             link.parentElement.style.display = 'none';
         }
         if (role === 'waiter' && hiddenForWaiter.includes(section)) {
@@ -307,25 +307,16 @@ function applyRoleRestrictions(role) {
         }
     });
 
-    // Cajero: ocultar todos los botones de editar, eliminar y formularios
-    if (role === 'cashier') {
-        // Ocultar formularios de agregar
+    // Caja: ocultar botones de editar/eliminar productos y configuraciones
+    if (role === 'caja') {
         document.querySelectorAll('#product-form, #client-form, #supplier-form, #expense-form, #insumo-form, #recipe-form, #mesa-form, #employee-form').forEach(el => {
             if (el) el.style.display = 'none';
         });
-        // Ocultar botones de exportar/importar
         document.querySelectorAll('#btn-export-csv, #btn-import-csv, #btn-export-sales, #btn-export-report, #btn-clear-history, #btn-clear-all, #btn-save-settings, #btn-backup, #btn-restore').forEach(el => {
             if (el) el.style.display = 'none';
         });
-        // Ocultar botones de acción en tablas (editar/eliminar)
         setTimeout(() => {
             document.querySelectorAll('.action-btn').forEach(btn => {
-                btn.style.display = 'none';
-            });
-        }, 500);
-        // Ocultar botón de anular ventas
-        setTimeout(() => {
-            document.querySelectorAll('[onclick*="voidSale"]').forEach(btn => {
                 btn.style.display = 'none';
             });
         }, 500);
@@ -1938,37 +1929,62 @@ function calcBreakEven() {
 // ==========================================
 // CIERRE DE CAJA DIARIO
 // ==========================================
+// ==========================================
+// CIERRE DE CAJA POR TURNOS (Mañana / Noche)
+// ==========================================
+let currentCashShift = 'todo'; // 'manana', 'noche', 'todo'
+
+function selectCashShift(shift) {
+    currentCashShift = shift;
+    // Update button styles
+    document.getElementById('btn-turno-manana').style.background = shift === 'manana' ? 'var(--primary)' : 'var(--bg)';
+    document.getElementById('btn-turno-manana').style.color = shift === 'manana' ? 'white' : 'var(--text)';
+    document.getElementById('btn-turno-noche').style.background = shift === 'noche' ? 'var(--primary)' : 'var(--bg)';
+    document.getElementById('btn-turno-noche').style.color = shift === 'noche' ? 'white' : 'var(--text)';
+    document.getElementById('btn-turno-todo').style.background = shift === 'todo' ? 'var(--primary)' : 'var(--bg)';
+    document.getElementById('btn-turno-todo').style.color = shift === 'todo' ? 'white' : 'var(--text)';
+    AppCache.invalidatePrefix('stats_cashclose');
+    renderCashClose();
+}
+
 function renderCashClose() {
     const dateInput = document.getElementById('cash-date');
     const selectedDate = dateInput.value || new Date().toISOString().split('T')[0];
 
-    // Cachear cálculos del cierre de caja por fecha (30s TTL)
-    const cacheKey = `stats_cashclose_${selectedDate}`;
-    const stats = AppCache.getOrSet(cacheKey, () => {
-        const daySales = sales.filter(s => s.date.startsWith(selectedDate));
-        const methods = { 'Efectivo': 0, 'Nequi': 0, 'Daviplata': 0, 'Tarjeta': 0, 'Transferencia': 0, 'Bold': 0, 'Rappi Pay': 0, 'Fiado': 0, 'Otro': 0 };
-        let total = 0, profit = 0, units = 0;
-        daySales.forEach(s => {
-            methods[s.method] = (methods[s.method] || 0) + s.total;
-            total += s.total;
-            profit += s.profit;
-            units += s.quantity;
-        });
-        return { methods, total, profit, count: daySales.length, units };
-    }, 30000);
+    // Filtrar ventas por fecha Y por turno
+    let daySales = sales.filter(s => s.date.startsWith(selectedDate));
 
-    setText('cash-total', formatCurrency(stats.total));
-    setText('cash-profit', formatCurrency(stats.profit));
-    setText('cash-count', stats.count);
-    setText('cash-units', stats.units);
-    setText('cash-efectivo', formatCurrency(stats.methods['Efectivo']));
-    setText('cash-nequi', formatCurrency(stats.methods['Nequi']));
-    setText('cash-daviplata', formatCurrency(stats.methods['Daviplata']));
-    setText('cash-tarjeta', formatCurrency(stats.methods['Tarjeta']));
-    setText('cash-transferencia', formatCurrency(stats.methods['Transferencia']));
-    setText('cash-bold', formatCurrency(stats.methods['Bold']));
-    setText('cash-fiado', formatCurrency(stats.methods['Fiado']));
-    setText('cash-otro', formatCurrency(stats.methods['Otro'] + stats.methods['Rappi Pay']));
+    // Aplicar filtro de turno
+    if (currentCashShift === 'manana') {
+        // Mañana: 6:00 AM - 2:00 PM (14:00)
+        daySales = daySales.filter(s => {
+            const hour = new Date(s.date).getHours();
+            return hour >= 6 && hour < 14;
+        });
+    } else if (currentCashShift === 'noche') {
+        // Noche: 2:00 PM (14:00) - cierre
+        daySales = daySales.filter(s => {
+            const hour = new Date(s.date).getHours();
+            return hour >= 14 || hour < 6;
+        });
+    }
+
+    const methods = { 'Efectivo': 0, 'Tarjeta': 0, 'Transferencia': 0 };
+    let total = 0, profit = 0, units = 0;
+    daySales.forEach(s => {
+        methods[s.method] = (methods[s.method] || 0) + s.total;
+        total += s.total;
+        profit += s.profit;
+        units += s.quantity;
+    });
+
+    setText('cash-total', formatCurrency(total));
+    setText('cash-profit', formatCurrency(profit));
+    setText('cash-count', daySales.length);
+    setText('cash-units', units);
+    setText('cash-efectivo', formatCurrency(methods['Efectivo']));
+    setText('cash-tarjeta', formatCurrency(methods['Tarjeta']));
+    setText('cash-transferencia', formatCurrency(methods['Transferencia']));
 }
 
 
@@ -2016,13 +2032,13 @@ function initCashClose() {
         dateInput.value = new Date().toISOString().split('T')[0];
         dateInput.addEventListener('change', renderCashClose);
     }
-    const btnPrint = document.getElementById('btn-print-cash');
-    if (btnPrint) btnPrint.addEventListener('click', printCashClose);
 }
 
 
 function printCashClose() {
     const date = document.getElementById('cash-date').value || new Date().toISOString().split('T')[0];
+    const shiftNames = { manana: '☀️ TURNO MAÑANA (6am-2pm)', noche: '🌙 TURNO NOCHE (2pm-cierre)', todo: '📊 TODO EL DÍA' };
+    const shiftLabel = shiftNames[currentCashShift] || 'Todo el día';
     const win = window.open('', '_blank', 'width=400,height=600');
     if (!win) { showToast('Permite las ventanas emergentes', 'warning'); return; }
     win.document.write(`
@@ -2036,6 +2052,7 @@ function printCashClose() {
         </style></head><body>
             <h2>${esc(settings.businessName)}</h2>
             <div class="center">CIERRE DE CAJA</div>
+            <div class="center">${shiftLabel}</div>
             <div class="center">${new Date(date).toLocaleDateString('es-CO')}</div>
             <hr>
             <div class="row"><span>Ventas:</span><span>${document.getElementById('cash-count').textContent}</span></div>
@@ -2044,7 +2061,6 @@ function printCashClose() {
             <div class="row"><span>Efectivo:</span><span>${document.getElementById('cash-efectivo').textContent}</span></div>
             <div class="row"><span>Tarjeta:</span><span>${document.getElementById('cash-tarjeta').textContent}</span></div>
             <div class="row"><span>Transferencia:</span><span>${document.getElementById('cash-transferencia').textContent}</span></div>
-            <div class="row"><span>Otro:</span><span>${document.getElementById('cash-otro').textContent}</span></div>
             <hr>
             <div class="row total"><span>TOTAL:</span><span>${document.getElementById('cash-total').textContent}</span></div>
             <div class="row"><span>Ganancia:</span><span>${document.getElementById('cash-profit').textContent}</span></div>
@@ -3181,7 +3197,7 @@ async function voidSale(saleId) {
 // ==========================================
 // SISTEMA DE ROLES
 // ==========================================
-// Roles: 'owner' (todo), 'cashier' (ventas, inventario, caja), 'waiter' (solo mesero)
+// Roles: 'owner' (todo), 'caja' (pedidos, cobrar, cocina, inventario, ventas, caja), 'waiter' (solo tomar pedidos)
 let currentRole = 'owner';
 let employees = [];
 
@@ -3237,7 +3253,7 @@ function toggleEmployeeActive(id) {
 }
 
 function getRoleName(role) {
-    const names = { owner: '👑 Dueño', cashier: '💰 Cajero', waiter: '📋 Mesero' };
+    const names = { owner: '👑 Dueño', caja: '💰 Caja', waiter: '📋 Mesero' };
     return names[role] || role;
 }
 
