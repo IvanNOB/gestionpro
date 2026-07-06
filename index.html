@@ -513,11 +513,15 @@
 
                 <!-- Selector de turno -->
                 <div class="card" style="margin-bottom:16px;">
-                    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+                    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">
                         <strong>Turno:</strong>
-                        <button class="btn btn-sm" id="btn-turno-manana" onclick="selectCashShift('manana')" style="background:var(--primary);color:white;">☀️ Mañana (6am - 2pm)</button>
-                        <button class="btn btn-sm" id="btn-turno-noche" onclick="selectCashShift('noche')" style="background:var(--bg);color:var(--text);border:1px solid var(--border);">🌙 Noche (2pm - cierre)</button>
+                        <button class="btn btn-sm" id="btn-turno-manana" onclick="selectCashShift('manana')" style="background:var(--primary);color:white;">☀️ Turno 1</button>
+                        <button class="btn btn-sm" id="btn-turno-noche" onclick="selectCashShift('noche')" style="background:var(--bg);color:var(--text);border:1px solid var(--border);">🌙 Turno 2</button>
                         <button class="btn btn-sm" id="btn-turno-todo" onclick="selectCashShift('todo')" style="background:var(--bg);color:var(--text);border:1px solid var(--border);">📊 Todo el día</button>
+                    </div>
+                    <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;font-size:0.85rem;">
+                        <label style="display:flex;align-items:center;gap:6px;">☀️ Turno 1 desde: <input type="time" id="shift-start-1" value="06:00" onchange="updateShiftTimes()" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);"></label>
+                        <label style="display:flex;align-items:center;gap:6px;">🌙 Turno 2 desde: <input type="time" id="shift-start-2" value="14:00" onchange="updateShiftTimes()" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);"></label>
                     </div>
                 </div>
 

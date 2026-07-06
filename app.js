@@ -1930,20 +1930,32 @@ function calcBreakEven() {
 // CIERRE DE CAJA DIARIO
 // ==========================================
 // ==========================================
-// CIERRE DE CAJA POR TURNOS (Mañana / Noche)
+// CIERRE DE CAJA POR TURNOS (Configurable)
 // ==========================================
 let currentCashShift = 'todo'; // 'manana', 'noche', 'todo'
+let shiftStart1 = 6;  // Hora inicio turno 1 (default 6am)
+let shiftStart2 = 14; // Hora inicio turno 2 (default 2pm)
+
+function updateShiftTimes() {
+    const t1 = document.getElementById('shift-start-1').value;
+    const t2 = document.getElementById('shift-start-2').value;
+    if (t1) shiftStart1 = parseInt(t1.split(':')[0]);
+    if (t2) shiftStart2 = parseInt(t2.split(':')[0]);
+    // Guardar en settings
+    settings.shiftStart1 = shiftStart1;
+    settings.shiftStart2 = shiftStart2;
+    saveSettings();
+    renderCashClose();
+}
 
 function selectCashShift(shift) {
     currentCashShift = shift;
-    // Update button styles
     document.getElementById('btn-turno-manana').style.background = shift === 'manana' ? 'var(--primary)' : 'var(--bg)';
     document.getElementById('btn-turno-manana').style.color = shift === 'manana' ? 'white' : 'var(--text)';
     document.getElementById('btn-turno-noche').style.background = shift === 'noche' ? 'var(--primary)' : 'var(--bg)';
     document.getElementById('btn-turno-noche').style.color = shift === 'noche' ? 'white' : 'var(--text)';
     document.getElementById('btn-turno-todo').style.background = shift === 'todo' ? 'var(--primary)' : 'var(--bg)';
     document.getElementById('btn-turno-todo').style.color = shift === 'todo' ? 'white' : 'var(--text)';
-    AppCache.invalidatePrefix('stats_cashclose');
     renderCashClose();
 }
 
@@ -1951,21 +1963,26 @@ function renderCashClose() {
     const dateInput = document.getElementById('cash-date');
     const selectedDate = dateInput.value || new Date().toISOString().split('T')[0];
 
+    // Cargar horas guardadas
+    if (settings.shiftStart1) shiftStart1 = settings.shiftStart1;
+    if (settings.shiftStart2) shiftStart2 = settings.shiftStart2;
+    const s1El = document.getElementById('shift-start-1');
+    const s2El = document.getElementById('shift-start-2');
+    if (s1El) s1El.value = String(shiftStart1).padStart(2, '0') + ':00';
+    if (s2El) s2El.value = String(shiftStart2).padStart(2, '0') + ':00';
+
     // Filtrar ventas por fecha Y por turno
     let daySales = sales.filter(s => s.date.startsWith(selectedDate));
 
-    // Aplicar filtro de turno
     if (currentCashShift === 'manana') {
-        // Mañana: 6:00 AM - 2:00 PM (14:00)
         daySales = daySales.filter(s => {
             const hour = new Date(s.date).getHours();
-            return hour >= 6 && hour < 14;
+            return hour >= shiftStart1 && hour < shiftStart2;
         });
     } else if (currentCashShift === 'noche') {
-        // Noche: 2:00 PM (14:00) - cierre
         daySales = daySales.filter(s => {
             const hour = new Date(s.date).getHours();
-            return hour >= 14 || hour < 6;
+            return hour >= shiftStart2 || hour < shiftStart1;
         });
     }
 
