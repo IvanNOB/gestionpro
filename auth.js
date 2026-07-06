@@ -16,7 +16,7 @@ function checkAuthState() {
         showLoading(false);
         if (user) {
             // Usuario logueado, redirigir a la app
-            window.location.href = 'index.html';
+            window.location.href = 'turno.html';
         }
     });
 }

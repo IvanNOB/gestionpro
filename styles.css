@@ -1402,6 +1402,9 @@ tbody tr:hover {
     .main-content {
         padding: 16px 12px;
         padding-top: 60px;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        min-height: 100vh;
     }
 
     .card {

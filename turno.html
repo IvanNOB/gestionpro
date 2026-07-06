@@ -64,9 +64,8 @@
             <div class="error-msg" id="error-msg"></div>
             
             <button class="btn-enter" id="btn-enter" disabled onclick="enterWithRole()">Entrar</button>
-            <button class="btn-owner" onclick="enterAsOwner()">👑 Entrar como Dueño (sin PIN)</button>
             
-            <p class="no-pin-msg">Si no tienes PIN, contacta al dueño del negocio.</p>
+            <p class="no-pin-msg">Selecciona tu perfil e ingresa tu PIN para continuar.</p>
         </div>
     </div>
 
@@ -100,15 +99,18 @@
 
         function renderEmployees() {
             const list = document.getElementById('employees-list');
-            if (employees.length === 0) {
-                list.innerHTML = '<p style="color:#94a3b8;">No hay empleados registrados. El dueño puede agregarlos en Ajustes.</p>';
-                return;
-            }
 
             const roleIcons = { owner: '👑', cashier: '💰', waiter: '📋' };
             const roleNames = { owner: 'Dueño', cashier: 'Cajero', waiter: 'Mesero' };
 
-            list.innerHTML = employees.map(emp => `
+            // Siempre agregar al dueño como primera opción
+            const ownerName = currentUser.displayName || currentUser.email.split('@')[0];
+            let allUsers = [{ id: '__owner__', name: ownerName, role: 'owner', pin: '' }];
+            
+            // Agregar empleados registrados
+            allUsers = allUsers.concat(employees);
+
+            list.innerHTML = allUsers.map(emp => `
                 <button class="employee-btn" onclick="selectEmployee('${emp.id}')">
                     <span class="emp-icon">${roleIcons[emp.role] || '👤'}</span>
                     <div class="emp-info">
@@ -137,6 +139,14 @@
         function enterWithRole() {
             if (!selectedEmployee) return;
 
+            // Si es el dueño, entrar directo
+            if (selectedEmployee.id === '__owner__') {
+                sessionStorage.setItem('activeRole', 'owner');
+                sessionStorage.setItem('activeEmployee', selectedEmployee.name);
+                window.location.href = 'index.html';
+                return;
+            }
+
             // Verificar PIN si tiene
             if (selectedEmployee.pin) {
                 const inputPin = document.getElementById('pin-input').value;
@@ -153,7 +163,6 @@
             sessionStorage.setItem('activeRole', selectedEmployee.role);
             sessionStorage.setItem('activeEmployee', selectedEmployee.name);
 
-            // Meseros SIEMPRE van al panel de mesero, nunca al principal
             if (selectedEmployee.role === 'waiter') {
                 window.location.href = 'mesero.html';
             } else {
@@ -161,10 +170,24 @@
             }
         }
 
-        function enterAsOwner() {
-            sessionStorage.setItem('activeRole', 'owner');
-            sessionStorage.setItem('activeEmployee', '');
-            window.location.href = 'index.html';
+        function selectEmployee(id) {
+
+            selectedEmployee = employees.find(e => e.id === id);
+            if (!selectedEmployee && id === '__owner__') {
+                const ownerName = currentUser.displayName || currentUser.email.split('@')[0];
+                selectedEmployee = { id: '__owner__', name: ownerName, role: 'owner', pin: '' };
+            }
+            document.querySelectorAll('.employee-btn').forEach(b => b.classList.remove('selected'));
+            event.currentTarget.classList.add('selected');
+            
+            if (selectedEmployee && selectedEmployee.pin) {
+                document.getElementById('pin-section').classList.add('active');
+                document.getElementById('pin-input').focus();
+            } else {
+                document.getElementById('pin-section').classList.remove('active');
+            }
+            document.getElementById('btn-enter').disabled = false;
+            document.getElementById('error-msg').style.display = 'none';
         }
     </script>
 </body>
