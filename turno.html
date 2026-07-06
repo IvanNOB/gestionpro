@@ -87,8 +87,13 @@
             const roleIcons = { owner: '👑', caja: '💰', waiter: '📋' };
             const roleNames = { owner: 'Dueño', caja: 'Caja', waiter: 'Mesero' };
 
+            // Si no hay empleados, redirigir directo al panel para configurar
             if (employees.length === 0) {
-                list.innerHTML = '<p style="color:#94a3b8;">No hay perfiles registrados. El dueño debe agregarlos en Ajustes → Empleados.</p>';
+                list.innerHTML = `
+                    <p style="color:#64748b;margin-bottom:16px;">No hay perfiles registrados aún.</p>
+                    <button onclick="enterFirstTime()" style="width:100%;padding:16px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:white;border:none;border-radius:12px;font-size:1rem;font-weight:700;cursor:pointer;">👑 Entrar como Dueño para configurar</button>
+                    <p style="color:#94a3b8;font-size:0.8rem;margin-top:12px;">Ve a Ajustes → Empleados para crear los perfiles con PIN</p>
+                `;
                 return;
             }
 
@@ -101,6 +106,12 @@
                     </div>
                 </button>
             `).join('');
+        }
+
+        function enterFirstTime() {
+            sessionStorage.setItem('activeRole', 'owner');
+            sessionStorage.setItem('activeEmployee', 'Dueño');
+            window.location.href = 'index.html';
         }
 
         function selectEmployee(id) {
