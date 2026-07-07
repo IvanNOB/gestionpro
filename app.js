@@ -846,7 +846,7 @@ function updateSaleProductList() {
     const select = document.getElementById('sale-product');
     select.innerHTML = '<option value="">Seleccionar producto...</option>';
     products.filter(p => p.quantity > 0).forEach(p => {
-        select.innerHTML += `<option value="${p.id}">${p.name} (Stock: ${p.quantity}) - ${formatCurrency(p.price)}</option>`;
+        select.innerHTML += `<option value="${p.id}">${esc(p.name)} (Stock: ${p.quantity}) - ${formatCurrency(p.price)}</option>`;
     });
 }
 
@@ -993,7 +993,7 @@ function updateCategoryFilter() {
     const select = document.getElementById('filter-category');
     const cats = [...new Set(products.map(p => p.category))].sort();
     select.innerHTML = '<option value="">Todas las categorías</option>';
-    cats.forEach(c => { select.innerHTML += `<option value="${c}">${c}</option>`; });
+    cats.forEach(c => { select.innerHTML += `<option value="${esc(c)}">${esc(c)}</option>`; });
 }
 
 // ==========================================
@@ -2423,7 +2423,7 @@ function showToast(message, type = 'info') {
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
     const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
-    toast.innerHTML = `<span>${icons[type] || ''}</span><span>${message}</span>`;
+    toast.innerHTML = `<span>${icons[type] || ''}</span><span>${esc(message)}</span>`;
     container.appendChild(toast);
     setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3000);
 }
