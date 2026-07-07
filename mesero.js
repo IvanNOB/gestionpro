@@ -2,6 +2,20 @@
 // MESERO - Tomar Pedidos por Mesa (Tablet/Celular)
 // ==========================================
 
+// Error handler para mesero
+window.onerror = function(message, source, lineno, colno, error) {
+    console.error('Error:', { message, source, lineno, error });
+    showToast('Error inesperado. Intenta de nuevo.', 'error');
+    return true;
+};
+
+window.addEventListener('unhandledrejection', function(event) {
+    console.error('Error async:', event.reason);
+    if (event.reason?.code !== 'unavailable') {
+        showToast('Error de conexión. Se guardará al reconectar.', 'warning');
+    }
+});
+
 let currentUser = null;
 let products = [];
 let mesas = [];
@@ -260,25 +274,30 @@ async function sendOrder() {
     
     const mesa = mesas.find(m => m.id === currentMesaId);
     
-    // Guardar pedido en Firestore
-    const orderDoc = {
-        id: 'order_' + currentMesaId,
-        mesaId: currentMesaId,
-        mesaName: mesa?.name || '',
-        items: items,
-        total: items.reduce((s, i) => s + (i.price * i.qty), 0),
-        status: 'active',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-    };
-    
-    await userCollection('orders').doc(orderDoc.id).set(orderDoc);
-    
-    // Imprimir ticket de cocina automáticamente
-    printKitchenTicket(mesa?.name || 'Mesa', items);
-    
-    showToast('✅ Pedido enviado', 'success');
-    showMesas();
+    try {
+        // Guardar pedido en Firestore
+        const orderDoc = {
+            id: 'order_' + currentMesaId,
+            mesaId: currentMesaId,
+            mesaName: mesa?.name || '',
+            items: items,
+            total: items.reduce((s, i) => s + (i.price * i.qty), 0),
+            status: 'active',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+        
+        await userCollection('orders').doc(orderDoc.id).set(orderDoc);
+        
+        // Imprimir ticket de cocina automáticamente
+        printKitchenTicket(mesa?.name || 'Mesa', items);
+        
+        showToast('✅ Pedido enviado a cocina', 'success');
+        showMesas();
+    } catch (error) {
+        console.error('Error enviando pedido:', error);
+        showToast('⚠️ Error enviando pedido. Se guardará al reconectar.', 'warning');
+    }
 }
 
 async function payOrder() {
@@ -287,51 +306,58 @@ async function payOrder() {
     
     const total = items.reduce((s, i) => s + (i.price * i.qty), 0);
     const mesa = mesas.find(m => m.id === currentMesaId);
-    
-    // Cobrar directamente sin ventana emergente
     const payMethod = selectedPayMethod || 'Efectivo';
     
-    // Registrar cada item como venta
-    for (const item of items) {
-        const sale = {
-            id: generateId(),
-            productId: item.productId,
-            productName: item.name,
-            quantity: item.qty,
-            price: item.price,
-            cost: item.cost || 0,
-            discount: 0,
-            discountAmount: 0,
-            total: item.price * item.qty,
-            profit: (item.price - (item.cost || 0)) * item.qty,
-            client: mesa?.name || '',
-            method: payMethod,
-            notes: 'Pedido de mesa',
-            date: new Date().toISOString()
-        };
-        await userCollection('sales').doc(sale.id).set(sale);
-        
-        // Descontar stock del producto
-        const product = products.find(p => p.id === item.productId);
-        if (product) {
-            product.quantity = Math.max(0, product.quantity - item.qty);
-            await userCollection('products').doc(product.id).set(product);
+    // Mostrar indicador de procesando
+    showToast('💳 Procesando cobro...', 'info');
+    
+    try {
+        // Registrar cada item como venta
+        for (const item of items) {
+            const sale = {
+                id: generateId(),
+                productId: item.productId,
+                productName: item.name,
+                quantity: item.qty,
+                price: item.price,
+                cost: item.cost || 0,
+                discount: 0,
+                discountAmount: 0,
+                total: item.price * item.qty,
+                profit: (item.price - (item.cost || 0)) * item.qty,
+                client: mesa?.name || '',
+                method: payMethod,
+                notes: 'Pedido de mesa',
+                date: new Date().toISOString()
+            };
+            await userCollection('sales').doc(sale.id).set(sale);
+            
+            // Descontar stock del producto
+            const product = products.find(p => p.id === item.productId);
+            if (product) {
+                product.quantity = Math.max(0, product.quantity - item.qty);
+                await userCollection('products').doc(product.id).set(product);
+            }
+            
+            // Descontar insumos
+            deductInsumos(item.productId, item.qty);
         }
         
-        // Descontar insumos
-        deductInsumos(item.productId, item.qty);
+        // Imprimir ticket de venta
+        printTableBillTicket(mesa?.name || 'Mesa', items, total, payMethod);
+        
+        // Limpiar pedido (solo si todo lo anterior fue exitoso)
+        delete orders[currentMesaId];
+        await userCollection('orders').doc('order_' + currentMesaId).delete();
+        
+        showToast(`💰 Cobrado ${formatCurrency(total)}`, 'success');
+        showMesas();
+        renderProducts();
+    } catch (error) {
+        console.error('Error al cobrar:', error);
+        showToast('⚠️ Error al cobrar. Verifica la conexión e intenta de nuevo.', 'error');
+        // No limpiar el pedido si falló — para que pueda reintentar
     }
-    
-    // Imprimir ticket de venta
-    printTableBillTicket(mesa?.name || 'Mesa', items, total, payMethod);
-    
-    // Limpiar pedido
-    delete orders[currentMesaId];
-    await userCollection('orders').doc('order_' + currentMesaId).delete();
-    
-    showToast(`💰 Cobrado ${formatCurrency(total)}`, 'success');
-    showMesas();
-    renderProducts();
 }
 
 function deductInsumos(productId, qty) {

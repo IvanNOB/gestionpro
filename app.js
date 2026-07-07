@@ -3,6 +3,47 @@
 // ==========================================
 // Versión optimizada con caché en memoria y mejoras de rendimiento
 
+// ==========================================
+// MANEJO DE ERRORES GLOBAL
+// ==========================================
+window.onerror = function(message, source, lineno, colno, error) {
+    console.error('Error global:', { message, source, lineno, error });
+    showToast('Ocurrió un error inesperado. Intenta de nuevo.', 'error');
+    return true;
+};
+
+window.addEventListener('unhandledrejection', function(event) {
+    console.error('Promise rechazada:', event.reason);
+    // No mostrar toast para errores de red (se manejan con el indicador offline)
+    if (event.reason?.code === 'unavailable' || event.reason?.message?.includes('network')) {
+        return;
+    }
+    showToast('Error de conexión. Los datos se guardarán cuando vuelva internet.', 'warning');
+});
+
+// Wrapper para operaciones de Firestore con retry automático
+async function firestoreOperation(operation, retries = 2) {
+    for (let i = 0; i <= retries; i++) {
+        try {
+            return await operation();
+        } catch (error) {
+            if (i === retries) {
+                console.error('Operación falló después de reintentos:', error);
+                if (error.code === 'permission-denied') {
+                    showToast('Sin permisos para esta acción', 'error');
+                } else if (error.code === 'unavailable' || error.code === 'deadline-exceeded') {
+                    showToast('Sin conexión. Se guardará cuando vuelva internet.', 'warning');
+                } else {
+                    showToast('Error guardando datos. Intenta de nuevo.', 'error');
+                }
+                throw error;
+            }
+            // Esperar antes de reintentar (backoff exponencial)
+            await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+        }
+    }
+}
+
 // Estado Global
 let products = [];
 let sales = [];
@@ -384,72 +425,50 @@ async function loadAllData() {
 }
 
 
-// Funciones de guardado en Firestore
+// Funciones de guardado en Firestore (con retry automático)
 async function saveProduct(product) {
-    try {
-        await userCollection('products').doc(product.id).set(product);
-    } catch (e) { console.error('Error guardando producto:', e); }
+    await firestoreOperation(() => userCollection('products').doc(product.id).set(product));
 }
 
 async function deleteProductFromDB(id) {
-    try {
-        await userCollection('products').doc(id).delete();
-    } catch (e) { console.error('Error eliminando producto:', e); }
+    await firestoreOperation(() => userCollection('products').doc(id).delete());
 }
 
 async function saveSale(sale) {
-    try {
-        await userCollection('sales').doc(sale.id).set(sale);
-    } catch (e) { console.error('Error guardando venta:', e); }
+    await firestoreOperation(() => userCollection('sales').doc(sale.id).set(sale));
 }
 
 async function saveHistoryItem(item) {
-    try {
-        await userCollection('history').doc(item.id).set(item);
-    } catch (e) { console.error('Error guardando historial:', e); }
+    await firestoreOperation(() => userCollection('history').doc(item.id).set(item));
 }
 
 async function saveClient(client) {
-    try {
-        await userCollection('clients').doc(client.id).set(client);
-    } catch (e) { console.error('Error guardando cliente:', e); }
+    await firestoreOperation(() => userCollection('clients').doc(client.id).set(client));
 }
 
 async function deleteClientFromDB(id) {
-    try {
-        await userCollection('clients').doc(id).delete();
-    } catch (e) { console.error('Error eliminando cliente:', e); }
+    await firestoreOperation(() => userCollection('clients').doc(id).delete());
 }
 
 async function saveSupplier(supplier) {
-    try {
-        await userCollection('suppliers').doc(supplier.id).set(supplier);
-    } catch (e) { console.error('Error guardando proveedor:', e); }
+    await firestoreOperation(() => userCollection('suppliers').doc(supplier.id).set(supplier));
 }
 
 async function deleteSupplierFromDB(id) {
-    try {
-        await userCollection('suppliers').doc(id).delete();
-    } catch (e) { console.error('Error eliminando proveedor:', e); }
+    await firestoreOperation(() => userCollection('suppliers').doc(id).delete());
 }
 
 
 async function saveExpense(expense) {
-    try {
-        await userCollection('expenses').doc(expense.id).set(expense);
-    } catch (e) { console.error('Error guardando gasto:', e); }
+    await firestoreOperation(() => userCollection('expenses').doc(expense.id).set(expense));
 }
 
 async function deleteExpenseFromDB(id) {
-    try {
-        await userCollection('expenses').doc(id).delete();
-    } catch (e) { console.error('Error eliminando gasto:', e); }
+    await firestoreOperation(() => userCollection('expenses').doc(id).delete());
 }
 
 async function saveSettings() {
-    try {
-        await userDoc().update({ settings: settings });
-    } catch (e) { console.error('Error guardando settings:', e); }
+    await firestoreOperation(() => userDoc().update({ settings: settings }));
 }
 
 async function clearHistoryFromDB() {
@@ -2585,13 +2604,11 @@ function renderInsumos() {
 }
 
 async function saveInsumo(insumo) {
-    try { await userCollection('insumos').doc(insumo.id).set(insumo); }
-    catch (e) { console.error('Error guardando insumo:', e); }
+    await firestoreOperation(() => userCollection('insumos').doc(insumo.id).set(insumo));
 }
 
 async function deleteInsumoFromDB(id) {
-    try { await userCollection('insumos').doc(id).delete(); }
-    catch (e) { console.error('Error eliminando insumo:', e); }
+    await firestoreOperation(() => userCollection('insumos').doc(id).delete());
 }
 
 // ==========================================
@@ -2865,13 +2882,11 @@ function renderRecipes() {
 }
 
 async function saveRecipe(recipe) {
-    try { await userCollection('recipes').doc(recipe.id).set(recipe); }
-    catch (e) { console.error('Error guardando receta:', e); }
+    await firestoreOperation(() => userCollection('recipes').doc(recipe.id).set(recipe));
 }
 
 async function deleteRecipeFromDB(id) {
-    try { await userCollection('recipes').doc(id).delete(); }
-    catch (e) { console.error('Error eliminando receta:', e); }
+    await firestoreOperation(() => userCollection('recipes').doc(id).delete());
 }
 
 // ==========================================
