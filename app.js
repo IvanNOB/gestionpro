@@ -2422,6 +2422,39 @@ function showToast(message, type = 'info') {
 // Renderizar gráficas al cargar si estamos en dashboard
 setTimeout(() => { if (currentUser) { renderCharts(); renderHistory(); } }, 1000);
 
+// ==========================================
+// INDICADOR OFFLINE/ONLINE
+// ==========================================
+function showOfflineIndicator() {
+    let indicator = document.getElementById('offline-indicator');
+    if (!indicator) {
+        indicator = document.createElement('div');
+        indicator.id = 'offline-indicator';
+        indicator.style.cssText = 'position:fixed;bottom:16px;left:16px;padding:10px 18px;border-radius:10px;font-size:0.85rem;font-weight:700;z-index:9999;transition:all 0.3s;display:flex;align-items:center;gap:8px;';
+        document.body.appendChild(indicator);
+    }
+    return indicator;
+}
+
+window.addEventListener('offline', () => {
+    const el = showOfflineIndicator();
+    el.style.background = '#fef2f2';
+    el.style.color = '#dc2626';
+    el.style.border = '1px solid #fca5a5';
+    el.innerHTML = '📡 Sin conexión — Los datos se guardan localmente';
+    el.style.display = 'flex';
+});
+
+window.addEventListener('online', () => {
+    const el = showOfflineIndicator();
+    el.style.background = '#f0fdf4';
+    el.style.color = '#16a34a';
+    el.style.border = '1px solid #86efac';
+    el.innerHTML = '✅ Conectado — Sincronizando datos...';
+    el.style.display = 'flex';
+    setTimeout(() => { el.style.display = 'none'; }, 3000);
+});
+
 
 
 // ==========================================

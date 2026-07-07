@@ -1373,15 +1373,11 @@
     <script src="app.js"></script>
     <script src="tickets.js"></script>
     <script>
-        // Service Worker desactivado - para que los cambios se reflejen al instante
+        // Service Worker para funcionamiento offline
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(registrations => {
-                registrations.forEach(reg => reg.unregister());
-            });
-            // Limpiar caches existentes
-            if ('caches' in window) {
-                caches.keys().then(keys => keys.forEach(key => caches.delete(key)));
-            }
+            navigator.serviceWorker.register('sw.js')
+                .then(() => console.log('SW registrado - modo offline activo'))
+                .catch((err) => console.log('SW error:', err));
         }
     </script>
 </body>

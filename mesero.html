@@ -867,9 +867,9 @@
     <script src="tickets.js"></script>
     <script src="mesero.js"></script>
     <script>
-        // Registrar SW para permitir instalar como app
+        // Registrar SW para modo offline + instalación como app
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw-mesero.js');
+            navigator.serviceWorker.register('sw.js');
         }
     </script>
 </body>

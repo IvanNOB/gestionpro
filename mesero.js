@@ -425,3 +425,33 @@ function applyMeseroRoleRestrictions(role) {
         if (btnHome) btnHome.style.display = '';
     }
 }
+
+
+
+// ==========================================
+// INDICADOR OFFLINE/ONLINE
+// ==========================================
+window.addEventListener('offline', () => {
+    let el = document.getElementById('offline-indicator');
+    if (!el) {
+        el = document.createElement('div');
+        el.id = 'offline-indicator';
+        el.style.cssText = 'position:fixed;bottom:16px;left:16px;padding:10px 18px;border-radius:10px;font-size:0.85rem;font-weight:700;z-index:9999;display:flex;align-items:center;gap:8px;';
+        document.body.appendChild(el);
+    }
+    el.style.background = '#fef2f2';
+    el.style.color = '#dc2626';
+    el.style.border = '1px solid #fca5a5';
+    el.innerHTML = '📡 Sin conexión — Los pedidos se guardan local';
+    el.style.display = 'flex';
+});
+
+window.addEventListener('online', () => {
+    let el = document.getElementById('offline-indicator');
+    if (!el) return;
+    el.style.background = '#f0fdf4';
+    el.style.color = '#16a34a';
+    el.style.border = '1px solid #86efac';
+    el.innerHTML = '✅ Conectado — Sincronizando...';
+    setTimeout(() => { el.style.display = 'none'; }, 3000);
+});
