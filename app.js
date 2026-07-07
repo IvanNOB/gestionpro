@@ -896,7 +896,7 @@ function updateSalePreview() {
 }
 
 
-function handleSaleSubmit(e) {
+async function handleSaleSubmit(e) {
     e.preventDefault();
     const productId = document.getElementById('sale-product').value;
     const qty = parseInt(document.getElementById('sale-quantity').value) || 0;
@@ -933,21 +933,29 @@ function handleSaleSubmit(e) {
     const idx = products.findIndex(p => p.id === productId);
     products[idx].quantity -= qty;
 
-    addHistory('sale', `Venta: ${qty}x ${product.name} por ${formatCurrency(sale.total)}`);
-    saveSale(sale);
-    saveProduct(products[idx]);
-    deductInsumosFromSale(productId, qty);
-    // Invalidar caché de datos de negocio tras nueva venta
-    AppCache.invalidateBusinessData();
-    renderAll();
-    renderGoalProgress();
-    showToast(`Venta registrada: ${qty}x ${product.name}`, 'success');
-    lastSale = sale;
-    e.target.reset();
-    document.getElementById('sale-summary').style.display = 'none';
-    document.getElementById('sale-discount-row').style.display = 'none';
-    updateSaleProductList();
-    printSaleTicket(sale);
+    try {
+        await saveSale(sale);
+        await saveProduct(products[idx]);
+        deductInsumosFromSale(productId, qty);
+        addHistory('sale', `Venta: ${qty}x ${product.name} por ${formatCurrency(sale.total)}`);
+        // Invalidar caché de datos de negocio tras nueva venta
+        AppCache.invalidateBusinessData();
+        renderAll();
+        renderGoalProgress();
+        showToast(`Venta registrada: ${qty}x ${product.name}`, 'success');
+        lastSale = sale;
+        e.target.reset();
+        document.getElementById('sale-summary').style.display = 'none';
+        document.getElementById('sale-discount-row').style.display = 'none';
+        updateSaleProductList();
+        printSaleTicket(sale);
+    } catch (error) {
+        // Revertir cambios locales si falla
+        sales = sales.filter(s => s.id !== sale.id);
+        products[idx].quantity += qty;
+        renderAll();
+        showToast('⚠️ Error registrando venta. Intenta de nuevo.', 'error');
+    }
 }
 
 
@@ -1860,10 +1868,10 @@ function initBackup() {
 
 function createBackup() {
     const backup = {
-        version: '4.0-firebase',
+        version: '5.0-firebase',
         date: new Date().toISOString(),
         businessName: settings.businessName,
-        products, sales, history, clients, suppliers, expenses, settings
+        products, sales, history, clients, suppliers, expenses, insumos, recipes, settings
     };
     const blob = new Blob([JSON.stringify(backup, null, 2)], {type:'application/json'});
     downloadBlob(blob, `backup-${settings.businessName.replace(/\s+/g,'-')}-${new Date().toISOString().split('T')[0]}.json`);

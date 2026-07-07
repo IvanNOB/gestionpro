@@ -104,13 +104,21 @@ if (!userId) {
 
 async function loadMenu(uid) {
     try {
-        const userDoc = await db.collection('users').doc(uid).get();
+        let settings = { businessName: 'Mi Negocio', currency: 'COP', customization: {} };
+        
+        // Intentar cargar datos del negocio (puede fallar si hay reglas restrictivas)
+        try {
+            const userDoc = await db.collection('users').doc(uid).get();
+            if (userDoc.exists) {
+                const userData = userDoc.data();
+                settings = userData.settings || settings;
+            }
+        } catch (e) {
+            console.warn('No se pudo cargar info del negocio, usando defaults');
+        }
+
+        // Cargar productos (siempre público)
         const productsSnap = await db.collection('users').doc(uid).collection('products').get();
-
-        if (!userDoc.exists) throw new Error('Usuario no encontrado');
-
-        const userData = userDoc.data();
-        const settings = userData.settings || {};
         const products = productsSnap.docs.map(doc => doc.data());
 
         // Header
