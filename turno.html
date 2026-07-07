@@ -127,12 +127,20 @@
             document.getElementById('error-msg').style.display = 'none';
         }
 
-        function enterWithRole() {
+        async function enterWithRole() {
             if (!selectedEmployee) return;
 
             // Verificar PIN (obligatorio para todos)
             const inputPin = document.getElementById('pin-input').value;
-            if (!inputPin || inputPin !== selectedEmployee.pin) {
+            if (!inputPin) {
+                document.getElementById('error-msg').textContent = 'Ingresa tu PIN';
+                document.getElementById('error-msg').style.display = 'block';
+                return;
+            }
+
+            // Hashear el PIN ingresado y comparar con el guardado
+            const hashedInput = await hashPin(inputPin);
+            if (hashedInput !== selectedEmployee.pin) {
                 document.getElementById('error-msg').textContent = 'PIN incorrecto';
                 document.getElementById('error-msg').style.display = 'block';
                 document.getElementById('pin-input').value = '';
@@ -152,6 +160,15 @@
             } else {
                 window.location.href = 'index.html';
             }
+        }
+
+        // Función de hash SHA-256 (misma que en app.js)
+        async function hashPin(pin) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(pin + '_gestionpro_salt');
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
         }
     </script>
 </body>

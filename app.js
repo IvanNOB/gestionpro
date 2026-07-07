@@ -2386,6 +2386,15 @@ function renderExpenses() {
 // UTILIDADES
 // ==========================================
 function generateId() { return 'id_' + Date.now() + '_' + Math.random().toString(36).substr(2,9); }
+
+// Hashear PIN con SHA-256 (nunca se guarda en texto plano)
+async function hashPin(pin) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(pin + '_gestionpro_salt');
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
 function getProduct(id) { return productsIndex.get(id) || products.find(p => p.id === id); }
 function formatCurrency(amount) {
     amount = amount || 0;
@@ -3275,13 +3284,17 @@ function handleEmployeeSubmit(e) {
     const pin = document.getElementById('employee-pin').value.trim();
 
     if (!name || !role) { showToast('Completa nombre y rol', 'error'); return; }
+    if (!pin) { showToast('El PIN es obligatorio', 'error'); return; }
 
-    const employee = { id: generateId(), name, email, role, pin, active: true, createdAt: new Date().toISOString() };
-    employees.push(employee);
-    saveEmployee(employee);
-    renderEmployees();
-    showToast(`Empleado "${name}" agregado como ${getRoleName(role)}`, 'success');
-    e.target.reset();
+    // Hashear PIN antes de guardar
+    hashPin(pin).then(hashedPin => {
+        const employee = { id: generateId(), name, email, role, pin: hashedPin, active: true, createdAt: new Date().toISOString() };
+        employees.push(employee);
+        saveEmployee(employee);
+        renderEmployees();
+        showToast(`Empleado "${name}" agregado como ${getRoleName(role)}`, 'success');
+        e.target.reset();
+    });
 }
 
 function deleteEmployee(id) {
