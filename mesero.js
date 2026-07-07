@@ -365,6 +365,7 @@ async function payOrder() {
         await userCollection('orders').doc('order_' + currentMesaId).delete();
         
         showToast(`💰 Cobrado ${formatCurrency(total)}`, 'success');
+        if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
         showMesas();
         renderProducts();
     } catch (error) {

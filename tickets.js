@@ -206,11 +206,27 @@ function printPreBillTicket(mesaName, items, total) {
 // UTILIDAD: Abrir ventana de impresión
 // ==========================================
 function openTicketWindow(html) {
+    // Intentar con popup primero
     const win = window.open('', '_blank', 'width=320,height=600');
-    if (!win) {
-        showToast('Permite las ventanas emergentes para imprimir', 'warning');
+    if (win) {
+        win.document.write(html);
+        win.document.close();
         return;
     }
-    win.document.write(html);
-    win.document.close();
+    
+    // Fallback: usar iframe oculto si el popup fue bloqueado
+    let iframe = document.getElementById('print-iframe');
+    if (!iframe) {
+        iframe = document.createElement('iframe');
+        iframe.id = 'print-iframe';
+        iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:320px;height:600px;border:none;';
+        document.body.appendChild(iframe);
+    }
+    iframe.contentDocument.open();
+    iframe.contentDocument.write(html.replace('window.print()', ''));
+    iframe.contentDocument.close();
+    setTimeout(() => {
+        iframe.contentWindow.print();
+    }, 500);
+    showToast('Imprimiendo ticket...', 'info');
 }

@@ -147,12 +147,16 @@ async function handleGoogleAuth() {
     showLoading(true);
 
     try {
+        // En modo PWA (standalone), usar redirect en vez de popup
+        if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+            await auth.signInWithRedirect(provider);
+            return;
+        }
         const result = await auth.signInWithPopup(provider);
         const user = result.user;
 
         // Verificar si es usuario nuevo
         if (result.additionalUserInfo && result.additionalUserInfo.isNewUser) {
-            // Crear documento del usuario en Firestore
             await db.collection('users').doc(user.uid).set({
                 businessName: user.displayName || 'Mi Negocio',
                 email: user.email,
@@ -171,7 +175,7 @@ async function handleGoogleAuth() {
 
         showMessage('¡Bienvenido!', 'success');
     } catch (error) {
-        if (error.code !== 'auth/popup-closed-by-user') {
+        if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/redirect-cancelled-by-user') {
             showMessage(getErrorMessage(error.code), 'error');
         }
     } finally {

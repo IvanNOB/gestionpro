@@ -193,6 +193,15 @@ async function loadMenu(uid) {
         document.getElementById('loading-menu').style.display = 'none';
         document.getElementById('menu-content').style.display = 'block';
 
+        // Mostrar horario si el negocio está cerrado (22:00 - 06:00)
+        const hour = new Date().getHours();
+        if (hour >= 22 || hour < 6) {
+            const notice = document.createElement('div');
+            notice.style.cssText = 'background:#fef2f2;border:1px solid #fca5a5;color:#991b1b;padding:14px 20px;text-align:center;font-size:0.9rem;font-weight:600;border-radius:12px;margin:0 16px 16px;';
+            notice.textContent = '🕐 Es posible que el establecimiento esté cerrado en este momento';
+            document.getElementById('menu-items').prepend(notice);
+        }
+
     } catch (e) {
         console.error(e);
         document.getElementById('loading-menu').style.display = 'none';

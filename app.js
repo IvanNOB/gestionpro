@@ -38,9 +38,23 @@ async function firestoreOperation(operation, retries = 2) {
                 }
                 throw error;
             }
-            // Esperar antes de reintentar (backoff exponencial)
             await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
         }
+    }
+}
+
+// Loading state para botones
+function setButtonLoading(btn, loading) {
+    if (!btn) return;
+    if (loading) {
+        btn.dataset.originalText = btn.textContent;
+        btn.textContent = '⏳...';
+        btn.disabled = true;
+        btn.style.opacity = '0.7';
+    } else {
+        btn.textContent = btn.dataset.originalText || btn.textContent;
+        btn.disabled = false;
+        btn.style.opacity = '1';
     }
 }
 
@@ -670,6 +684,8 @@ function useSuggestedPrice() {
 
 function handleProductSubmit(e) {
     e.preventDefault();
+    const btn = document.getElementById('btn-submit');
+    setButtonLoading(btn, true);
     const name = document.getElementById('product-name').value.trim();
     const categorySelect = document.getElementById('product-category').value;
     const categoryCustom = document.getElementById('product-category-custom').value.trim();
@@ -717,6 +733,7 @@ function handleProductSubmit(e) {
     document.getElementById('profit-margin').value = settings.defaultMargin;
     document.getElementById('product-min-stock').value = '5';
     document.getElementById('suggested-price-box').style.display = 'none';
+    setButtonLoading(btn, false);
 }
 
 
@@ -931,7 +948,8 @@ async function handleSaleSubmit(e) {
         discount, discountAmount: descuentoMonto,
         total, profit: total - (product.cost * qty),
         client, method, notes,
-        date: new Date().toISOString()
+        date: new Date().toISOString(),
+        soldBy: sessionStorage.getItem('activeEmployee') || 'Dueño'
     };
 
     sales.push(sale);
@@ -949,6 +967,8 @@ async function handleSaleSubmit(e) {
         renderAll();
         renderGoalProgress();
         showToast(`Venta registrada: ${qty}x ${product.name}`, 'success');
+        // Vibración haptic en celular al confirmar venta
+        if (navigator.vibrate) navigator.vibrate(100);
         lastSale = sale;
         e.target.reset();
         document.getElementById('sale-summary').style.display = 'none';
@@ -2579,6 +2599,14 @@ setTimeout(() => { if (currentUser) { renderCharts(); renderHistory(); } }, 1000
 // ==========================================
 // INDICADOR OFFLINE/ONLINE
 // ==========================================
+// Atajo de teclado: Enter en campo PIN para confirmar
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.target.id === 'sale-quantity') {
+        e.preventDefault();
+        document.getElementById('sale-form').requestSubmit();
+    }
+});
+
 function showOfflineIndicator() {
     let indicator = document.getElementById('offline-indicator');
     if (!indicator) {
