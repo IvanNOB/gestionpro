@@ -342,7 +342,8 @@ async function payOrder() {
                 client: mesa?.name || '',
                 method: payMethod,
                 notes: 'Pedido de mesa',
-                date: new Date().toISOString()
+                date: new Date().toISOString(),
+                soldBy: sessionStorage.getItem('activeEmployee') || 'Dueño'
             };
             await userCollection('sales').doc(sale.id).set(sale);
             

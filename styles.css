@@ -1896,3 +1896,33 @@ img {
     color: #92400e !important;
     border: 1px solid #fcd34d;
 }
+
+
+
+/* ==========================================
+   iOS ZOOM PREVENTION + SAFE AREA
+   ========================================== */
+
+/* Prevenir zoom en inputs en iOS (necesita font-size >= 16px) */
+input, select, textarea {
+    font-size: 16px !important;
+}
+
+@media (max-width: 600px) {
+    input, select, textarea {
+        font-size: 16px !important;
+    }
+}
+
+/* Safe area para iPhones con notch */
+@supports (padding-top: env(safe-area-inset-top)) {
+    .sidebar {
+        padding-top: env(safe-area-inset-top);
+    }
+    .main-content {
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+    .sidebar-toggle {
+        top: calc(14px + env(safe-area-inset-top));
+    }
+}

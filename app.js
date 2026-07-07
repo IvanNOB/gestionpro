@@ -331,6 +331,14 @@ function showUserInfo() {
             el.textContent = currentUser.displayName || currentUser.email;
         }
     }
+    // Mostrar badge de turno activo
+    const shiftBadge = document.getElementById('active-shift-badge');
+    if (shiftBadge) {
+        const role = sessionStorage.getItem('activeRole') || 'owner';
+        const roleLabels = { owner: '👑 Dueño', caja: '💰 Caja', waiter: '📋 Mesero' };
+        shiftBadge.textContent = roleLabels[role] || role;
+        shiftBadge.style.display = 'inline-block';
+    }
 }
 
 function checkActiveRole() {
@@ -491,7 +499,7 @@ async function clearHistoryFromDB() {
         const snap = await userCollection('history').get();
         snap.docs.forEach(doc => batch.delete(doc.ref));
         await batch.commit();
-    } catch (e) { console.error('Error limpiando historial:', e); }
+    } catch (e) { showToast('Error limpiando historial', 'error'); }
 }
 
 async function clearAllDataFromDB() {
@@ -503,7 +511,7 @@ async function clearAllDataFromDB() {
             snap.docs.forEach(doc => batch.delete(doc.ref));
             await batch.commit();
         }
-    } catch (e) { console.error('Error borrando datos:', e); }
+    } catch (e) { showToast('Error borrando datos', 'error'); }
 }
 
 
@@ -1172,6 +1180,7 @@ function renderSalesTable() {
         <td class="${s.profit>=0?'profit-positive':'profit-negative'}">${formatCurrency(s.profit)}</td>
         <td>${s.method}</td>
         <td>${esc(s.client || '-')}</td>
+        <td style="font-size:0.75rem;color:var(--text-light);">${esc(s.soldBy || '-')}</td>
         <td>${!voided ? `<button class="action-btn" onclick="voidSale('${s.id}')" title="Anular venta">❌</button>` : '<span style="font-size:0.75rem;color:var(--danger);">Anulada</span>'}</td>
     </tr>`;
     }).join('');
@@ -3598,7 +3607,7 @@ function showOnboarding() {
         { icon: '📝', title: '3. Crea recetas', text: 'Define qué insumos lleva cada producto. Así se descuentan automáticamente al vender.' },
         { icon: '🪑', title: '4. Configura tus mesas', text: 'Ve a Mesas, agrégalas y comparte el link de mesero con tu equipo.' },
         { icon: '💰', title: '5. ¡Empieza a vender!', text: 'Registra ventas directamente o toma pedidos por mesa. Los tickets se imprimen automáticamente.' },
-        { icon: '🎨', title: '6. Personaliza tu app', text: 'En Ajustes puedes cambiar colores, agregar tu logo y configurar tu negocio.' },
+        { icon: '🎨', title: '6. Configura tu negocio', text: 'En Ajustes puedes cambiar el nombre de tu negocio, la moneda y la meta de ventas.' },
         { icon: '🚀', title: '¡Listo!', text: 'Ya tienes todo para empezar. Si necesitas ayuda, revisa cada sección. ¡Éxito con tu negocio!' },
     ];
 

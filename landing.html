@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GestiónPro - Gestiona tu Negocio desde el Celular</title>
+    <link rel="icon" href="icons/icon-192.png" type="image/png">
     <meta name="description" content="Software de gestión para negocios: inventario, ventas, mesas, cocina, tickets. Todo desde tu celular.">
     <meta property="og:title" content="GestiónPro - Gestiona tu Negocio desde el Celular">
     <meta property="og:description" content="Inventario, ventas, mesas, cocina, tickets y reportes. Todo en un solo lugar para tu negocio.">
@@ -309,5 +310,15 @@
 
     <!-- WHATSAPP FLOTANTE -->
     <a href="https://wa.me/573159756975?text=Hola%2C%20quiero%20información%20sobre%20GestiónPro" target="_blank" class="whatsapp-float">💬</a>
+
+    <!-- CTA flotante mobile -->
+    <style>
+        .mobile-cta-float { display:none; position:fixed; bottom:0; left:0; right:0; background:white; padding:12px 20px; box-shadow:0 -4px 20px rgba(0,0,0,0.1); z-index:998; text-align:center; }
+        .mobile-cta-float a { display:block; padding:14px; background:linear-gradient(135deg,#2563eb,#1d4ed8); color:white; border-radius:12px; text-decoration:none; font-weight:700; font-size:1rem; }
+        @media (max-width:600px) { .mobile-cta-float { display:block; } .whatsapp-float { bottom:80px; } }
+    </style>
+    <div class="mobile-cta-float">
+        <a href="login.html">🚀 Empezar Gratis</a>
+    </div>
 </body>
 </html>
