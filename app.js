@@ -850,11 +850,17 @@ function editProduct(id) {
 function deleteProduct(id) {
     const p = getProduct(id);
     if (!p) return;
+    const deletedProduct = { ...p };
     products = products.filter(pr => pr.id !== id);
-    addHistory('delete', `Producto eliminado: ${p.name}`);
     deleteProductFromDB(id);
     renderAll();
-    showToast(`"${p.name}" eliminado`, 'warning');
+    showUndoToast(`"${p.name}" eliminado`, () => {
+        products.push(deletedProduct);
+        saveProduct(deletedProduct);
+        rebuildProductsIndex();
+        renderAll();
+    });
+    addHistory('delete', `Producto eliminado: ${p.name}`);
 }
 
 
@@ -2175,10 +2181,15 @@ function cancelClientEdit() {
 function deleteClient(id) {
     const c = clients.find(x => x.id === id);
     if (!c) return;
+    const deleted = { ...c };
     clients = clients.filter(x => x.id !== id);
     deleteClientFromDB(id);
     renderClients();
-    showToast('Cliente eliminado', 'warning');
+    showUndoToast(`Cliente "${c.name}" eliminado`, () => {
+        clients.push(deleted);
+        saveClient(deleted);
+        renderClients();
+    });
 }
 
 
@@ -2282,10 +2293,15 @@ function cancelSupplierEdit() {
 function deleteSupplier(id) {
     const s = suppliers.find(x => x.id === id);
     if (!s) return;
+    const deleted = { ...s };
     suppliers = suppliers.filter(x => x.id !== id);
     deleteSupplierFromDB(id);
     renderSuppliers();
-    showToast('Proveedor eliminado', 'warning');
+    showUndoToast(`Proveedor "${s.name}" eliminado`, () => {
+        suppliers.push(deleted);
+        saveSupplier(deleted);
+        renderSuppliers();
+    });
 }
 
 function renderSuppliers() {
@@ -2373,11 +2389,17 @@ function cancelExpenseEdit() {
 function deleteExpense(id) {
     const x = expenses.find(e => e.id === id);
     if (!x) return;
+    const deleted = { ...x };
     expenses = expenses.filter(e => e.id !== id);
     deleteExpenseFromDB(id);
     renderExpenses();
     updateDashboardStats();
-    showToast('Gasto eliminado', 'warning');
+    showUndoToast(`Gasto "${x.concept}" eliminado`, () => {
+        expenses.push(deleted);
+        saveExpense(deleted);
+        renderExpenses();
+        updateDashboardStats();
+    });
 }
 
 
@@ -2453,6 +2475,41 @@ function showToast(message, type = 'info') {
     toast.innerHTML = `<span>${icons[type] || ''}</span><span>${esc(message)}</span>`;
     container.appendChild(toast);
     setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3000);
+}
+
+// ==========================================
+// DESHACER ELIMINACIÓN (5 segundos para recuperar)
+// ==========================================
+let undoData = null;
+let undoTimeout = null;
+
+function showUndoToast(message, undoCallback) {
+    if (undoTimeout) clearTimeout(undoTimeout);
+    const container = document.getElementById('toast-container');
+    container.querySelectorAll('.toast-undo').forEach(t => t.remove());
+
+    const toast = document.createElement('div');
+    toast.className = 'toast warning toast-undo';
+    toast.style.cssText = 'display:flex;align-items:center;gap:12px;padding:12px 16px;';
+    toast.innerHTML = `<span>⚠️ ${esc(message)}</span><button onclick="executeUndo()" style="background:white;color:#d97706;border:none;padding:6px 14px;border-radius:8px;font-weight:700;font-size:0.8rem;cursor:pointer;white-space:nowrap;">↩️ Deshacer</button>`;
+    container.appendChild(toast);
+
+    undoData = undoCallback;
+    undoTimeout = setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+        undoData = null;
+    }, 5000);
+}
+
+function executeUndo() {
+    if (undoData) {
+        undoData();
+        undoData = null;
+        if (undoTimeout) clearTimeout(undoTimeout);
+        document.querySelectorAll('.toast-undo').forEach(t => t.remove());
+        showToast('↩️ Acción deshecha', 'success');
+    }
 }
 
 // Renderizar gráficas al cargar si estamos en dashboard
@@ -2564,10 +2621,15 @@ function cancelInsumoEdit() {
 function deleteInsumo(id) {
     const i = insumos.find(x => x.id === id);
     if (!i) return;
+    const deleted = { ...i };
     insumos = insumos.filter(x => x.id !== id);
     deleteInsumoFromDB(id);
     renderInsumos();
-    showToast('Insumo eliminado', 'warning');
+    showUndoToast(`Insumo "${i.name}" eliminado`, () => {
+        insumos.push(deleted);
+        saveInsumo(deleted);
+        renderInsumos();
+    });
 }
 
 function restockInsumo(id) {
@@ -2836,10 +2898,15 @@ function cancelRecipeEdit() {
 function deleteRecipe(id) {
     const r = recipes.find(x => x.id === id);
     if (!r) return;
+    const deleted = { ...r };
     recipes = recipes.filter(x => x.id !== id);
     deleteRecipeFromDB(id);
     renderRecipes();
-    showToast('Receta eliminada', 'warning');
+    showUndoToast(`Receta de "${r.productName}" eliminada`, () => {
+        recipes.push(deleted);
+        saveRecipe(deleted);
+        renderRecipes();
+    });
 }
 
 function renderRecipeIngredients() {
