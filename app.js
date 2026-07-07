@@ -1636,6 +1636,7 @@ function renderReports() {
     renderTopProductsReport();
     renderCategoryReport();
     renderMonthlyReport();
+    renderEmployeeReport();
 }
 
 function renderTopProductsReport() {
@@ -1722,6 +1723,31 @@ function renderMonthlyReport() {
             <td class="profit-positive">${formatCurrency(d.profit)}</td>
         </tr>`;
     }).join('') || '<tr><td colspan="5" style="text-align:center;">No hay ventas</td></tr>';
+}
+
+// ==========================================
+// REPORTE POR EMPLEADO
+// ==========================================
+function renderEmployeeReport() {
+    const tbody = document.getElementById('report-employees');
+    if (!tbody) return;
+
+    const empSales = {};
+    sales.forEach(s => {
+        const emp = s.soldBy || 'Dueño';
+        if (!empSales[emp]) empSales[emp] = { count: 0, revenue: 0, profit: 0 };
+        empSales[emp].count += s.quantity;
+        empSales[emp].revenue += s.total;
+        empSales[emp].profit += s.profit;
+    });
+
+    const sorted = Object.entries(empSales).sort((a, b) => b[1].revenue - a[1].revenue);
+    tbody.innerHTML = sorted.map(([emp, d]) => `<tr>
+        <td><strong>${esc(emp)}</strong></td>
+        <td>${d.count}</td>
+        <td>${formatCurrency(d.revenue)}</td>
+        <td class="profit-positive">${formatCurrency(d.profit)}</td>
+    </tr>`).join('') || '<tr><td colspan="4" style="text-align:center;">No hay datos</td></tr>';
 }
 
 // ==========================================
@@ -3216,13 +3242,35 @@ function printQR() {
 // PEDIDOS PENDIENTES (Dashboard + Tiempo Real)
 // ==========================================
 function initPendingOrders() {
-    // Escuchar pedidos en tiempo real
+    let prevCount = 0;
     userCollection('orders').onSnapshot((snapshot) => {
         const pendingOrders = snapshot.docs
             .map(doc => ({ id: doc.id, ...doc.data() }))
             .filter(o => o.status === 'active' || o.status === 'preparing' || o.status === 'ready');
+        
+        // Sonido si hay pedido nuevo
+        if (pendingOrders.length > prevCount && prevCount > 0) {
+            playOrderNotification();
+        }
+        prevCount = pendingOrders.length;
         renderPendingOrders(pendingOrders);
     });
+}
+
+function playOrderNotification() {
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        gain.gain.value = 0.3;
+        osc.frequency.value = 660;
+        osc.type = 'sine';
+        osc.start();
+        setTimeout(() => { osc.frequency.value = 880; }, 150);
+        setTimeout(() => { gain.gain.value = 0; osc.stop(); ctx.close(); }, 300);
+    } catch(e) {}
 }
 
 function renderPendingOrders(orders) {

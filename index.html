@@ -6,6 +6,8 @@
     <title>Gestión Pro - Tu Negocio Completo</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#2563eb">
+    <meta name="description" content="GestiónPro - Sistema de gestión completo para tu negocio. Inventario, ventas, mesas, cocina.">
+    <link rel="icon" href="icons/icon-192.png" type="image/png">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="icons/icon-192.png">
@@ -31,13 +33,13 @@
         <nav class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <h1>📦 GestiónPro</h1>
-                <button class="sidebar-toggle" id="sidebar-toggle">☰</button>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Abrir menú">☰</button>
             </div>
             <div id="sidebar-slogan" style="display:none;padding:0 20px 8px;font-size:0.75rem;color:#94a3b8;"></div>
             <div class="user-info-bar">
                 <span class="user-display" id="user-display">Usuario</span>
                 <button onclick="openTurno()" title="Cambiar turno" style="background:rgba(255,255,255,0.08);border:none;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:1rem;">👥</button>
-                <button class="btn-logout" id="btn-logout" title="Cerrar sesión">🚪</button>
+                <button class="btn-logout" id="btn-logout" title="Cerrar sesión" aria-label="Cerrar sesión">🚪</button>
             </div>
             <ul class="nav-menu">
                 <!-- Principal -->
@@ -1224,6 +1226,23 @@
                                     </tr>
                                 </thead>
                                 <tbody id="report-monthly"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>👥 Ventas por Empleado</h3>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Empleado</th>
+                                        <th>Unidades</th>
+                                        <th>Ingresos</th>
+                                        <th>Ganancia</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="report-employees"></tbody>
                             </table>
                         </div>
                     </div>
