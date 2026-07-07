@@ -232,6 +232,16 @@ function changeQty(productId, delta) {
     renderOrderItems();
 }
 
+function addItemNote(productId) {
+    const item = orders[currentMesaId]?.find(i => i.productId === productId);
+    if (!item) return;
+    const note = prompt(`Nota para "${item.name}":`, item.notes || '');
+    if (note !== null) {
+        item.notes = note.trim();
+        renderOrderItems();
+    }
+}
+
 function renderOrderItems() {
     const items = orders[currentMesaId] || [];
     const list = document.getElementById('order-items-list');
@@ -252,13 +262,17 @@ function renderOrderItems() {
         const subtotal = i.price * i.qty;
         total += subtotal;
         return `<div class="order-item">
-            <span class="order-item-name">${esc(i.name)}</span>
+            <div style="flex:1;min-width:0;">
+                <span class="order-item-name">${esc(i.name)}</span>
+                ${i.notes ? `<div style="font-size:0.7rem;color:var(--accent-amber,#f59e0b);margin-top:2px;">📝 ${esc(i.notes)}</div>` : ''}
+            </div>
             <div class="order-item-qty">
                 <button class="qty-btn minus" onclick="changeQty('${i.productId}', -1)">−</button>
                 <span class="qty-num">${i.qty}</span>
                 <button class="qty-btn plus" onclick="changeQty('${i.productId}', 1)">+</button>
             </div>
             <span class="order-item-price">${formatCurrency(subtotal)}</span>
+            <button onclick="addItemNote('${i.productId}')" style="background:none;border:none;font-size:0.9rem;cursor:pointer;padding:4px;" title="Agregar nota">📝</button>
         </div>`;
     }).join('');
     
@@ -380,6 +394,26 @@ function clearCurrentOrder() {
     showToast('Pedido eliminado', 'info');
 }
 
+// Dividir cuenta (por cantidad de personas)
+function splitBill() {
+    const items = orders[currentMesaId];
+    if (!items || items.length === 0) { showToast('No hay pedido para dividir', 'error'); return; }
+
+    const total = items.reduce((s, i) => s + (i.price * i.qty), 0);
+    const people = prompt('¿Entre cuántas personas dividir la cuenta?', '2');
+    if (!people || parseInt(people) <= 0) return;
+
+    const perPerson = total / parseInt(people);
+    showToast(`💰 Cada persona paga: ${formatCurrency(perPerson)} (${people} personas)`, 'success');
+
+    // Mostrar en la lista como referencia
+    const list = document.getElementById('order-items-list');
+    list.innerHTML += `<div style="margin-top:12px;padding:12px;background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.3);border-radius:10px;text-align:center;">
+        <div style="font-size:0.85rem;color:#8b5cf6;font-weight:600;">➗ Cuenta dividida entre ${people} personas</div>
+        <div style="font-size:1.3rem;font-weight:800;color:#8b5cf6;margin-top:4px;">${formatCurrency(perPerson)} c/u</div>
+    </div>`;
+}
+
 // ==========================================
 // UTILIDADES
 // ==========================================
@@ -428,14 +462,16 @@ function selectPayMethod(btn, method) {
 // RESTRICCIONES POR ROL EN MESERO
 // ==========================================
 function applyMeseroRoleRestrictions(role) {
-    // Mesero: solo puede tomar pedidos y enviar, NO puede cobrar
+    // Mesero: solo puede tomar pedidos y enviar, NO puede cobrar ni dividir
     if (role === 'waiter') {
         const btnCobrar = document.getElementById('btn-cobrar');
         const btnPrebill = document.getElementById('btn-prebill');
+        const btnDividir = document.getElementById('btn-dividir');
         const payMethods = document.querySelectorAll('.pay-method-btn');
         
         if (btnCobrar) btnCobrar.style.display = 'none';
         if (btnPrebill) btnPrebill.style.display = 'none';
+        if (btnDividir) btnDividir.style.display = 'none';
         payMethods.forEach(btn => btn.style.display = 'none');
     }
 

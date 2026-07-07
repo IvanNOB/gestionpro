@@ -414,6 +414,7 @@
                 <div class="card">
                     <h3>📋 Ventas Recientes</h3>
                     <div class="sales-filters">
+                        <input type="text" id="sales-search" placeholder="🔍 Buscar producto o cliente..." style="padding:9px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:0.85rem;background:var(--card-bg);color:var(--text);width:200px;" autocomplete="off">
                         <input type="date" id="sales-date-from" class="filter-select">
                         <input type="date" id="sales-date-to" class="filter-select">
                         <button class="btn btn-sm btn-outline" id="btn-filter-sales">Filtrar</button>
@@ -563,9 +564,11 @@
                         <div class="calc-result-item"><span>💳 Tarjeta:</span><span id="cash-tarjeta">$0</span></div>
                         <div class="calc-result-item"><span>🏦 Transferencia:</span><span id="cash-transferencia">$0</span></div>
                     </div>
-                    <div style="margin-top:16px;">
-                        <button class="btn btn-primary" id="btn-print-cash" onclick="printCashClose()">🖨️ Imprimir Cierre</button>
+                    <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;">
+                        <button class="btn btn-primary" onclick="printCashClose()">🖨️ Imprimir Cierre</button>
+                        <button class="btn btn-success" onclick="saveCashCloseRecord()">💾 Guardar Acta de Cierre</button>
                     </div>
+                    <div id="cash-close-history" style="margin-top:20px;"></div>
                 </div>
             </section>
 

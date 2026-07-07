@@ -1123,10 +1123,16 @@ function renderSalesTable() {
     const emptyMsg = document.getElementById('empty-sales');
     const from = document.getElementById('sales-date-from').value;
     const to = document.getElementById('sales-date-to').value;
+    const searchEl = document.getElementById('sales-search');
+    const search = searchEl ? searchEl.value.toLowerCase().trim() : '';
 
     let filtered = [...sales].sort((a,b) => new Date(b.date) - new Date(a.date));
     if (from) filtered = filtered.filter(s => s.date >= from);
     if (to) filtered = filtered.filter(s => s.date <= to + 'T23:59:59');
+    if (search) filtered = filtered.filter(s => 
+        s.productName.toLowerCase().includes(search) || 
+        (s.client || '').toLowerCase().includes(search)
+    );
 
     if (filtered.length === 0) {
         tbody.innerHTML = '';
@@ -1135,7 +1141,7 @@ function renderSalesTable() {
     }
     emptyMsg.style.display = 'none';
 
-    tbody.innerHTML = filtered.slice(0, 50).map(s => {
+    tbody.innerHTML = filtered.slice(0, 100).map(s => {
         const voided = s.voided === true;
         return `<tr style="${voided ? 'opacity:0.5;text-decoration:line-through;' : ''}">
         <td>${new Date(s.date).toLocaleDateString('es-MX', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</td>
@@ -2082,6 +2088,61 @@ function initCashClose() {
         dateInput.value = new Date().toISOString().split('T')[0];
         dateInput.addEventListener('change', renderCashClose);
     }
+    loadCashCloseHistory();
+}
+
+// Guardar acta de cierre de caja como registro permanente
+async function saveCashCloseRecord() {
+    const date = document.getElementById('cash-date').value || new Date().toISOString().split('T')[0];
+    const shiftNames = { manana: 'Turno Mañana', noche: 'Turno Noche', todo: 'Todo el día' };
+    const shift = shiftNames[currentCashShift] || 'Todo el día';
+
+    const record = {
+        id: generateId(),
+        date: date,
+        shift: currentCashShift,
+        shiftName: shift,
+        total: document.getElementById('cash-total').textContent,
+        profit: document.getElementById('cash-profit').textContent,
+        salesCount: document.getElementById('cash-count').textContent,
+        units: document.getElementById('cash-units').textContent,
+        efectivo: document.getElementById('cash-efectivo').textContent,
+        tarjeta: document.getElementById('cash-tarjeta').textContent,
+        transferencia: document.getElementById('cash-transferencia').textContent,
+        closedBy: sessionStorage.getItem('activeEmployee') || 'Dueño',
+        closedAt: new Date().toISOString()
+    };
+
+    await firestoreOperation(() => userCollection('cashCloses').doc(record.id).set(record));
+    showToast('✅ Acta de cierre guardada', 'success');
+    loadCashCloseHistory();
+}
+
+async function loadCashCloseHistory() {
+    const container = document.getElementById('cash-close-history');
+    if (!container || !currentUser) return;
+
+    try {
+        const snap = await userCollection('cashCloses').orderBy('closedAt', 'desc').limit(10).get();
+        const records = snap.docs.map(doc => doc.data());
+
+        if (records.length === 0) {
+            container.innerHTML = '';
+            return;
+        }
+
+        container.innerHTML = `<h4 style="margin-bottom:12px;">📋 Últimos cierres guardados</h4>` +
+            records.map(r => `<div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+                <div>
+                    <strong>${new Date(r.date).toLocaleDateString('es-CO')}</strong> — ${esc(r.shiftName)}
+                    <div style="font-size:0.8rem;color:var(--text-light);">Cerrado por: ${esc(r.closedBy)} a las ${new Date(r.closedAt).toLocaleTimeString('es-CO', {hour:'2-digit',minute:'2-digit'})}</div>
+                </div>
+                <div style="text-align:right;">
+                    <div style="font-weight:700;color:var(--success);">${r.total}</div>
+                    <div style="font-size:0.8rem;color:var(--text-light);">${r.salesCount} ventas</div>
+                </div>
+            </div>`).join('');
+    } catch (e) { container.innerHTML = ''; }
 }
 
 
