@@ -154,6 +154,7 @@ function renderUsersTable() {
                         ? `<button class="btn-block btn-unblock-user" onclick="unblockUser('${u.uid}')" title="Desbloquear">✅</button>`
                         : `<button class="btn-block btn-block-user" onclick="blockUser('${u.uid}')" title="Bloquear">🚫</button>`
                     }
+                    <button class="btn-block" style="background:rgba(16,185,129,0.15);color:#6ee7b7;border:1px solid rgba(16,185,129,0.3);" onclick="enterAsUser('${u.uid}', '${(u.businessName || u.email || '').replace(/'/g, '')}')" title="Entrar a esta cuenta">👁️</button>
                     <button class="btn-block" style="background:rgba(99,91,255,0.15);color:#93c5fd;border:1px solid rgba(99,91,255,0.3);" onclick="loadDemoForUser('${u.uid}', '${(u.businessName || '').replace(/'/g, '')}')" title="Cargar demo">📦</button>
                     <button class="btn-block" style="background:rgba(223,27,65,0.1);color:#fca5a5;border:1px solid rgba(223,27,65,0.2);" onclick="deleteUserAccount('${u.uid}', '${(u.businessName || u.email || '').replace(/'/g, '')}')" title="Eliminar cuenta">🗑️</button>
                     <select onchange="changePlan('${u.uid}', this.value)" style="padding:5px 8px;border-radius:6px;border:1px solid #334155;background:#0a0e1a;color:#e2e8f0;font-size:0.72rem;cursor:pointer;">
@@ -235,6 +236,19 @@ function showToast(message, type = 'info') {
 }
 
 
+
+// ==========================================
+// ACCESO REMOTO A CUENTAS (Admin)
+// ==========================================
+function enterAsUser(uid, name) {
+    // Guardar el UID del usuario que queremos ver en sessionStorage
+    sessionStorage.setItem('adminViewingUid', uid);
+    sessionStorage.setItem('adminViewingName', name);
+    sessionStorage.setItem('activeRole', 'owner');
+    sessionStorage.setItem('activeEmployee', 'Admin → ' + name);
+    // Abrir el panel en nueva pestaña
+    window.open('admin-remote.html?uid=' + uid, '_blank');
+}
 
 // ==========================================
 // CAMBIAR PLAN DE USUARIO

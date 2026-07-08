@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GestiónPro - Admin Remote</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+.admin-bar { background: #dc2626; color: white; padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 9999; }
+.admin-bar h3 { font-size: 0.9rem; }
+.admin-bar button { background: white; color: #dc2626; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.85rem; }
+.section { padding: 20px; max-width: 1000px; margin: 0 auto; }
+.card { background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 20px; margin-bottom: 16px; }
+.card h3 { color: #f1f5f9; margin-bottom: 12px; font-size: 1.1rem; }
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.stat { background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 14px; text-align: center; }
+.stat .value { font-size: 1.3rem; font-weight: 800; color: #f1f5f9; }
+.stat .label { font-size: 0.75rem; color: #64748b; margin-top: 4px; }
+table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #334155; }
+th { color: #94a3b8; font-weight: 600; font-size: 0.75rem; text-transform: uppercase; }
+.loading { text-align: center; padding: 60px; color: #64748b; }
+.tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+.tab { padding: 8px 16px; background: #1e293b; border: 1px solid #334155; border-radius: 8px; cursor: pointer; font-size: 0.85rem; color: #94a3b8; }
+.tab.active { background: #2563eb; color: white; border-color: #2563eb; }
+.btn-action { padding: 8px 14px; border: none; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer; margin-right: 8px; }
+.btn-edit { background: rgba(99,91,255,0.15); color: #93c5fd; border: 1px solid rgba(99,91,255,0.3); }
+.btn-delete { background: rgba(220,38,38,0.15); color: #fca5a5; border: 1px solid rgba(220,38,38,0.3); }
+</style>
+</head>
+<body>
+<div class="admin-bar">
+    <h3>🛡️ ADMIN REMOTO — <span id="remote-user-name">Cargando...</span></h3>
+    <button onclick="window.close()">✕ Cerrar</button>
+</div>
+
+<div class="section">
+    <div class="tabs" id="tabs">
+        <div class="tab active" onclick="showTab('overview')">📊 Resumen</div>
+        <div class="tab" onclick="showTab('products')">📦 Productos</div>
+        <div class="tab" onclick="showTab('sales')">💰 Ventas</div>
+        <div class="tab" onclick="showTab('employees')">👥 Empleados</div>
+        <div class="tab" onclick="showTab('settings')">⚙️ Config</div>
+    </div>
+
+    <div id="content">
+        <div class="loading">Cargando datos del usuario...</div>
+    </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+const ADMIN_EMAILS = ['kalethcano0216@gmail.com'];
+const params = new URLSearchParams(window.location.search);
+const targetUid = params.get('uid');
+
+let userData = {};
+let products = [];
+let sales = [];
+let employees = [];
+let mesas = [];
+let expenses = [];
+
+auth.onAuthStateChanged(async (user) => {
+    if (!user || !ADMIN_EMAILS.includes(user.email.toLowerCase())) {
+        document.getElementById('content').innerHTML = '<p style="color:#dc2626;text-align:center;padding:40px;">⛔ Acceso denegado</p>';
+        return;
+    }
+    if (!targetUid) {
+        document.getElementById('content').innerHTML = '<p style="color:#dc2626;text-align:center;padding:40px;">No se especificó usuario</p>';
+        return;
+    }
+    await loadUserData();
+});
+
+async function loadUserData() {
+    try {
+        const userDoc = await db.collection('users').doc(targetUid).get();
+        userData = userDoc.exists ? userDoc.data() : {};
+        document.getElementById('remote-user-name').textContent = userData.settings?.businessName || userData.businessName || userData.email || targetUid;
+
+        const [prodSnap, salesSnap, empSnap, mesasSnap, expSnap] = await Promise.all([
+            db.collection('users').doc(targetUid).collection('products').get(),
+            db.collection('users').doc(targetUid).collection('sales').orderBy('date', 'desc').limit(50).get(),
+            db.collection('users').doc(targetUid).collection('employees').get(),
+            db.collection('users').doc(targetUid).collection('mesas').get(),
+            db.collection('users').doc(targetUid).collection('expenses').get()
+        ]);
+
+        products = prodSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        sales = salesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        employees = empSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        mesas = mesasSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        expenses = expSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        showTab('overview');
+    } catch (e) {
+        document.getElementById('content').innerHTML = `<p style="color:#dc2626;padding:40px;">Error: ${e.message}</p>`;
+    }
+}
+
+function showTab(tab) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    event.target?.classList?.add('active');
+
+    const content = document.getElementById('content');
+
+    if (tab === 'overview') {
+        const totalSales = sales.reduce((s, v) => s + (v.total || 0), 0);
+        const totalProfit = sales.reduce((s, v) => s + (v.profit || 0), 0);
+        const totalExpenses = expenses.reduce((s, e) => s + (e.amount || 0), 0);
+        content.innerHTML = `
+            <div class="stat-grid">
+                <div class="stat"><div class="value">${products.length}</div><div class="label">Productos</div></div>
+                <div class="stat"><div class="value">${sales.length}</div><div class="label">Ventas (últimas 50)</div></div>
+                <div class="stat"><div class="value">${employees.length}</div><div class="label">Empleados</div></div>
+                <div class="stat"><div class="value">${mesas.length}</div><div class="label">Mesas</div></div>
+                <div class="stat"><div class="value">$${Math.round(totalSales).toLocaleString('es-CO')}</div><div class="label">Ingresos</div></div>
+                <div class="stat"><div class="value">$${Math.round(totalProfit).toLocaleString('es-CO')}</div><div class="label">Ganancia</div></div>
+                <div class="stat"><div class="value">$${Math.round(totalExpenses).toLocaleString('es-CO')}</div><div class="label">Gastos</div></div>
+                <div class="stat"><div class="value">${userData.plan || 'free'}</div><div class="label">Plan</div></div>
+            </div>
+            <div class="card"><h3>📋 Info</h3>
+                <p>Email: ${esc(userData.email || '-')}</p>
+                <p>Negocio: ${esc(userData.settings?.businessName || '-')}</p>
+                <p>Moneda: ${esc(userData.settings?.currency || 'COP')}</p>
+                <p>UID: <code style="font-size:0.75rem;color:#64748b;">${targetUid}</code></p>
+            </div>`;
+    } else if (tab === 'products') {
+        content.innerHTML = `<div class="card"><h3>📦 Productos (${products.length})</h3>
+            <table><thead><tr><th>Nombre</th><th>Categoría</th><th>Stock</th><th>Costo</th><th>Precio</th><th>Acción</th></tr></thead>
+            <tbody>${products.map(p => `<tr>
+                <td>${esc(p.name)}</td><td>${esc(p.category || '-')}</td><td>${p.quantity}</td>
+                <td>$${Math.round(p.cost || 0).toLocaleString('es-CO')}</td>
+                <td>$${Math.round(p.price || 0).toLocaleString('es-CO')}</td>
+                <td><button class="btn-action btn-delete" onclick="deleteRemoteDoc('products','${p.id}','${esc(p.name)}')">🗑️</button></td>
+            </tr>`).join('')}</tbody></table></div>`;
+    } else if (tab === 'sales') {
+        content.innerHTML = `<div class="card"><h3>💰 Últimas Ventas (${sales.length})</h3>
+            <table><thead><tr><th>Fecha</th><th>Producto</th><th>Cant</th><th>Total</th><th>Método</th><th>Vendió</th></tr></thead>
+            <tbody>${sales.map(s => `<tr>
+                <td>${new Date(s.date).toLocaleDateString('es-CO', {day:'2-digit',month:'short'})}</td>
+                <td>${esc(s.productName || '-')}</td><td>${s.quantity}</td>
+                <td>$${Math.round(s.total || 0).toLocaleString('es-CO')}</td>
+                <td>${esc(s.method || '-')}</td>
+                <td>${esc(s.soldBy || '-')}</td>
+            </tr>`).join('')}</tbody></table></div>`;
+    } else if (tab === 'employees') {
+        content.innerHTML = `<div class="card"><h3>👥 Empleados (${employees.length})</h3>
+            <table><thead><tr><th>Nombre</th><th>Rol</th><th>PIN (hash)</th><th>Activo</th><th>Acción</th></tr></thead>
+            <tbody>${employees.map(e => `<tr>
+                <td>${esc(e.name)}</td><td>${esc(e.role)}</td>
+                <td style="font-size:0.7rem;color:#64748b;">${e.pin ? e.pin.substring(0,8) + '...' : 'Sin PIN'}</td>
+                <td>${e.active !== false ? '✅' : '❌'}</td>
+                <td><button class="btn-action btn-delete" onclick="deleteRemoteDoc('employees','${e.id}','${esc(e.name)}')">🗑️</button></td>
+            </tr>`).join('')}</tbody></table></div>`;
+    } else if (tab === 'settings') {
+        const s = userData.settings || {};
+        content.innerHTML = `<div class="card"><h3>⚙️ Configuración</h3>
+            <pre style="background:#0f172a;padding:16px;border-radius:10px;font-size:0.8rem;overflow:auto;color:#94a3b8;">${JSON.stringify(s, null, 2)}</pre></div>
+            <div class="card"><h3>🔧 Acciones Remotas</h3>
+                <button class="btn-action btn-edit" onclick="resetUserSettings()">🔄 Resetear Settings</button>
+                <button class="btn-action btn-edit" onclick="fixUserPlan()">💳 Activar Plan Restaurant</button>
+                <button class="btn-action btn-delete" onclick="clearUserSales()">🗑️ Borrar Ventas</button>
+            </div>`;
+    }
+}
+
+async function deleteRemoteDoc(collection, docId, name) {
+    try {
+        await db.collection('users').doc(targetUid).collection(collection).doc(docId).delete();
+        showNotice(`"${name}" eliminado`);
+        await loadUserData();
+    } catch (e) { showNotice('Error: ' + e.message); }
+}
+
+async function resetUserSettings() {
+    try {
+        await db.collection('users').doc(targetUid).update({
+            settings: { businessName: userData.settings?.businessName || 'Mi Negocio', currency: 'COP', defaultTax: 19, defaultMargin: 30, theme: 'light', monthlyGoal: 0 }
+        });
+        showNotice('Settings reseteados');
+        await loadUserData();
+    } catch (e) { showNotice('Error: ' + e.message); }
+}
+
+async function fixUserPlan() {
+    try {
+        await db.collection('users').doc(targetUid).update({ plan: 'restaurant', 'settings.plan': 'restaurant' });
+        showNotice('Plan activado: Restaurant');
+        await loadUserData();
+    } catch (e) { showNotice('Error: ' + e.message); }
+}
+
+async function clearUserSales() {
+    if (!confirm('¿Borrar TODAS las ventas de este usuario?')) return;
+    try {
+        const snap = await db.collection('users').doc(targetUid).collection('sales').get();
+        const batch = db.batch();
+        snap.docs.forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+        showNotice('Ventas borradas');
+        await loadUserData();
+    } catch (e) { showNotice('Error: ' + e.message); }
+}
+
+function showNotice(msg) {
+    const n = document.createElement('div');
+    n.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1e293b;color:white;padding:12px 24px;border-radius:10px;font-size:0.9rem;z-index:9999;border:1px solid #334155;';
+    n.textContent = msg;
+    document.body.appendChild(n);
+    setTimeout(() => n.remove(), 3000);
+}
+
+function esc(t) { const d = document.createElement('div'); d.textContent = t || ''; return d.innerHTML; }
+</script>
+</body>
+</html>
