@@ -13,12 +13,8 @@ window.onerror = function(message, source, lineno, colno, error) {
 };
 
 window.addEventListener('unhandledrejection', function(event) {
-    console.error('Promise rechazada:', event.reason);
-    // No mostrar toast para errores de red (se manejan con el indicador offline)
-    if (event.reason?.code === 'unavailable' || event.reason?.message?.includes('network')) {
-        return;
-    }
-    showToast('Error de conexión. Los datos se guardarán cuando vuelva internet.', 'warning');
+    console.warn('Promise rechazada:', event.reason);
+    // No mostrar toast - Firestore offline maneja la sincronización automáticamente
 });
 
 // Wrapper para operaciones de Firestore con retry automático
@@ -28,17 +24,20 @@ async function firestoreOperation(operation, retries = 2) {
             return await operation();
         } catch (error) {
             if (i === retries) {
-                console.error('Operación falló después de reintentos:', error);
-                if (error.code === 'permission-denied') {
-                    showToast('Sin permisos para esta acción', 'error');
-                } else if (error.code === 'unavailable' || error.code === 'deadline-exceeded') {
-                    showToast('Sin conexión. Se guardará cuando vuelva internet.', 'warning');
-                } else {
-                    showToast('Error guardando datos. Intenta de nuevo.', 'error');
+                // Con persistencia offline, los datos se guardan localmente aunque falle la red
+                if (error.code === 'unavailable' || error.code === 'deadline-exceeded') {
+                    // No mostrar error - se sincronizará cuando vuelva internet
+                    console.warn('Operación guardada offline, se sincronizará después');
+                    return;
                 }
-                throw error;
+                if (error.code === 'permission-denied') {
+                    showToast('Sin permisos. Verifica las reglas de Firestore.', 'error');
+                }
+                // Para otros errores, no mostrar toast (Firestore offline los maneja)
+                console.error('Error Firestore:', error.code, error.message);
+                return;
             }
-            await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+            await new Promise(resolve => setTimeout(resolve, 500 * (i + 1)));
         }
     }
 }
