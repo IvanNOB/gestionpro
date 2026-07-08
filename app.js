@@ -294,7 +294,6 @@ async function initApp() {
         showUserInfo();
         checkActiveRole();
         loadCustomization();
-        checkOnboarding();
         initPlanSystem();
     } catch (error) {
         console.error('Error inicializando app:', error);
@@ -3592,67 +3591,7 @@ async function saveEmployee(emp) {
 
 
 
-// ==========================================
-// TUTORIAL / ONBOARDING
-// ==========================================
-function checkOnboarding() {
-    // Solo mostrar una vez por perfil
-    const activeEmployee = sessionStorage.getItem('activeEmployee') || 'owner';
-    const key = 'onboarding_done_' + activeEmployee;
-    if (localStorage.getItem(key)) return;
-    showOnboarding();
-}
 
-function showOnboarding() {
-    const overlay = document.createElement('div');
-    overlay.id = 'onboarding-overlay';
-    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);';
-
-    const steps = [
-        { icon: '👋', title: '¡Bienvenido a GestiónPro!', text: 'Tu negocio completo en la nube. Te mostramos cómo empezar.' },
-        { icon: '📦', title: '1. Agrega tus productos', text: 'Ve a Inventario y agrega tus productos con costo, precio y stock.' },
-        { icon: '🧂', title: '2. Registra tus insumos', text: 'Si vendes preparaciones (café, comida), agrega las materias primas en Insumos.' },
-        { icon: '📝', title: '3. Crea recetas', text: 'Define qué insumos lleva cada producto. Así se descuentan automáticamente al vender.' },
-        { icon: '🪑', title: '4. Configura tus mesas', text: 'Ve a Mesas, agrégalas y comparte el link de mesero con tu equipo.' },
-        { icon: '💰', title: '5. ¡Empieza a vender!', text: 'Registra ventas directamente o toma pedidos por mesa. Los tickets se imprimen automáticamente.' },
-        { icon: '🎨', title: '6. Configura tu negocio', text: 'En Ajustes puedes cambiar el nombre de tu negocio, la moneda y la meta de ventas.' },
-        { icon: '🚀', title: '¡Listo!', text: 'Ya tienes todo para empezar. Si necesitas ayuda, revisa cada sección. ¡Éxito con tu negocio!' },
-    ];
-
-    let currentStep = 0;
-
-    function renderStep() {
-        const step = steps[currentStep];
-        const isLast = currentStep === steps.length - 1;
-        const isFirst = currentStep === 0;
-        overlay.innerHTML = `
-            <div style="background:white;border-radius:20px;padding:40px 32px;max-width:420px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3);animation:fadeIn 0.3s ease;">
-                <div style="font-size:3.5rem;margin-bottom:16px;">${step.icon}</div>
-                <h2 style="font-size:1.4rem;color:#1e293b;margin-bottom:12px;">${step.title}</h2>
-                <p style="color:#64748b;font-size:1rem;margin-bottom:28px;line-height:1.5;">${step.text}</p>
-                <div style="display:flex;gap:8px;justify-content:center;margin-bottom:20px;">
-                    ${steps.map((_, i) => `<div style="width:8px;height:8px;border-radius:50%;background:${i === currentStep ? '#2563eb' : '#e2e8f0'};transition:background 0.2s;"></div>`).join('')}
-                </div>
-                <div style="display:flex;gap:12px;justify-content:center;">
-                    ${!isFirst ? '<button onclick="onboardingPrev()" style="padding:12px 24px;border:2px solid #e2e8f0;background:white;border-radius:10px;font-size:0.95rem;cursor:pointer;font-weight:600;color:#64748b;">← Anterior</button>' : ''}
-                    <button onclick="${isLast ? 'finishOnboarding()' : 'onboardingNext()'}" style="padding:12px 24px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:white;border:none;border-radius:10px;font-size:0.95rem;cursor:pointer;font-weight:600;box-shadow:0 4px 12px rgba(37,99,235,0.3);">${isLast ? '✅ ¡Empezar!' : 'Siguiente →'}</button>
-                </div>
-                ${isFirst ? '<p style="margin-top:16px;font-size:0.8rem;color:#94a3b8;cursor:pointer;" onclick="finishOnboarding()">Saltar tutorial</p>' : ''}
-            </div>
-        `;
-    }
-
-    window.onboardingNext = () => { currentStep = Math.min(currentStep + 1, steps.length - 1); renderStep(); };
-    window.onboardingPrev = () => { currentStep = Math.max(currentStep - 1, 0); renderStep(); };
-    window.finishOnboarding = async () => {
-        overlay.remove();
-        const activeEmployee = sessionStorage.getItem('activeEmployee') || 'owner';
-        localStorage.setItem('onboarding_done_' + activeEmployee, 'true');
-    };
-
-    renderStep();
-    document.body.appendChild(overlay);
-}
 
 
 
