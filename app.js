@@ -3596,7 +3596,10 @@ async function saveEmployee(emp) {
 // TUTORIAL / ONBOARDING
 // ==========================================
 function checkOnboarding() {
-    if (settings.onboardingDone) return;
+    // Solo mostrar una vez por perfil
+    const activeEmployee = sessionStorage.getItem('activeEmployee') || 'owner';
+    const key = 'onboarding_done_' + activeEmployee;
+    if (localStorage.getItem(key)) return;
     showOnboarding();
 }
 
@@ -3643,8 +3646,8 @@ function showOnboarding() {
     window.onboardingPrev = () => { currentStep = Math.max(currentStep - 1, 0); renderStep(); };
     window.finishOnboarding = async () => {
         overlay.remove();
-        settings.onboardingDone = true;
-        await saveSettings();
+        const activeEmployee = sessionStorage.getItem('activeEmployee') || 'owner';
+        localStorage.setItem('onboarding_done_' + activeEmployee, 'true');
     };
 
     renderStep();
