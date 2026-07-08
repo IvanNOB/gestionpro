@@ -244,6 +244,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Esperar a que Firebase Auth confirme el usuario
     auth.onAuthStateChanged((user) => {
         if (user) {
+            // Verificar que pasó por turno (tiene rol asignado)
+            const activeRole = sessionStorage.getItem('activeRole');
+            if (!activeRole) {
+                window.location.href = 'turno.html';
+                return;
+            }
             currentUser = user;
             initApp();
         } else {
