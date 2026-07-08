@@ -294,7 +294,7 @@ async function initApp() {
         showUserInfo();
         checkActiveRole();
         loadCustomization();
-        checkOnboarding();
+        // Tutorial desactivado
         initPlanSystem();
     } catch (error) {
         console.error('Error inicializando app:', error);
