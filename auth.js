@@ -12,13 +12,41 @@ document.addEventListener('DOMContentLoaded', () => {
 // ==========================================
 function checkAuthState() {
     showLoading(true);
-    auth.onAuthStateChanged((user) => {
+    auth.onAuthStateChanged(async (user) => {
         showLoading(false);
         if (user) {
+            // Verificar que el documento del usuario existe en Firestore
+            await ensureUserDocument(user);
             // Usuario logueado, redirigir a la app
             window.location.href = 'turno.html';
         }
     });
+}
+
+// Si el usuario existe en Auth pero no en Firestore, crear su documento
+async function ensureUserDocument(user) {
+    try {
+        const docRef = db.collection('users').doc(user.uid);
+        const doc = await docRef.get();
+        if (!doc.exists) {
+            await docRef.set({
+                businessName: user.displayName || 'Mi Negocio',
+                email: user.email,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                plan: 'free',
+                settings: {
+                    businessName: user.displayName || 'Mi Negocio',
+                    currency: 'COP',
+                    defaultTax: 19,
+                    defaultMargin: 30,
+                    theme: 'light',
+                    monthlyGoal: 0
+                }
+            });
+        }
+    } catch (e) {
+        console.warn('No se pudo verificar documento del usuario:', e);
+    }
 }
 
 // ==========================================

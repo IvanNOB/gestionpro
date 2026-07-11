@@ -263,7 +263,24 @@ async function initApp() {
     try {
         // Verificar si el usuario está bloqueado
         const userDocSnap = await db.collection('users').doc(currentUser.uid).get();
-        if (userDocSnap.exists && userDocSnap.data().blocked === true) {
+        
+        // Si no existe el documento, crearlo
+        if (!userDocSnap.exists) {
+            await db.collection('users').doc(currentUser.uid).set({
+                businessName: currentUser.displayName || 'Mi Negocio',
+                email: currentUser.email,
+                createdAt: new Date().toISOString(),
+                plan: 'free',
+                settings: {
+                    businessName: currentUser.displayName || 'Mi Negocio',
+                    currency: 'COP',
+                    defaultTax: 19,
+                    defaultMargin: 30,
+                    theme: 'light',
+                    monthlyGoal: 0
+                }
+            });
+        } else if (userDocSnap.data().blocked === true) {
             showBlockedMessage();
             return;
         }
