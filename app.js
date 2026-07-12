@@ -2170,7 +2170,7 @@ function initCashClose() {
 
 // Guardar acta de cierre de caja como registro permanente
 async function saveCashCloseRecord() {
-    const date = document.getElementById('cash-date').value || new Date().toISOString().split('T')[0];
+    const date = new Date().toISOString().split('T')[0];
     const shiftNames = { manana: 'Turno Mañana', noche: 'Turno Noche', todo: 'Todo el día' };
     const shift = shiftNames[currentCashShift] || 'Todo el día';
 
