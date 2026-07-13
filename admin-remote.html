@@ -105,7 +105,8 @@ async function loadUserData() {
 
 function showTab(tab) {
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    event.target?.classList?.add('active');
+    const activeTab = document.querySelector(`.tab[onclick*="'${tab}'"]`);
+    if (activeTab) activeTab.classList.add('active');
 
     const content = document.getElementById('content');
 
