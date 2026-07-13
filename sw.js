@@ -29,6 +29,7 @@ const PRECACHE_URLS = [
     './cocina-app.js',
     './admin.js',
     './tickets.js',
+    './modules-extra.js',
     './firebase-config.js',
     './manifest.json',
     './manifest-mesero.json',

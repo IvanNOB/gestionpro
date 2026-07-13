@@ -1249,6 +1249,56 @@
                         </div>
                     </div>
                 </div>
+            <!-- MÓDULOS EXTRA (nuevas funcionalidades) -->
+            <div class="card" id="month-comparison-card">
+                <h3>📊 Comparativa vs Mes Anterior</h3>
+                <div id="month-comparison"></div>
+            </div>
+
+            <div class="card" id="stock-predictions-card">
+                <h3>🔮 Predicción de Stock</h3>
+                <p style="color:var(--text-light);font-size:0.85rem;margin-bottom:12px;">Productos que se agotarán pronto basado en tus ventas</p>
+                <div id="stock-predictions"></div>
+            </div>
+
+            <div class="card" id="expiration-card">
+                <h3>📅 Control de Vencimientos</h3>
+                <div id="expiration-alerts"></div>
+            </div>
+
+            <div class="card" id="debts-card">
+                <h3>📝 Cuentas por Cobrar (Fiados)</h3>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                    <span>Total pendiente: <strong id="debts-total">$0</strong></span>
+                    <button class="btn btn-sm btn-primary" onclick="addDebt()">+ Agregar Fiado</button>
+                </div>
+                <div id="debts-list"></div>
+            </div>
+
+            <div class="card" id="appointments-card">
+                <h3>📅 Agenda de Citas</h3>
+                <div style="margin-bottom:12px;">
+                    <button class="btn btn-sm btn-primary" onclick="addAppointment()">+ Nueva Cita</button>
+                </div>
+                <div id="appointments-list"></div>
+            </div>
+
+            <div class="card" id="pos-card">
+                <h3>⚡ Venta Rápida POS</h3>
+                <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
+                    <button class="btn btn-sm btn-outline" id="btn-scan-barcode">📷 Escanear Código</button>
+                    <select id="pos-method" style="padding:6px 12px;border:1px solid var(--border);border-radius:8px;background:var(--card-bg);color:var(--text);font-size:0.85rem;">
+                        <option value="Efectivo">💵 Efectivo</option>
+                        <option value="Tarjeta">💳 Tarjeta</option>
+                        <option value="Transferencia">🏦 Transferencia</option>
+                    </select>
+                </div>
+                <div id="pos-cart" style="margin-bottom:12px;"></div>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--bg);border-radius:10px;">
+                    <strong>Total: <span id="pos-total">$0</span></strong>
+                    <button class="btn btn-success" onclick="processPOSSale()">💰 Cobrar POS</button>
+                </div>
+            </div>
             </section>
 
             <!-- ======================== ALERTAS ======================== -->
@@ -1396,6 +1446,7 @@
 
     <script src="app.js"></script>
     <script src="tickets.js"></script>
+    <script src="modules-extra.js"></script>
     <script>
         // Service Worker para funcionamiento offline
         if ('serviceWorker' in navigator) {
