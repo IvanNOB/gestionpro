@@ -3715,10 +3715,41 @@ function initPlanSystem() {
         applyPlanRestrictions(currentPlan);
     }
 
+    // Aplicar restricciones según tipo de negocio
+    applyBusinessTypeRestrictions(settings.businessType || 'general');
+
     // Guardar fecha de registro si no existe
     if (!settings.registeredAt) {
         settings.registeredAt = new Date().toISOString();
         saveSettings();
+    }
+}
+
+// ==========================================
+// RESTRICCIONES POR TIPO DE NEGOCIO
+// ==========================================
+function applyBusinessTypeRestrictions(type) {
+    const hiddenModules = {
+        restaurant: [],
+        store: ['mesas', 'insumos', 'recipes'],
+        services: ['mesas', 'insumos', 'recipes', 'inventory'],
+        general: []
+    };
+
+    const toHide = hiddenModules[type] || [];
+    if (toHide.length === 0) return;
+
+    document.querySelectorAll('.nav-link').forEach(link => {
+        const section = link.dataset.section;
+        if (section && toHide.includes(section)) {
+            link.parentElement.style.display = 'none';
+        }
+    });
+
+    if (type === 'store' || type === 'services') {
+        document.querySelectorAll('[onclick*="openCocina"], [onclick*="openMesero"]').forEach(btn => {
+            btn.style.display = 'none';
+        });
     }
 }
 

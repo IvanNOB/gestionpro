@@ -164,6 +164,12 @@ function renderUsersTable() {
                         <option value="premium" ${plan==='premium'?'selected':''}>Premium</option>
                         <option value="free" ${plan==='free'?'selected':''}>Free</option>
                     </select>
+                    <select onchange="changeBusinessType('${u.uid}', this.value)" style="padding:5px 8px;border-radius:6px;border:1px solid #334155;background:#0a0e1a;color:#e2e8f0;font-size:0.72rem;cursor:pointer;">
+                        <option value="general" ${(u.businessType||'')==='general'?'selected':''}>📦 General</option>
+                        <option value="restaurant" ${(u.businessType||'')==='restaurant'?'selected':''}>🍽️ Restaurante</option>
+                        <option value="store" ${(u.businessType||'')==='store'?'selected':''}>🏪 Tienda/Ferretería</option>
+                        <option value="services" ${(u.businessType||'')==='services'?'selected':''}>💇 Servicios</option>
+                    </select>
                 </div>`}
             </td>
         </tr>`;
@@ -248,6 +254,26 @@ function enterAsUser(uid, name) {
     sessionStorage.setItem('activeEmployee', 'Admin → ' + name);
     // Abrir el panel en nueva pestaña
     window.open('admin-remote.html?uid=' + uid, '_blank');
+}
+
+// ==========================================
+// CAMBIAR TIPO DE NEGOCIO
+// ==========================================
+async function changeBusinessType(uid, type) {
+    const user = allUsers.find(u => u.uid === uid);
+    if (!user) return;
+
+    try {
+        await db.collection('users').doc(uid).update({
+            businessType: type,
+            'settings.businessType': type
+        });
+        user.businessType = type;
+        const typeNames = { general: 'General', restaurant: 'Restaurante', store: 'Tienda/Ferretería', services: 'Servicios' };
+        showToast(`Tipo de "${user.businessName || user.email}" cambiado a: ${typeNames[type]}`, 'success');
+    } catch (error) {
+        showToast('Error: ' + error.message, 'error');
+    }
 }
 
 // ==========================================
