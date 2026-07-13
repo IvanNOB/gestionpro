@@ -165,10 +165,16 @@ function renderUsersTable() {
                         <option value="free" ${plan==='free'?'selected':''}>Free</option>
                     </select>
                     <select onchange="changeBusinessType('${u.uid}', this.value)" style="padding:5px 8px;border-radius:6px;border:1px solid #334155;background:#0a0e1a;color:#e2e8f0;font-size:0.72rem;cursor:pointer;">
-                        <option value="general" ${(u.businessType||'')==='general'?'selected':''}>📦 General</option>
-                        <option value="restaurant" ${(u.businessType||'')==='restaurant'?'selected':''}>🍽️ Restaurante</option>
+                        <option value="general" ${(u.businessType||'')==='general'?'selected':''}>📦 General (todo)</option>
+                        <option value="restaurant" ${(u.businessType||'')==='restaurant'?'selected':''}>🍽️ Restaurante/Café</option>
                         <option value="store" ${(u.businessType||'')==='store'?'selected':''}>🏪 Tienda/Ferretería</option>
-                        <option value="services" ${(u.businessType||'')==='services'?'selected':''}>💇 Servicios</option>
+                        <option value="beauty" ${(u.businessType||'')==='beauty'?'selected':''}>💇 Peluquería/Barbería</option>
+                        <option value="gym" ${(u.businessType||'')==='gym'?'selected':''}>🏋️ Gimnasio</option>
+                        <option value="services" ${(u.businessType||'')==='services'?'selected':''}>🔧 Servicios</option>
+                        <option value="food" ${(u.businessType||'')==='food'?'selected':''}>🍕 Comidas Rápidas</option>
+                        <option value="minimarket" ${(u.businessType||'')==='minimarket'?'selected':''}>🛒 Minimarket</option>
+                        <option value="clothing" ${(u.businessType||'')==='clothing'?'selected':''}>👕 Ropa/Accesorios</option>
+                        <option value="pharmacy" ${(u.businessType||'')==='pharmacy'?'selected':''}>💊 Droguería</option>
                     </select>
                 </div>`}
             </td>

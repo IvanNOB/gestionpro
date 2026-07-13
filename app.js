@@ -3729,11 +3729,18 @@ function initPlanSystem() {
 // RESTRICCIONES POR TIPO DE NEGOCIO
 // ==========================================
 function applyBusinessTypeRestrictions(type) {
+    // Módulos que se OCULTAN según tipo de negocio
     const hiddenModules = {
-        restaurant: [],
-        store: ['mesas', 'insumos', 'recipes'],
-        services: ['mesas', 'insumos', 'recipes', 'inventory'],
-        general: []
+        general: [],       // Ve TODO
+        restaurant: [],    // Ve TODO (mesas, cocina, insumos, recetas)
+        food: [],          // Comidas rápidas = igual que restaurante
+        store: ['mesas', 'insumos', 'recipes'],          // Ferretería/Tienda
+        minimarket: ['mesas', 'insumos', 'recipes'],     // Minimarket
+        pharmacy: ['mesas', 'insumos', 'recipes'],       // Droguería
+        clothing: ['mesas', 'insumos', 'recipes'],       // Ropa
+        beauty: ['mesas', 'insumos', 'recipes', 'inventory'],  // Peluquería (no maneja inventario pesado)
+        gym: ['mesas', 'insumos', 'recipes', 'inventory'],     // Gimnasio
+        services: ['mesas', 'insumos', 'recipes', 'inventory'] // Servicios generales
     };
 
     const toHide = hiddenModules[type] || [];
@@ -3746,11 +3753,58 @@ function applyBusinessTypeRestrictions(type) {
         }
     });
 
-    if (type === 'store' || type === 'services') {
+    // Ocultar botones de cocina/mesero si no es tipo restaurante/comidas
+    if (!['restaurant', 'food', 'general'].includes(type)) {
         document.querySelectorAll('[onclick*="openCocina"], [onclick*="openMesero"]').forEach(btn => {
             btn.style.display = 'none';
         });
+        // Ocultar sección de pedidos pendientes en dashboard
+        const pendingCard = document.getElementById('pending-orders-card');
+        if (pendingCard) pendingCard.style.display = 'none';
     }
+
+    // Cambiar categorías predeterminadas según tipo de negocio
+    updateCategoriesForBusinessType(type);
+}
+
+function updateCategoriesForBusinessType(type) {
+    const catSelect = document.getElementById('product-category');
+    if (!catSelect) return;
+
+    const categoriesByType = {
+        restaurant: ['Platos Fuertes', 'Entradas', 'Bebidas', 'Postres', 'Desayunos', 'Snacks', 'Cafetería'],
+        food: ['Hamburguesas', 'Pizzas', 'Perros', 'Bebidas', 'Combos', 'Postres', 'Adicionales'],
+        store: ['Herramientas', 'Eléctrico', 'Plomería', 'Pinturas', 'Tornillos', 'Cerrajería', 'Otro'],
+        minimarket: ['Bebidas', 'Snacks', 'Lácteos', 'Aseo', 'Granos', 'Enlatados', 'Otro'],
+        pharmacy: ['Medicamentos', 'Cuidado Personal', 'Vitaminas', 'Bebés', 'Primeros Auxilios', 'Otro'],
+        clothing: ['Camisas', 'Pantalones', 'Zapatos', 'Accesorios', 'Ropa Interior', 'Otro'],
+        beauty: ['Cortes', 'Tintes', 'Uñas', 'Facial', 'Productos', 'Otro'],
+        gym: ['Mensualidades', 'Suplementos', 'Ropa Deportiva', 'Accesorios', 'Clases', 'Otro'],
+        services: ['Servicio Básico', 'Servicio Premium', 'Repuestos', 'Mantenimiento', 'Otro']
+    };
+
+    const categories = categoriesByType[type];
+    if (!categories) return;
+
+    // Guardar opciones existentes personalizadas
+    const customOptions = [];
+    catSelect.querySelectorAll('option').forEach(opt => {
+        if (opt.value === '' || opt.value === '__custom__') return;
+        const isDefault = Object.values(categoriesByType).flat().includes(opt.value) ||
+            ['Ropa', 'Electrónica', 'Alimentos', 'Hogar', 'Belleza', 'Deportes', 'Accesorios', 'Tecnología', 'Salud', 'Mascotas', 'Papelería', 'Platos Fuertes', 'Entradas', 'Bebidas', 'Postres', 'Desayunos', 'Snacks', 'Cafetería', 'Otro'].includes(opt.value);
+        if (!isDefault) customOptions.push(opt.value);
+    });
+
+    // Reconstruir el select con categorías del tipo de negocio
+    catSelect.innerHTML = '<option value="">Seleccionar...</option>';
+    categories.forEach(cat => {
+        catSelect.innerHTML += `<option value="${cat}">${cat}</option>`;
+    });
+    // Agregar personalizadas del usuario
+    customOptions.forEach(cat => {
+        catSelect.innerHTML += `<option value="${cat}">⭐ ${cat}</option>`;
+    });
+    catSelect.innerHTML += '<option value="__custom__">✏️ Escribir otra...</option>';
 }
 
 function applyPlanRestrictions(plan) {
