@@ -449,6 +449,7 @@ function initModulesExtra() {
     loadAppointments();
     loadDebts();
     loadPromotions();
+    loadBranches();
     renderMonthComparison();
     renderStockPredictions();
     renderExpirationAlerts();
@@ -456,3 +457,123 @@ function initModulesExtra() {
 
 // Ejecutar cuando la app esté lista (después de initApp)
 setTimeout(() => { if (typeof currentUser !== 'undefined' && currentUser) initModulesExtra(); }, 2000);
+
+
+
+// ==========================================
+// MÚLTIPLES SUCURSALES
+// ==========================================
+let branches = [];
+let activeBranch = null;
+
+async function loadBranches() {
+    if (!currentUser) return;
+    try {
+        const snap = await userCollection('branches').get();
+        branches = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        // Cargar sucursal activa desde sessionStorage
+        const savedBranch = sessionStorage.getItem('activeBranch');
+        if (savedBranch) {
+            activeBranch = branches.find(b => b.id === savedBranch) || null;
+        }
+        renderBranchSelector();
+        renderBranchesAdmin();
+    } catch (e) {}
+}
+
+async function addBranch() {
+    const name = prompt('Nombre de la sucursal (ej: Local Centro, Sede Norte):');
+    if (!name) return;
+    const address = prompt('Dirección (opcional):', '');
+    const phone = prompt('Teléfono (opcional):', '');
+    const branch = {
+        id: generateId(),
+        name: name.trim(),
+        address: address || '',
+        phone: phone || '',
+        active: true,
+        createdAt: new Date().toISOString()
+    };
+    branches.push(branch);
+    await firestoreOperation(() => userCollection('branches').doc(branch.id).set(branch));
+    renderBranchSelector();
+    renderBranchesAdmin();
+    showToast(`Sucursal "${name}" creada`, 'success');
+}
+
+async function deleteBranch(id) {
+    branches = branches.filter(b => b.id !== id);
+    await firestoreOperation(() => userCollection('branches').doc(id).delete());
+    if (activeBranch && activeBranch.id === id) {
+        activeBranch = null;
+        sessionStorage.removeItem('activeBranch');
+    }
+    renderBranchSelector();
+    renderBranchesAdmin();
+    showToast('Sucursal eliminada', 'warning');
+}
+
+function selectBranch(branchId) {
+    if (branchId === 'all') {
+        activeBranch = null;
+        sessionStorage.removeItem('activeBranch');
+        showToast('Viendo todas las sucursales', 'info');
+    } else {
+        activeBranch = branches.find(b => b.id === branchId);
+        sessionStorage.setItem('activeBranch', branchId);
+        showToast(`Sucursal: ${activeBranch?.name}`, 'info');
+    }
+    renderBranchSelector();
+    // Recargar datos filtrados por sucursal
+    renderAll();
+}
+
+function renderBranchSelector() {
+    const container = document.getElementById('branch-selector');
+    if (!container || branches.length === 0) {
+        if (container) container.style.display = 'none';
+        return;
+    }
+    container.style.display = 'block';
+    container.innerHTML = `
+        <select onchange="selectBranch(this.value)" style="padding:8px 14px;border:1px solid var(--border);border-radius:8px;background:var(--card-bg);color:var(--text);font-size:0.85rem;font-weight:600;">
+            <option value="all" ${!activeBranch ? 'selected' : ''}>🏢 Todas las sucursales</option>
+            ${branches.filter(b => b.active).map(b => `<option value="${b.id}" ${activeBranch?.id === b.id ? 'selected' : ''}>📍 ${esc(b.name)}</option>`).join('')}
+        </select>
+    `;
+}
+
+function renderBranchesAdmin() {
+    const container = document.getElementById('branches-list');
+    if (!container) return;
+    if (branches.length === 0) {
+        container.innerHTML = '<p style="color:var(--text-light);">No hay sucursales. Todos los datos van a un solo local.</p>';
+        return;
+    }
+    container.innerHTML = branches.map(b => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;">
+            <div>
+                <strong>📍 ${esc(b.name)}</strong>
+                ${b.address ? `<br><span style="font-size:0.8rem;color:var(--text-light);">${esc(b.address)}</span>` : ''}
+                ${b.phone ? `<br><span style="font-size:0.8rem;color:var(--text-light);">📞 ${esc(b.phone)}</span>` : ''}
+            </div>
+            <button onclick="deleteBranch('${b.id}')" style="background:var(--danger);color:white;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;">🗑️</button>
+        </div>
+    `).join('');
+}
+
+// Filtrar ventas por sucursal activa
+function filterSalesByBranch(salesList) {
+    if (!activeBranch) return salesList;
+    return salesList.filter(s => s.branchId === activeBranch.id);
+}
+
+// Al registrar una venta, agregar el branchId automáticamente
+// Se modifica el sale object antes de guardar (en el flujo de venta existente)
+function attachBranchToSale(sale) {
+    if (activeBranch) {
+        sale.branchId = activeBranch.id;
+        sale.branchName = activeBranch.name;
+    }
+    return sale;
+}

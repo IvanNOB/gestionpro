@@ -1250,6 +1250,17 @@
                     </div>
                 </div>
             <!-- MÓDULOS EXTRA (nuevas funcionalidades) -->
+            <div id="branch-selector" style="display:none;margin-bottom:16px;"></div>
+
+            <div class="card" id="branches-card">
+                <h3>🏢 Sucursales</h3>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                    <span style="color:var(--text-light);font-size:0.85rem;">Administra múltiples locales</span>
+                    <button class="btn btn-sm btn-primary" onclick="addBranch()">+ Nueva Sucursal</button>
+                </div>
+                <div id="branches-list"></div>
+            </div>
+
             <div class="card" id="month-comparison-card">
                 <h3>📊 Comparativa vs Mes Anterior</h3>
                 <div id="month-comparison"></div>
