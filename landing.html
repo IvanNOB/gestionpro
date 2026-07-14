@@ -1,324 +1,358 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GestiónPro - Gestiona tu Negocio desde el Celular</title>
-    <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
-    <meta name="description" content="Software de gestión para negocios: inventario, ventas, mesas, cocina, tickets. Todo desde tu celular.">
-    <meta property="og:title" content="GestiónPro - Gestiona tu Negocio desde el Celular">
-    <meta property="og:description" content="Inventario, ventas, mesas, cocina, tickets y reportes. Todo en un solo lugar para tu negocio.">
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://ivannob.github.io/gestionpro/">
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="GestiónPro - Tu Negocio Completo en la Nube">
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1e293b; line-height: 1.6; }
-        
-        /* HERO */
-        .hero { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: white; padding: 80px 20px; text-align: center; position: relative; overflow: hidden; }
-        .hero::before { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(37,99,235,0.1) 0%, transparent 50%); animation: rotate 20s linear infinite; }
-        @keyframes rotate { to { transform: rotate(360deg); } }
-        .hero-content { position: relative; z-index: 1; max-width: 700px; margin: 0 auto; }
-        .hero h1 { font-size: 2.5rem; font-weight: 800; margin-bottom: 16px; line-height: 1.2; }
-        .hero h1 span { background: linear-gradient(135deg, #60a5fa, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .hero p { font-size: 1.15rem; color: #94a3b8; margin-bottom: 32px; }
-        .hero-btns { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
-        .btn-hero { padding: 16px 32px; border-radius: 12px; font-size: 1.05rem; font-weight: 700; text-decoration: none; transition: all 0.2s; display: inline-block; }
-        .btn-primary { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; box-shadow: 0 4px 20px rgba(37,99,235,0.4); }
-        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(37,99,235,0.5); }
-        .btn-secondary { background: rgba(255,255,255,0.1); color: white; border: 2px solid rgba(255,255,255,0.2); }
-        .btn-secondary:hover { background: rgba(255,255,255,0.15); }
-        .hero-badge { display: inline-block; background: rgba(16,185,129,0.15); color: #34d399; padding: 8px 16px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; margin-bottom: 24px; }
-        
-        /* FEATURES */
-        .section { padding: 80px 20px; max-width: 1100px; margin: 0 auto; }
-        .section-title { text-align: center; margin-bottom: 48px; }
-        .section-title h2 { font-size: 2rem; font-weight: 800; margin-bottom: 12px; }
-        .section-title p { color: #64748b; font-size: 1.05rem; }
-        
-        .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; }
-        .feature-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px; padding: 28px; transition: all 0.2s; }
-        .feature-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.08); border-color: #2563eb; }
-        .feature-icon { font-size: 2.2rem; margin-bottom: 14px; }
-        .feature-card h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 8px; }
-        .feature-card p { color: #64748b; font-size: 0.9rem; }
-        
-        /* HOW IT WORKS */
-        .steps-section { background: #f8fafc; padding: 80px 20px; }
-        .steps-grid { max-width: 800px; margin: 0 auto; }
-        .step { display: flex; gap: 20px; margin-bottom: 32px; align-items: flex-start; }
-        .step-number { width: 48px; height: 48px; background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.2rem; flex-shrink: 0; }
-        .step-content h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 4px; }
-        .step-content p { color: #64748b; font-size: 0.9rem; }
-        
-        /* PRICING */
-        .pricing-section { padding: 80px 20px; text-align: center; }
-        .pricing-card { max-width: 450px; margin: 0 auto; background: white; border: 3px solid #2563eb; border-radius: 24px; padding: 40px 32px; box-shadow: 0 20px 60px rgba(37,99,235,0.15); }
-        .pricing-badge { display: inline-block; background: #2563eb; color: white; padding: 6px 16px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 1px; }
-        .pricing-price { font-size: 3rem; font-weight: 800; color: #1e293b; margin-bottom: 4px; }
-        .pricing-price span { font-size: 1rem; color: #64748b; font-weight: 500; }
-        .pricing-trial { color: #16a34a; font-weight: 700; font-size: 1rem; margin-bottom: 24px; }
-        .pricing-features { text-align: left; margin-bottom: 28px; }
-        .pricing-features li { list-style: none; padding: 8px 0; font-size: 0.95rem; color: #475569; display: flex; align-items: center; gap: 10px; }
-        .pricing-features li::before { content: '✅'; }
-        .btn-pricing { display: block; width: 100%; padding: 18px; background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; border: none; border-radius: 14px; font-size: 1.1rem; font-weight: 700; cursor: pointer; text-decoration: none; text-align: center; box-shadow: 0 4px 20px rgba(37,99,235,0.3); transition: all 0.2s; }
-        .btn-pricing:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(37,99,235,0.4); }
-        
-        /* TESTIMONIALS */
-        .testimonials { background: #0f172a; color: white; padding: 60px 20px; text-align: center; }
-        .testimonials h2 { font-size: 1.8rem; margin-bottom: 32px; }
-        .testimonial-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; max-width: 900px; margin: 0 auto; }
-        .testimonial { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 24px; text-align: left; }
-        .testimonial p { color: #cbd5e1; font-size: 0.9rem; margin-bottom: 12px; font-style: italic; }
-        .testimonial .name { color: white; font-weight: 700; font-size: 0.85rem; }
-        .testimonial .business { color: #64748b; font-size: 0.8rem; }
-        
-        /* CTA */
-        .cta { background: linear-gradient(135deg, #2563eb, #7c3aed); padding: 60px 20px; text-align: center; color: white; }
-        .cta h2 { font-size: 2rem; font-weight: 800; margin-bottom: 12px; }
-        .cta p { color: rgba(255,255,255,0.8); margin-bottom: 24px; font-size: 1.05rem; }
-        .cta .btn-hero { background: white; color: #1e293b; }
-        
-        /* FOOTER */
-        .footer { background: #0f172a; color: #94a3b8; padding: 40px 20px; text-align: center; }
-        .footer-links { display: flex; gap: 24px; justify-content: center; margin-bottom: 16px; flex-wrap: wrap; }
-        .footer-links a { color: #94a3b8; text-decoration: none; font-size: 0.9rem; }
-        .footer-links a:hover { color: white; }
-        .footer p { font-size: 0.8rem; }
-        
-        /* WHATSAPP FLOAT */
-        .whatsapp-float { position: fixed; bottom: 24px; right: 24px; background: #25d366; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; box-shadow: 0 4px 20px rgba(37,211,102,0.4); z-index: 999; text-decoration: none; transition: transform 0.2s; }
-        .whatsapp-float:hover { transform: scale(1.1); }
-        
-        @media (max-width: 600px) {
-            .hero h1 { font-size: 1.8rem; }
-            .hero { padding: 60px 20px; }
-            .pricing-price { font-size: 2.5rem; }
-            .features-grid { grid-template-columns: 1fr; }
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GestiónPro - Software de Gestión para tu Negocio</title>
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<meta name="description" content="Software de gestión para negocios: inventario, ventas, mesas, cocina, tickets. Todo desde tu celular.">
+<meta property="og:title" content="GestiónPro - Software de Gestión para tu Negocio">
+<meta property="og:description" content="Inventario, ventas, mesas, cocina, tickets y reportes. Todo en un solo lugar.">
+<meta property="og:type" content="website">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1e293b;line-height:1.6}
+
+/* NAV */
+.nav{position:fixed;top:0;left:0;right:0;background:rgba(15,23,42,0.95);backdrop-filter:blur(10px);z-index:1000;padding:16px 0;border-bottom:1px solid rgba(255,255,255,0.05)}
+.nav-inner{max-width:1200px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between}
+.nav-logo{font-size:1.4rem;font-weight:800;color:white;text-decoration:none;display:flex;align-items:center;gap:10px}
+.nav-logo img{width:32px;height:32px;border-radius:8px}
+.nav-links{display:flex;gap:28px;align-items:center}
+.nav-links a{color:#94a3b8;text-decoration:none;font-size:0.9rem;font-weight:500;transition:color 0.2s}
+.nav-links a:hover{color:white}
+.nav-btn{background:linear-gradient(135deg,#6366f1,#4f46e5);color:white;padding:10px 22px;border-radius:8px;font-weight:700;font-size:0.85rem;text-decoration:none;transition:all 0.2s}
+.nav-btn:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(99,102,241,0.4)}
+
+/* HERO */
+.hero{min-height:100vh;background:linear-gradient(135deg,#0f172a 0%,#1e1b4b 50%,#0f172a 100%);display:flex;align-items:center;padding:120px 24px 80px;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(circle at 30% 40%,rgba(99,102,241,0.08) 0%,transparent 50%);animation:rotate 30s linear infinite}
+@keyframes rotate{to{transform:rotate(360deg)}}
+.hero-inner{max-width:800px;margin:0 auto;text-align:center;position:relative;z-index:1}
+.hero-badge{display:inline-block;background:rgba(99,102,241,0.15);color:#a5b4fc;border:1px solid rgba(99,102,241,0.3);padding:8px 20px;border-radius:24px;font-size:0.85rem;font-weight:600;margin-bottom:28px}
+.hero h1{font-size:clamp(2.2rem,5vw,3.5rem);font-weight:800;color:white;line-height:1.15;margin-bottom:20px}
+.hero h1 span{background:linear-gradient(135deg,#818cf8,#c084fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{font-size:1.15rem;color:#94a3b8;margin-bottom:36px;max-width:600px;margin-left:auto;margin-right:auto}
+.hero-btns{display:flex;gap:16px;justify-content:center;flex-wrap:wrap}
+.btn-primary{background:linear-gradient(135deg,#6366f1,#4f46e5);color:white;padding:16px 36px;border-radius:12px;font-size:1.05rem;font-weight:700;text-decoration:none;transition:all 0.2s;box-shadow:0 4px 20px rgba(99,102,241,0.4)}
+.btn-primary:hover{transform:translateY(-3px);box-shadow:0 8px 30px rgba(99,102,241,0.5)}
+.btn-secondary{background:rgba(255,255,255,0.06);color:white;padding:16px 36px;border-radius:12px;font-size:1.05rem;font-weight:700;text-decoration:none;border:1px solid rgba(255,255,255,0.15);transition:all 0.2s}
+.btn-secondary:hover{background:rgba(255,255,255,0.12)}
+
+/* SERVICIOS */
+.services{padding:100px 24px;max-width:1200px;margin:0 auto}
+.section-header{text-align:center;margin-bottom:60px}
+.section-header h2{font-size:2.2rem;font-weight:800;margin-bottom:12px}
+.section-header p{color:#64748b;font-size:1.05rem;max-width:600px;margin:0 auto}
+.services-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px}
+.service-card{background:#f8fafc;border:1px solid #e2e8f0;border-radius:16px;padding:32px;transition:all 0.3s}
+.service-card:hover{transform:translateY(-4px);box-shadow:0 12px 40px rgba(0,0,0,0.08);border-color:#6366f1}
+.service-icon{width:56px;height:56px;background:linear-gradient(135deg,#eef2ff,#e0e7ff);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.8rem;margin-bottom:18px}
+.service-card h3{font-size:1.15rem;font-weight:700;margin-bottom:8px}
+.service-card p{color:#64748b;font-size:0.9rem;line-height:1.6}
+
+/* POR QUÉ */
+.why{background:#0f172a;padding:100px 24px;color:white}
+.why-grid{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:32px;margin-top:60px}
+.why-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:32px;transition:all 0.3s}
+.why-card:hover{background:rgba(99,102,241,0.05);border-color:rgba(99,102,241,0.3)}
+.why-card .icon{font-size:2rem;margin-bottom:16px}
+.why-card h3{font-size:1.1rem;font-weight:700;margin-bottom:8px}
+.why-card p{color:#94a3b8;font-size:0.9rem}
+
+/* MÓDULOS */
+.modules{padding:100px 24px;background:#f8fafc}
+.modules-grid{max-width:1000px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-top:48px}
+.module-item{background:white;border:1px solid #e2e8f0;border-radius:12px;padding:20px;text-align:center;transition:all 0.2s}
+.module-item:hover{border-color:#6366f1;box-shadow:0 4px 16px rgba(99,102,241,0.1)}
+.module-item .emoji{font-size:2rem;margin-bottom:8px}
+.module-item span{font-size:0.9rem;font-weight:600;color:#1e293b}
+
+/* PRECIOS */
+.pricing{padding:100px 24px;max-width:1100px;margin:0 auto}
+.pricing-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;margin-top:48px}
+.price-card{background:white;border:2px solid #e2e8f0;border-radius:20px;padding:36px 28px;text-align:center;transition:all 0.3s;position:relative}
+.price-card.featured{border-color:#6366f1;box-shadow:0 12px 40px rgba(99,102,241,0.15)}
+.price-card.featured::before{content:'MÁS POPULAR';position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:#6366f1;color:white;padding:5px 18px;border-radius:20px;font-size:0.7rem;font-weight:700;letter-spacing:0.5px}
+.price-card .emoji{font-size:2.5rem;margin-bottom:12px}
+.price-card h3{font-size:1.3rem;font-weight:700;margin-bottom:4px}
+.price-card .desc{color:#64748b;font-size:0.85rem;margin-bottom:20px}
+.price-card .price{font-size:2.5rem;font-weight:800;color:#1e293b;margin-bottom:4px}
+.price-card .price span{font-size:0.9rem;color:#64748b;font-weight:500}
+.price-card ul{list-style:none;text-align:left;margin:24px 0;font-size:0.9rem;color:#475569}
+.price-card ul li{padding:8px 0;display:flex;align-items:center;gap:10px}
+.price-card ul li::before{content:'✅'}
+.price-card .btn-card{display:block;padding:16px;border-radius:12px;text-decoration:none;font-weight:700;font-size:1rem;transition:all 0.2s}
+.btn-card-primary{background:linear-gradient(135deg,#6366f1,#4f46e5);color:white;box-shadow:0 4px 16px rgba(99,102,241,0.3)}
+.btn-card-primary:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(99,102,241,0.4)}
+.btn-card-secondary{background:#f1f5f9;color:#1e293b}
+.btn-card-secondary:hover{background:#e2e8f0}
+
+/* CTA */
+.cta{background:linear-gradient(135deg,#6366f1,#4f46e5);padding:80px 24px;text-align:center;color:white}
+.cta h2{font-size:2.2rem;font-weight:800;margin-bottom:12px}
+.cta p{color:rgba(255,255,255,0.8);font-size:1.1rem;margin-bottom:32px}
+.cta .btn-cta{background:white;color:#4f46e5;padding:18px 40px;border-radius:12px;font-size:1.1rem;font-weight:700;text-decoration:none;display:inline-block;transition:all 0.2s}
+.cta .btn-cta:hover{transform:translateY(-3px);box-shadow:0 12px 30px rgba(0,0,0,0.2)}
+
+/* FOOTER */
+.footer{background:#0f172a;color:#94a3b8;padding:60px 24px 30px}
+.footer-inner{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:40px}
+.footer-brand h3{color:white;font-size:1.3rem;margin-bottom:12px}
+.footer-brand p{font-size:0.9rem;line-height:1.7}
+.footer-col h4{color:white;font-size:0.9rem;font-weight:700;margin-bottom:16px;text-transform:uppercase;letter-spacing:0.5px}
+.footer-col a{display:block;color:#94a3b8;text-decoration:none;font-size:0.85rem;padding:4px 0;transition:color 0.2s}
+.footer-col a:hover{color:white}
+.footer-bottom{max-width:1200px;margin:0 auto;border-top:1px solid rgba(255,255,255,0.06);margin-top:40px;padding-top:20px;text-align:center;font-size:0.8rem}
+
+/* MOBILE */
+@media(max-width:768px){
+.nav-links{display:none}
+.hero h1{font-size:2rem}
+.services-grid,.why-grid,.pricing-grid{grid-template-columns:1fr}
+.footer-inner{grid-template-columns:1fr}
+.modules-grid{grid-template-columns:repeat(2,1fr)}
+}
+
+/* WhatsApp float */
+.wa-float{position:fixed;bottom:24px;right:24px;background:#25d366;width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2rem;box-shadow:0 4px 20px rgba(37,211,102,0.4);z-index:999;text-decoration:none;transition:transform 0.2s}
+.wa-float:hover{transform:scale(1.1)}
+
+/* Mobile CTA */
+.mobile-cta{display:none;position:fixed;bottom:0;left:0;right:0;background:white;padding:12px 20px;box-shadow:0 -4px 20px rgba(0,0,0,0.1);z-index:998;text-align:center}
+.mobile-cta a{display:block;padding:14px;background:linear-gradient(135deg,#6366f1,#4f46e5);color:white;border-radius:12px;text-decoration:none;font-weight:700}
+@media(max-width:600px){.mobile-cta{display:block}.wa-float{bottom:80px}}
+</style>
 </head>
 <body>
-    <!-- HERO -->
-    <section class="hero">
-        <div class="hero-content">
-            <div class="hero-badge">🚀 Tu negocio completo en la nube</div>
-            <h1>Gestiona tu negocio <span>desde el celular</span></h1>
-            <p>Inventario, ventas, mesas, cocina, tickets y reportes. Todo en un solo lugar. Sin instalar nada.</p>
-            <div class="hero-btns">
-                <a href="login.html" class="btn-hero btn-primary">🚀 Empezar Gratis</a>
-                <a href="https://wa.me/573159756975?text=Hola%2C%20quiero%20información%20sobre%20GestiónPro" class="btn-hero btn-secondary" target="_blank">💬 WhatsApp</a>
-            </div>
-        </div>
-    </section>
 
-    <!-- FEATURES -->
-    <section class="section">
-        <div class="section-title">
-            <h2>Todo lo que tu negocio necesita</h2>
-            <p>Sin complicaciones. Se usa desde el celular, tablet o computador.</p>
-        </div>
-        <div class="features-grid">
-            <div class="feature-card">
-                <div class="feature-icon">📦</div>
-                <h3>Inventario Completo</h3>
-                <p>Productos con costo, precio, stock y alertas cuando se acaban.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">💰</div>
-                <h3>Ventas y Caja</h3>
-                <p>Registra ventas, descuenta stock automático y cierra caja cada día.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">🪑</div>
-                <h3>Mesas y Pedidos</h3>
-                <p>Para restaurantes y cafeterías. El mesero toma pedidos desde su celular.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">👨‍🍳</div>
-                <h3>Pantalla de Cocina</h3>
-                <p>Los pedidos llegan a la cocina en tiempo real con sonido de alerta.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">🧂</div>
-                <h3>Insumos y Recetas</h3>
-                <p>Controla materias primas. Se descuentan solas cuando vendes.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">🧾</div>
-                <h3>Tickets POS</h3>
-                <p>Imprime tickets en impresora térmica. Recibos, pre-cuentas y cocina.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">📊</div>
-                <h3>Reportes y Gráficas</h3>
-                <p>Sabe cuánto vendes, cuánto ganas y qué producto es el más rentable.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">📲</div>
-                <h3>Menú Digital + QR</h3>
-                <p>Tus clientes escanean un código y ven tu menú con precios.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">🎨</div>
-                <h3>Personalizable</h3>
-                <p>Pon tu logo, colores y nombre. Cada negocio se ve diferente.</p>
-            </div>
-        </div>
-    </section>
-
-    <!-- HOW IT WORKS -->
-    <section class="steps-section">
-        <div class="section-title">
-            <h2>¿Cómo funciona?</h2>
-            <p>En 3 minutos ya estás usando la app</p>
-        </div>
-        <div class="steps-grid">
-            <div class="step">
-                <div class="step-number">1</div>
-                <div class="step-content">
-                    <h3>Crea tu cuenta gratis</h3>
-                    <p>Solo necesitas tu correo. No pide tarjeta ni datos bancarios.</p>
-                </div>
-            </div>
-            <div class="step">
-                <div class="step-number">2</div>
-                <div class="step-content">
-                    <h3>Agrega tus productos</h3>
-                    <p>Pon nombre, costo, precio y stock. La app calcula tus ganancias.</p>
-                </div>
-            </div>
-            <div class="step">
-                <div class="step-number">3</div>
-                <div class="step-content">
-                    <h3>Empieza a vender</h3>
-                    <p>Registra ventas, toma pedidos por mesa y mira tus reportes crecer.</p>
-                </div>
-            </div>
-            <div class="step">
-                <div class="step-number">4</div>
-                <div class="step-content">
-                    <h3>Controla todo desde el celular</h3>
-                    <p>Revisa ventas, stock y ganancias desde cualquier lugar. Funciona 24/7.</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- PRICING -->
-    <section class="pricing-section" id="precios">
-        <div class="section-title">
-            <h2>Planes para cada negocio</h2>
-            <p>Empieza gratis. Elige el plan que necesites.</p>
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;max-width:950px;margin:0 auto;">
-            <!-- BASICO -->
-            <div style="background:white;border:2px solid #e2e8f0;border-radius:20px;padding:32px 24px;text-align:center;">
-                <div style="font-size:2rem;margin-bottom:8px;">☕</div>
-                <h3 style="font-size:1.2rem;margin-bottom:4px;">Básico</h3>
-                <p style="color:#64748b;font-size:0.85rem;margin-bottom:16px;">Para tiendas y negocios pequeños</p>
-                <div style="font-size:2.2rem;font-weight:800;color:#1e293b;">$25.000<span style="font-size:0.9rem;color:#64748b;font-weight:500;">/mes</span></div>
-                <ul style="text-align:left;list-style:none;margin:20px 0;font-size:0.9rem;color:#475569;">
-                    <li style="padding:6px 0;">✅ Inventario ilimitado</li>
-                    <li style="padding:6px 0;">✅ Ventas y cierre de caja</li>
-                    <li style="padding:6px 0;">✅ Clientes y proveedores</li>
-                    <li style="padding:6px 0;">✅ Gastos del negocio</li>
-                    <li style="padding:6px 0;">✅ Reportes y gráficas</li>
-                    <li style="padding:6px 0;">✅ Calculadora de costos</li>
-                    <li style="padding:6px 0;">✅ Exportar datos</li>
-                </ul>
-                <a href="https://wa.me/573159756975?text=Hola%2C%20quiero%20el%20plan%20Básico%20de%20GestiónPro" target="_blank" style="display:block;padding:14px;background:#f1f5f9;color:#1e293b;border-radius:12px;text-decoration:none;font-weight:700;">Contratar Plan</a>
-            </div>
-            <!-- RESTAURANTE -->
-            <div style="background:white;border:3px solid #2563eb;border-radius:20px;padding:32px 24px;text-align:center;box-shadow:0 12px 40px rgba(37,99,235,0.15);position:relative;">
-                <div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:#2563eb;color:white;padding:4px 16px;border-radius:20px;font-size:0.75rem;font-weight:700;">MÁS POPULAR</div>
-                <div style="font-size:2rem;margin-bottom:8px;">🍽️</div>
-                <h3 style="font-size:1.2rem;margin-bottom:4px;">Restaurante</h3>
-                <p style="color:#64748b;font-size:0.85rem;margin-bottom:16px;">Para cafeterías y restaurantes</p>
-                <div style="font-size:2.2rem;font-weight:800;color:#1e293b;">$45.000<span style="font-size:0.9rem;color:#64748b;font-weight:500;">/mes</span></div>
-                <ul style="text-align:left;list-style:none;margin:20px 0;font-size:0.9rem;color:#475569;">
-                    <li style="padding:6px 0;">✅ Todo lo del plan Básico</li>
-                    <li style="padding:6px 0;">✅ Mesas y pedidos por celular</li>
-                    <li style="padding:6px 0;">✅ Pantalla de cocina</li>
-                    <li style="padding:6px 0;">✅ Insumos y recetas</li>
-                    <li style="padding:6px 0;">✅ Tickets POS (tirilla)</li>
-                    <li style="padding:6px 0;">✅ Empleados y roles</li>
-                    <li style="padding:6px 0;">✅ Personalización</li>
-                </ul>
-                <a href="login.html" style="display:block;padding:14px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:white;border-radius:12px;text-decoration:none;font-weight:700;box-shadow:0 4px 12px rgba(37,99,235,0.3);">🚀 Empezar ahora</a>
-            </div>
-            <!-- PREMIUM -->
-            <div style="background:white;border:2px solid #e2e8f0;border-radius:20px;padding:32px 24px;text-align:center;">
-                <div style="font-size:2rem;margin-bottom:8px;">👑</div>
-                <h3 style="font-size:1.2rem;margin-bottom:4px;">Premium</h3>
-                <p style="color:#64748b;font-size:0.85rem;margin-bottom:16px;">Todo incluido + soporte VIP</p>
-                <div style="font-size:2.2rem;font-weight:800;color:#1e293b;">$65.000<span style="font-size:0.9rem;color:#64748b;font-weight:500;">/mes</span></div>
-                <ul style="text-align:left;list-style:none;margin:20px 0;font-size:0.9rem;color:#475569;">
-                    <li style="padding:6px 0;">✅ Todo lo del plan Restaurante</li>
-                    <li style="padding:6px 0;">✅ Menú digital con QR</li>
-                    <li style="padding:6px 0;">✅ Soporte prioritario</li>
-                    <li style="padding:6px 0;">✅ Configuración personalizada</li>
-                    <li style="padding:6px 0;">✅ Capacitación incluida</li>
-                    <li style="padding:6px 0;">✅ Actualizaciones primero</li>
-                </ul>
-                <a href="https://wa.me/573159756975?text=Hola%2C%20quiero%20el%20plan%20Premium%20de%20GestiónPro" target="_blank" style="display:block;padding:14px;background:#f1f5f9;color:#1e293b;border-radius:12px;text-decoration:none;font-weight:700;">Contratar Plan</a>
-            </div>
-        </div>
-        <p style="text-align:center;color:#64748b;margin-top:24px;font-size:0.9rem;">✨ El plan Restaurante incluye todas las funciones</p>
-    </section>
-
-    <!-- TESTIMONIALS -->
-    <section class="testimonials">
-        <h2>Negocios que ya usan GestiónPro</h2>
-        <div class="testimonial-grid">
-            <div class="testimonial">
-                <p>"Antes anotaba todo en un cuaderno y se me perdían las cuentas. Ahora todo está en el celular y sé exactamente cuánto gano."</p>
-                <div class="name">María López</div>
-                <div class="business">Cafetería El Aroma</div>
-            </div>
-            <div class="testimonial">
-                <p>"Lo mejor es que el mesero toma el pedido y llega directo a la cocina. Ya no se pierden pedidos ni se confunden."</p>
-                <div class="name">Carlos Mendoza</div>
-                <div class="business">Restaurante Sabor Criollo</div>
-            </div>
-            <div class="testimonial">
-                <p>"Por $35 mil al mes tengo todo controlado. Antes pagaba $150 mil por un programa que ni entendía."</p>
-                <div class="name">Ana Gutiérrez</div>
-                <div class="business">Mini Market La Esquina</div>
-            </div>
-        </div>
-    </section>
-
-    <!-- CTA -->
-    <section class="cta">
-        <h2>¿Listo para organizar tu negocio?</h2>
-        <p>Empieza hoy. Sin compromiso.</p>
-        <a href="login.html" class="btn-hero" style="background:white;color:#1e293b;">🚀 Crear cuenta gratis</a>
-    </section>
-
-    <!-- FOOTER -->
-    <footer class="footer">
-        <div class="footer-links">
-            <a href="login.html">Iniciar Sesión</a>
-            <a href="terminos.html">Términos y Condiciones</a>
-            <a href="https://wa.me/573159756975" target="_blank">Soporte</a>
-        </div>
-        <p>GestiónPro &copy; 2025 — Hecho en Colombia 🇨🇴</p>
-    </footer>
-
-    <!-- WHATSAPP FLOTANTE -->
-    <a href="https://wa.me/573159756975?text=Hola%2C%20quiero%20información%20sobre%20GestiónPro" target="_blank" class="whatsapp-float">💬</a>
-
-    <!-- CTA flotante mobile -->
-    <style>
-        .mobile-cta-float { display:none; position:fixed; bottom:0; left:0; right:0; background:white; padding:12px 20px; box-shadow:0 -4px 20px rgba(0,0,0,0.1); z-index:998; text-align:center; }
-        .mobile-cta-float a { display:block; padding:14px; background:linear-gradient(135deg,#2563eb,#1d4ed8); color:white; border-radius:12px; text-decoration:none; font-weight:700; font-size:1rem; }
-        @media (max-width:600px) { .mobile-cta-float { display:block; } .whatsapp-float { bottom:80px; } }
-    </style>
-    <div class="mobile-cta-float">
-        <a href="login.html">🚀 Empezar Gratis</a>
+<!-- NAV -->
+<nav class="nav">
+<div class="nav-inner">
+    <a href="#" class="nav-logo"><img src="icons/icon.svg" alt="G"> GestiónPro</a>
+    <div class="nav-links">
+        <a href="#servicios">Servicios</a>
+        <a href="#modulos">Módulos</a>
+        <a href="#precios">Precios</a>
+        <a href="https://wa.me/573159756975" target="_blank">Contacto</a>
+        <a href="login.html" class="nav-btn">Iniciar Sesión</a>
     </div>
+</div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+<div class="hero-inner">
+    <div class="hero-badge">🚀 Software de gestión #1 en Colombia</div>
+    <h1>Soluciones inteligentes para <span>tu negocio</span></h1>
+    <p>Software completo de punto de venta, inventario, mesas, cocina y reportes. Todo desde tu celular, sin instalar nada.</p>
+    <div class="hero-btns">
+        <a href="login.html" class="btn-primary">Empezar Gratis</a>
+        <a href="#modulos" class="btn-secondary">Ver Módulos</a>
+    </div>
+</div>
+</section>
+
+<!-- SERVICIOS -->
+<section class="services" id="servicios">
+<div class="section-header">
+    <h2>Nuestros Servicios</h2>
+    <p>Soluciones tecnológicas integrales que transforman la manera en que tu negocio opera.</p>
+</div>
+<div class="services-grid">
+    <div class="service-card">
+        <div class="service-icon">📦</div>
+        <h3>Gestión de Inventario</h3>
+        <p>Control total de stock con alertas, categorías, fotos y predicción de agotamiento.</p>
+    </div>
+    <div class="service-card">
+        <div class="service-icon">💰</div>
+        <h3>Punto de Venta (POS)</h3>
+        <p>Venta rápida con lector de códigos de barras, combos, descuentos y múltiples métodos de pago.</p>
+    </div>
+    <div class="service-card">
+        <div class="service-icon">🪑</div>
+        <h3>Mesas y Pedidos</h3>
+        <p>Sistema completo para restaurantes: mesas, meseros, cocina en tiempo real y pedidos delivery.</p>
+    </div>
+    <div class="service-card">
+        <div class="service-icon">📊</div>
+        <h3>Reportes Inteligentes</h3>
+        <p>Dashboard con gráficas, comparativas, predicciones y reportes por WhatsApp automáticos.</p>
+    </div>
+    <div class="service-card">
+        <div class="service-icon">🔒</div>
+        <h3>Seguridad y Roles</h3>
+        <p>PINs encriptados, roles por empleado, registro de quién hizo qué y cuándo.</p>
+    </div>
+    <div class="service-card">
+        <div class="service-icon">📱</div>
+        <h3>App Móvil (PWA)</h3>
+        <p>Se instala como app en el celular. Funciona sin internet y sincroniza automáticamente.</p>
+    </div>
+</div>
+</section>
+
+<!-- POR QUÉ -->
+<section class="why">
+<div class="section-header">
+    <h2 style="color:white">¿Por Qué Elegir GestiónPro?</h2>
+    <p style="color:#94a3b8">Nos diferenciamos por nuestra simplicidad y potencia.</p>
+</div>
+<div class="why-grid">
+    <div class="why-card">
+        <div class="icon">⚡</div>
+        <h3>Fácil de Usar</h3>
+        <p>Más fácil que WhatsApp. Sin capacitaciones largas. En 5 minutos ya estás vendiendo.</p>
+    </div>
+    <div class="why-card">
+        <div class="icon">📡</div>
+        <h3>Funciona Sin Internet</h3>
+        <p>Sigue vendiendo aunque no haya señal. Cuando vuelve internet se sincroniza solo.</p>
+    </div>
+    <div class="why-card">
+        <div class="icon">🎯</div>
+        <h3>Multi-Negocio</h3>
+        <p>Se adapta a tu tipo de negocio: restaurante, ferretería, peluquería, gimnasio y más.</p>
+    </div>
+    <div class="why-card">
+        <div class="icon">💬</div>
+        <h3>Soporte Directo</h3>
+        <p>Te atendemos por WhatsApp personalmente. Sin robots, sin esperas.</p>
+    </div>
+</div>
+</section>
+
+<!-- MÓDULOS -->
+<section class="modules" id="modulos">
+<div class="section-header">
+    <h2>Módulos Incluidos</h2>
+    <p>Todo lo que tu negocio necesita en un solo sistema.</p>
+</div>
+<div class="modules-grid">
+    <div class="module-item"><div class="emoji">📋</div><span>Inventario</span></div>
+    <div class="module-item"><div class="emoji">💰</div><span>Ventas POS</span></div>
+    <div class="module-item"><div class="emoji">🪑</div><span>Mesas</span></div>
+    <div class="module-item"><div class="emoji">👨‍🍳</div><span>Cocina</span></div>
+    <div class="module-item"><div class="emoji">🧾</div><span>Cierre de Caja</span></div>
+    <div class="module-item"><div class="emoji">📊</div><span>Reportes</span></div>
+    <div class="module-item"><div class="emoji">👥</div><span>Clientes</span></div>
+    <div class="module-item"><div class="emoji">🚚</div><span>Proveedores</span></div>
+    <div class="module-item"><div class="emoji">💸</div><span>Gastos</span></div>
+    <div class="module-item"><div class="emoji">🧂</div><span>Insumos</span></div>
+    <div class="module-item"><div class="emoji">📝</div><span>Recetas</span></div>
+    <div class="module-item"><div class="emoji">🧮</div><span>Calculadora</span></div>
+    <div class="module-item"><div class="emoji">📲</div><span>Menú QR</span></div>
+    <div class="module-item"><div class="emoji">🏍️</div><span>Delivery</span></div>
+    <div class="module-item"><div class="emoji">📝</div><span>Fiados</span></div>
+    <div class="module-item"><div class="emoji">📅</div><span>Citas</span></div>
+    <div class="module-item"><div class="emoji">🎁</div><span>Combos</span></div>
+    <div class="module-item"><div class="emoji">📋</div><span>Cotizaciones</span></div>
+    <div class="module-item"><div class="emoji">🏢</div><span>Sucursales</span></div>
+    <div class="module-item"><div class="emoji">🔮</div><span>Predicción Stock</span></div>
+</div>
+</section>
+
+<!-- PRECIOS -->
+<section class="pricing" id="precios">
+<div class="section-header">
+    <h2>Planes para Cada Negocio</h2>
+    <p>Elige el que mejor se adapte a tus necesidades.</p>
+</div>
+<div class="pricing-grid">
+    <div class="price-card">
+        <div class="emoji">☕</div>
+        <h3>Básico</h3>
+        <p class="desc">Tiendas y negocios pequeños</p>
+        <div class="price">$25.000<span>/mes</span></div>
+        <ul>
+            <li>Inventario ilimitado</li>
+            <li>Ventas y cierre de caja</li>
+            <li>Clientes y proveedores</li>
+            <li>Gastos y reportes</li>
+            <li>Calculadora de costos</li>
+            <li>Funciona offline</li>
+        </ul>
+        <a href="https://wa.me/573159756975?text=Hola%2C%20quiero%20el%20plan%20Básico" target="_blank" class="btn-card btn-card-secondary">Contratar</a>
+    </div>
+    <div class="price-card featured">
+        <div class="emoji">🍽️</div>
+        <h3>Restaurante</h3>
+        <p class="desc">Cafeterías y restaurantes</p>
+        <div class="price">$45.000<span>/mes</span></div>
+        <ul>
+            <li>Todo lo del Básico</li>
+            <li>Mesas y pedidos por celular</li>
+            <li>Pantalla de cocina</li>
+            <li>Insumos y recetas</li>
+            <li>Delivery y para llevar</li>
+            <li>Menú QR con fotos</li>
+            <li>Empleados y roles con PIN</li>
+        </ul>
+        <a href="login.html" class="btn-card btn-card-primary">Empezar Ahora</a>
+    </div>
+    <div class="price-card">
+        <div class="emoji">👑</div>
+        <h3>Premium</h3>
+        <p class="desc">Todo incluido + soporte VIP</p>
+        <div class="price">$65.000<span>/mes</span></div>
+        <ul>
+            <li>Todo lo del Restaurante</li>
+            <li>Múltiples sucursales</li>
+            <li>Combos y cotizaciones</li>
+            <li>Soporte prioritario</li>
+            <li>Configuración personalizada</li>
+            <li>Capacitación incluida</li>
+        </ul>
+        <a href="https://wa.me/573159756975?text=Hola%2C%20quiero%20el%20plan%20Premium" target="_blank" class="btn-card btn-card-secondary">Contratar</a>
+    </div>
+</div>
+</section>
+
+<!-- CTA -->
+<section class="cta">
+<h2>¿Listo para organizar tu negocio?</h2>
+<p>Empieza hoy. Sin compromiso. Sin tarjeta de crédito.</p>
+<a href="login.html" class="btn-cta">🚀 Crear Cuenta Gratis</a>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+<div class="footer-inner">
+    <div class="footer-brand">
+        <h3>GestiónPro</h3>
+        <p>Software de gestión completo para negocios. Inventario, ventas, mesas, cocina, reportes y más. Todo desde tu celular.</p>
+    </div>
+    <div class="footer-col">
+        <h4>Producto</h4>
+        <a href="#servicios">Servicios</a>
+        <a href="#modulos">Módulos</a>
+        <a href="#precios">Precios</a>
+        <a href="login.html">Iniciar Sesión</a>
+    </div>
+    <div class="footer-col">
+        <h4>Empresa</h4>
+        <a href="terminos.html">Términos</a>
+        <a href="https://wa.me/573159756975" target="_blank">Soporte</a>
+    </div>
+    <div class="footer-col">
+        <h4>Contacto</h4>
+        <a href="https://wa.me/573159756975" target="_blank">WhatsApp</a>
+        <a href="mailto:kalethcano0216@gmail.com">Email</a>
+    </div>
+</div>
+<div class="footer-bottom">
+    <p>© 2025 GestiónPro. Todos los derechos reservados. Hecho en Colombia 🇨🇴</p>
+</div>
+</footer>
+
+<!-- WhatsApp Float -->
+<a href="https://wa.me/573159756975?text=Hola%2C%20quiero%20información%20sobre%20GestiónPro" target="_blank" class="wa-float">💬</a>
+
+<!-- Mobile CTA -->
+<div class="mobile-cta">
+    <a href="login.html">🚀 Empezar Gratis</a>
+</div>
+
 </body>
 </html>
