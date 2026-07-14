@@ -75,6 +75,11 @@ body {
     font-size: 14px;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    max-width: 100vw;
+}
+
+html {
+    overflow-x: hidden;
 }
 
 
@@ -195,6 +200,8 @@ body {
     padding: 32px 40px;
     min-height: 100vh;
     background: var(--bg);
+    max-width: 100%;
+    overflow-x: hidden;
 }
 
 /* ==========================================
