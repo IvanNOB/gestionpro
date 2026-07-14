@@ -1298,6 +1298,7 @@
                 <h3>⚡ Venta Rápida POS</h3>
                 <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
                     <button class="btn btn-sm btn-outline" id="btn-scan-barcode">📷 Escanear Código</button>
+                    <button class="btn btn-sm btn-outline" onclick="calculateChange()">💵 Calcular Vuelto</button>
                     <select id="pos-method" style="padding:6px 12px;border:1px solid var(--border);border-radius:8px;background:var(--card-bg);color:var(--text);font-size:0.85rem;">
                         <option value="Efectivo">💵 Efectivo</option>
                         <option value="Tarjeta">💳 Tarjeta</option>
@@ -1309,6 +1310,30 @@
                     <strong>Total: <span id="pos-total">$0</span></strong>
                     <button class="btn btn-success" onclick="processPOSSale()">💰 Cobrar POS</button>
                 </div>
+            </div>
+
+            <div class="card" id="combos-card">
+                <h3>🎁 Combos / Paquetes</h3>
+                <div style="margin-bottom:12px;">
+                    <button class="btn btn-sm btn-primary" onclick="addCombo()">+ Crear Combo</button>
+                </div>
+                <div id="combos-list"></div>
+            </div>
+
+            <div class="card" id="quotes-card">
+                <h3>📋 Cotizaciones</h3>
+                <div style="margin-bottom:12px;">
+                    <button class="btn btn-sm btn-primary" onclick="addQuote()">+ Nueva Cotización</button>
+                </div>
+                <div id="quotes-list"></div>
+            </div>
+
+            <div class="card" id="purchase-lots-card">
+                <h3>📦 Registro de Compras (Lotes)</h3>
+                <div style="margin-bottom:12px;">
+                    <button class="btn btn-sm btn-primary" onclick="addPurchaseLot()">+ Registrar Compra</button>
+                </div>
+                <div id="purchase-lots-list"></div>
             </div>
             </section>
 

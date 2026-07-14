@@ -450,6 +450,9 @@ function initModulesExtra() {
     loadDebts();
     loadPromotions();
     loadBranches();
+    loadCombos();
+    loadQuotes();
+    loadPurchaseLots();
     renderMonthComparison();
     renderStockPredictions();
     renderExpirationAlerts();
@@ -576,4 +579,273 @@ function attachBranchToSale(sale) {
         sale.branchName = activeBranch.name;
     }
     return sale;
+}
+
+
+
+// ==========================================
+// COMBOS / PAQUETES
+// ==========================================
+let combos = [];
+
+async function loadCombos() {
+    if (!currentUser) return;
+    try {
+        const snap = await userCollection('combos').get();
+        combos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderCombos();
+    } catch (e) {}
+}
+
+async function addCombo() {
+    const name = prompt('Nombre del combo (ej: Combo Hamburguesa + Bebida):');
+    if (!name) return;
+    const price = parseFloat(prompt('Precio del combo ($):'));
+    if (!price || price <= 0) return;
+
+    // Seleccionar productos del combo
+    const availableProducts = products.map(p => `${p.name} ($${Math.round(p.price).toLocaleString('es-CO')})`).join('\n');
+    const selectedNames = prompt(`Escribe los productos del combo separados por coma:\n\nDisponibles:\n${availableProducts}\n\nEj: Hamburguesa, Papas, Gaseosa`);
+    if (!selectedNames) return;
+
+    const items = selectedNames.split(',').map(n => {
+        const trimmed = n.trim();
+        const product = products.find(p => p.name.toLowerCase().includes(trimmed.toLowerCase()));
+        return product ? { productId: product.id, name: product.name, price: product.price, cost: product.cost } : { productId: null, name: trimmed, price: 0, cost: 0 };
+    });
+
+    const totalCost = items.reduce((s, i) => s + i.cost, 0);
+    const combo = { id: generateId(), name: name.trim(), price, items, totalCost, profit: price - totalCost, active: true, createdAt: new Date().toISOString() };
+    combos.push(combo);
+    await firestoreOperation(() => userCollection('combos').doc(combo.id).set(combo));
+    renderCombos();
+    showToast(`Combo "${name}" creado ($${Math.round(price).toLocaleString('es-CO')})`, 'success');
+}
+
+async function sellCombo(id) {
+    const combo = combos.find(c => c.id === id);
+    if (!combo) return;
+    const method = document.getElementById('pos-method')?.value || 'Efectivo';
+
+    // Registrar como venta
+    const sale = { id: generateId(), productId: 'combo_' + combo.id, productName: '🎁 ' + combo.name, quantity: 1, price: combo.price, cost: combo.totalCost, discount: 0, discountAmount: 0, total: combo.price, profit: combo.profit, client: '', method, notes: 'Combo', date: new Date().toISOString(), soldBy: sessionStorage.getItem('activeEmployee') || 'Dueño' };
+    sales.push(sale);
+    await saveSale(sale);
+
+    // Descontar stock de cada producto del combo
+    for (const item of combo.items) {
+        if (item.productId) {
+            const product = products.find(p => p.id === item.productId);
+            if (product && product.quantity > 0) { product.quantity--; await saveProduct(product); }
+        }
+    }
+
+    if (navigator.vibrate) navigator.vibrate(100);
+    showToast(`💰 Combo "${combo.name}" vendido: ${formatCurrency(combo.price)}`, 'success');
+    renderAll();
+}
+
+async function deleteCombo(id) {
+    combos = combos.filter(c => c.id !== id);
+    await firestoreOperation(() => userCollection('combos').doc(id).delete());
+    renderCombos();
+    showToast('Combo eliminado', 'warning');
+}
+
+function renderCombos() {
+    const container = document.getElementById('combos-list');
+    if (!container) return;
+    if (combos.length === 0) { container.innerHTML = '<p style="color:var(--text-light);">No hay combos creados</p>'; return; }
+    container.innerHTML = combos.filter(c => c.active).map(c => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:14px;background:var(--bg);border:1px solid var(--border);border-radius:12px;margin-bottom:8px;">
+            <div>
+                <strong>🎁 ${esc(c.name)}</strong>
+                <div style="font-size:0.8rem;color:var(--text-light);margin-top:4px;">${c.items.map(i => i.name).join(' + ')}</div>
+                <div style="font-size:0.8rem;color:var(--success);margin-top:2px;">Ganancia: ${formatCurrency(c.profit)}</div>
+            </div>
+            <div style="text-align:right;">
+                <div style="font-weight:800;font-size:1.1rem;">${formatCurrency(c.price)}</div>
+                <div style="display:flex;gap:6px;margin-top:6px;">
+                    <button onclick="sellCombo('${c.id}')" style="background:var(--success);color:white;border:none;padding:6px 12px;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.8rem;">💰 Vender</button>
+                    <button onclick="deleteCombo('${c.id}')" style="background:var(--danger);color:white;border:none;padding:6px 8px;border-radius:8px;cursor:pointer;font-size:0.8rem;">🗑️</button>
+                </div>
+            </div>
+        </div>`).join('');
+}
+
+
+
+// ==========================================
+// COTIZACIONES
+// ==========================================
+let quotes = [];
+
+async function loadQuotes() {
+    if (!currentUser) return;
+    try {
+        const snap = await userCollection('quotes').orderBy('date', 'desc').limit(50).get();
+        quotes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderQuotes();
+    } catch (e) {}
+}
+
+async function addQuote() {
+    const client = prompt('Cliente para la cotización:');
+    if (!client) return;
+    const itemsText = prompt('Productos (separados por coma):\nEj: Hamburguesa x2, Papas x1, Gaseosa x3');
+    if (!itemsText) return;
+
+    const items = itemsText.split(',').map(text => {
+        const match = text.trim().match(/(.+?)\s*x?\s*(\d+)?$/i);
+        const name = match ? match[1].trim() : text.trim();
+        const qty = match && match[2] ? parseInt(match[2]) : 1;
+        const product = products.find(p => p.name.toLowerCase().includes(name.toLowerCase()));
+        return { name: product ? product.name : name, price: product ? product.price : 0, qty };
+    });
+
+    const total = items.reduce((s, i) => s + (i.price * i.qty), 0);
+    const quote = { id: generateId(), client: client.trim(), items, total, status: 'pendiente', date: new Date().toISOString(), validUntil: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] };
+    quotes.push(quote);
+    await firestoreOperation(() => userCollection('quotes').doc(quote.id).set(quote));
+    renderQuotes();
+    showToast(`Cotización para "${client}" creada: ${formatCurrency(total)}`, 'success');
+}
+
+async function convertQuoteToSale(id) {
+    const quote = quotes.find(q => q.id === id);
+    if (!quote) return;
+    const method = prompt('Método de pago (Efectivo/Tarjeta/Transferencia):', 'Efectivo') || 'Efectivo';
+
+    for (const item of quote.items) {
+        const product = products.find(p => p.name === item.name);
+        const sale = { id: generateId(), productId: product?.id || '', productName: item.name, quantity: item.qty, price: item.price, cost: product?.cost || 0, discount: 0, discountAmount: 0, total: item.price * item.qty, profit: (item.price - (product?.cost || 0)) * item.qty, client: quote.client, method, notes: 'Desde cotización', date: new Date().toISOString(), soldBy: sessionStorage.getItem('activeEmployee') || 'Dueño' };
+        sales.push(sale);
+        await saveSale(sale);
+        if (product) { product.quantity = Math.max(0, product.quantity - item.qty); await saveProduct(product); }
+    }
+
+    quote.status = 'convertida';
+    await firestoreOperation(() => userCollection('quotes').doc(id).update({ status: 'convertida' }));
+    renderQuotes();
+    renderAll();
+    showToast(`Cotización convertida en venta: ${formatCurrency(quote.total)}`, 'success');
+}
+
+function printQuote(id) {
+    const quote = quotes.find(q => q.id === id);
+    if (!quote) return;
+    const html = `<!DOCTYPE html><html><head><style>body{font-family:sans-serif;padding:20px;max-width:600px;margin:auto;}h2{text-align:center;}table{width:100%;border-collapse:collapse;margin:20px 0;}th,td{border:1px solid #ddd;padding:10px;text-align:left;}th{background:#f5f5f5;}.total{font-size:1.3rem;font-weight:bold;text-align:right;margin-top:20px;}</style></head><body>
+        <h2>${esc(settings.businessName || 'GestiónPro')}</h2>
+        <p style="text-align:center;color:#666;">COTIZACIÓN</p>
+        <p><strong>Cliente:</strong> ${esc(quote.client)}</p>
+        <p><strong>Fecha:</strong> ${new Date(quote.date).toLocaleDateString('es-CO')}</p>
+        <p><strong>Válida hasta:</strong> ${quote.validUntil}</p>
+        <table><thead><tr><th>Producto</th><th>Cant</th><th>Precio</th><th>Subtotal</th></tr></thead>
+        <tbody>${quote.items.map(i => `<tr><td>${esc(i.name)}</td><td>${i.qty}</td><td>$${Math.round(i.price).toLocaleString('es-CO')}</td><td>$${Math.round(i.price * i.qty).toLocaleString('es-CO')}</td></tr>`).join('')}</tbody></table>
+        <p class="total">TOTAL: $${Math.round(quote.total).toLocaleString('es-CO')}</p>
+        <p style="text-align:center;color:#999;margin-top:40px;">Esta cotización no es una factura</p>
+        <script>window.onload=function(){window.print();}<\/script></body></html>`;
+    const win = window.open('', '_blank', 'width=700,height=500');
+    if (win) { win.document.write(html); win.document.close(); }
+}
+
+function renderQuotes() {
+    const container = document.getElementById('quotes-list');
+    if (!container) return;
+    const pending = quotes.filter(q => q.status === 'pendiente');
+    if (pending.length === 0) { container.innerHTML = '<p style="color:var(--text-light);">No hay cotizaciones pendientes</p>'; return; }
+    container.innerHTML = pending.map(q => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:14px;background:var(--bg);border:1px solid var(--border);border-radius:12px;margin-bottom:8px;">
+            <div>
+                <strong>${esc(q.client)}</strong>
+                <div style="font-size:0.8rem;color:var(--text-light);">${q.items.map(i => i.qty + 'x ' + i.name).join(', ')}</div>
+                <div style="font-size:0.75rem;color:var(--text-light);">Válida hasta: ${q.validUntil}</div>
+            </div>
+            <div style="text-align:right;">
+                <div style="font-weight:800;">${formatCurrency(q.total)}</div>
+                <div style="display:flex;gap:4px;margin-top:6px;">
+                    <button onclick="convertQuoteToSale('${q.id}')" style="background:var(--success);color:white;border:none;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:0.75rem;">💰 Vender</button>
+                    <button onclick="printQuote('${q.id}')" style="background:var(--primary);color:white;border:none;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:0.75rem;">🖨️</button>
+                </div>
+            </div>
+        </div>`).join('');
+}
+
+
+
+// ==========================================
+// VUELTO / CAMBIO AL COBRAR
+// ==========================================
+function calculateChange() {
+    const totalEl = document.getElementById('pos-total') || document.getElementById('order-total-value');
+    if (!totalEl) return;
+    const totalText = totalEl.textContent.replace(/[^0-9]/g, '');
+    const total = parseInt(totalText) || 0;
+    const paid = parseFloat(prompt(`Total a pagar: ${formatCurrency(total)}\n\n¿Con cuánto paga el cliente?`));
+    if (!paid || paid <= 0) return;
+    const change = paid - total;
+    if (change < 0) {
+        showToast(`⚠️ Faltan ${formatCurrency(Math.abs(change))}`, 'error');
+    } else if (change === 0) {
+        showToast('✅ Pago exacto', 'success');
+    } else {
+        showToast(`💵 Vuelto: ${formatCurrency(change)}`, 'success');
+    }
+}
+
+// ==========================================
+// LOTES DE COMPRA (Historial de reabastecimiento)
+// ==========================================
+let purchaseLots = [];
+
+async function loadPurchaseLots() {
+    if (!currentUser) return;
+    try {
+        const snap = await userCollection('purchaseLots').orderBy('date', 'desc').limit(50).get();
+        purchaseLots = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderPurchaseLots();
+    } catch (e) {}
+}
+
+async function addPurchaseLot() {
+    const productName = prompt('¿Qué producto compraste?');
+    if (!productName) return;
+    const product = products.find(p => p.name.toLowerCase().includes(productName.toLowerCase()));
+
+    const qty = parseInt(prompt('¿Cuántas unidades compraste?'));
+    if (!qty || qty <= 0) return;
+    const totalCost = parseFloat(prompt('¿Cuánto pagaste en total? ($)'));
+    if (!totalCost || totalCost <= 0) return;
+    const supplier = prompt('Proveedor (opcional):', '') || '';
+
+    const costPerUnit = totalCost / qty;
+    const lot = { id: generateId(), productId: product?.id || '', productName: product?.name || productName, quantity: qty, totalCost, costPerUnit: Math.round(costPerUnit * 100) / 100, supplier, date: new Date().toISOString() };
+
+    purchaseLots.push(lot);
+    await firestoreOperation(() => userCollection('purchaseLots').doc(lot.id).set(lot));
+
+    // Actualizar stock del producto si existe
+    if (product) {
+        product.quantity += qty;
+        product.cost = Math.round(costPerUnit * 100) / 100; // Actualizar costo unitario
+        await saveProduct(product);
+        renderAll();
+    }
+
+    renderPurchaseLots();
+    showToast(`📦 Compra registrada: ${qty}x ${product?.name || productName} por ${formatCurrency(totalCost)}`, 'success');
+}
+
+function renderPurchaseLots() {
+    const container = document.getElementById('purchase-lots-list');
+    if (!container) return;
+    if (purchaseLots.length === 0) { container.innerHTML = '<p style="color:var(--text-light);">No hay compras registradas</p>'; return; }
+    container.innerHTML = purchaseLots.slice(0, 20).map(l => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:10px;margin-bottom:6px;">
+            <div>
+                <strong>📦 ${esc(l.productName)}</strong>
+                <div style="font-size:0.8rem;color:var(--text-light);">${l.quantity} uds × ${formatCurrency(l.costPerUnit)} = ${formatCurrency(l.totalCost)}${l.supplier ? ' | ' + esc(l.supplier) : ''}</div>
+            </div>
+            <span style="font-size:0.75rem;color:var(--text-light);">${new Date(l.date).toLocaleDateString('es-CO', {day:'2-digit', month:'short'})}</span>
+        </div>`).join('');
 }
