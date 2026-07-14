@@ -95,26 +95,19 @@ async function loadData() {
 function renderMesas() {
     const grid = document.getElementById('mesas-grid');
     
-    // Tarjeta de Delivery/Para Llevar (siempre visible para Caja y Dueño)
+    // Tarjeta de Para Llevar (visible para Caja y Dueño)
     const activeRole = sessionStorage.getItem('activeRole');
     let deliveryCard = '';
     if (activeRole === 'caja' || activeRole === 'owner') {
-        const hasDeliveryOrder = orders['delivery_1'] && orders['delivery_1'].length > 0;
-        const deliveryTotal = hasDeliveryOrder ? orders['delivery_1'].reduce((s, i) => s + (i.price * i.qty), 0) : 0;
-        const deliveryCount = hasDeliveryOrder ? orders['delivery_1'].reduce((s, i) => s + i.qty, 0) : 0;
-        deliveryCard = `<div class="mesa-card ${hasDeliveryOrder ? 'ocupada' : 'libre'}" onclick="openMesa('delivery_1')" style="border-color:rgba(16,185,129,0.4);">
-            ${hasDeliveryOrder ? `<div class="mesa-items-count">${deliveryCount}</div>` : ''}
-            <div class="mesa-icon">🏍️</div>
-            <div class="mesa-name">Delivery</div>
-            <div class="mesa-status">${hasDeliveryOrder ? '● Pedido activo' : '● Nuevo pedido'}</div>
-            ${hasDeliveryOrder ? `<div class="mesa-total">${formatCurrency(deliveryTotal)}</div>` : ''}
-        </div>
-        <div class="mesa-card ${orders['llevar_1']?.length > 0 ? 'ocupada' : 'libre'}" onclick="openMesa('llevar_1')" style="border-color:rgba(245,158,11,0.4);">
-            ${orders['llevar_1']?.length > 0 ? `<div class="mesa-items-count">${orders['llevar_1'].reduce((s,i)=>s+i.qty,0)}</div>` : ''}
+        const hasLlevarOrder = orders['llevar_1'] && orders['llevar_1'].length > 0;
+        const llevarTotal = hasLlevarOrder ? orders['llevar_1'].reduce((s, i) => s + (i.price * i.qty), 0) : 0;
+        const llevarCount = hasLlevarOrder ? orders['llevar_1'].reduce((s, i) => s + i.qty, 0) : 0;
+        deliveryCard = `<div class="mesa-card ${hasLlevarOrder ? 'ocupada' : 'libre'}" onclick="openMesa('llevar_1')" style="border-color:rgba(245,158,11,0.4);">
+            ${hasLlevarOrder ? `<div class="mesa-items-count">${llevarCount}</div>` : ''}
             <div class="mesa-icon">🛍️</div>
             <div class="mesa-name">Para Llevar</div>
-            <div class="mesa-status">${orders['llevar_1']?.length > 0 ? '● Pedido activo' : '● Nuevo pedido'}</div>
-            ${orders['llevar_1']?.length > 0 ? `<div class="mesa-total">${formatCurrency(orders['llevar_1'].reduce((s,i)=>s+(i.price*i.qty),0))}</div>` : ''}
+            <div class="mesa-status">${hasLlevarOrder ? '● Pedido activo' : '● Nuevo pedido'}</div>
+            ${hasLlevarOrder ? `<div class="mesa-total">${formatCurrency(llevarTotal)}</div>` : ''}
         </div>`;
     }
     
