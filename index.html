@@ -1344,6 +1344,27 @@
                     <button class="btn btn-sm btn-primary" onclick="sendWeeklyReportWhatsApp()">📈 Reporte Semanal</button>
                 </div>
             </div>
+
+            <div class="card" id="cash-opening-card">
+                <h3>🔓 Apertura de Caja</h3>
+                <div id="cash-opening-info"></div>
+            </div>
+
+            <div class="card" id="delivery-card">
+                <h3>🏍️ Pedidos para Llevar / Delivery</h3>
+                <div style="margin-bottom:12px;">
+                    <button class="btn btn-sm btn-primary" onclick="newDeliveryOrder()">+ Nuevo Pedido</button>
+                </div>
+                <div id="delivery-orders-list"></div>
+            </div>
+
+            <div class="card" id="returns-card">
+                <h3>↩️ Devoluciones</h3>
+                <div style="margin-bottom:12px;">
+                    <button class="btn btn-sm btn-primary" onclick="partialReturn()">+ Registrar Devolución</button>
+                </div>
+                <div id="returns-list"></div>
+            </div>
             </section>
 
             <!-- ======================== ALERTAS ======================== -->

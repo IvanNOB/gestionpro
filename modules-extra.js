@@ -453,6 +453,9 @@ function initModulesExtra() {
     loadCombos();
     loadQuotes();
     loadPurchaseLots();
+    loadCashOpenings();
+    loadReturns();
+    loadDeliveryOrders();
     renderMonthComparison();
     renderStockPredictions();
     renderExpirationAlerts();
@@ -972,4 +975,271 @@ _Generado por GestiónPro_`;
     if (!phone) return;
     window.open(`https://wa.me/${phone.replace(/\s/g, '')}?text=${encodeURIComponent(msg)}`, '_blank');
     showToast('Reporte semanal enviado', 'success');
+}
+
+
+
+// ==========================================
+// DEVOLUCIONES PARCIALES
+// ==========================================
+async function partialReturn() {
+    const saleId = prompt('ID o nombre del producto vendido a devolver:\n(Busca en la tabla de ventas)');
+    if (!saleId) return;
+
+    // Buscar la venta por nombre de producto
+    const matchingSales = sales.filter(s => s.productName && s.productName.toLowerCase().includes(saleId.toLowerCase()) && !s.voided);
+    if (matchingSales.length === 0) { showToast('No se encontró la venta', 'error'); return; }
+
+    const sale = matchingSales[0]; // La más reciente
+    const maxQty = sale.quantity;
+    const returnQty = parseInt(prompt(`Venta encontrada: ${sale.quantity}x ${sale.productName} (${formatCurrency(sale.total)})\n\n¿Cuántas unidades devolver? (máx: ${maxQty})`));
+    if (!returnQty || returnQty <= 0 || returnQty > maxQty) { showToast('Cantidad inválida', 'error'); return; }
+
+    const returnAmount = (sale.price * returnQty) - (sale.discountAmount ? (sale.discountAmount / sale.quantity) * returnQty : 0);
+    const reason = prompt('Motivo de la devolución:', 'Devolución del cliente') || 'Devolución';
+
+    // Crear registro de devolución
+    const returnDoc = {
+        id: generateId(),
+        saleId: sale.id,
+        productId: sale.productId,
+        productName: sale.productName,
+        quantity: returnQty,
+        amount: Math.round(returnAmount * 100) / 100,
+        reason,
+        originalSaleDate: sale.date,
+        date: new Date().toISOString(),
+        processedBy: sessionStorage.getItem('activeEmployee') || 'Dueño'
+    };
+
+    await firestoreOperation(() => userCollection('returns').doc(returnDoc.id).set(returnDoc));
+
+    // Devolver stock al producto
+    const product = products.find(p => p.id === sale.productId);
+    if (product) {
+        product.quantity += returnQty;
+        await saveProduct(product);
+    }
+
+    // Si devolvió todo, marcar venta como anulada
+    if (returnQty === maxQty) {
+        sale.voided = true;
+        sale.voidedAt = new Date().toISOString();
+        await firestoreOperation(() => userCollection('sales').doc(sale.id).update({ voided: true, voidedAt: sale.voidedAt }));
+    } else {
+        // Actualizar la venta con la cantidad reducida
+        sale.quantity -= returnQty;
+        sale.total = sale.price * sale.quantity;
+        sale.profit = (sale.price - sale.cost) * sale.quantity;
+        await firestoreOperation(() => userCollection('sales').doc(sale.id).update({ quantity: sale.quantity, total: sale.total, profit: sale.profit }));
+    }
+
+    renderAll();
+    loadReturns();
+    showToast(`✅ Devolución: ${returnQty}x ${sale.productName} (${formatCurrency(returnAmount)})`, 'success');
+}
+
+let returns = [];
+
+async function loadReturns() {
+    if (!currentUser) return;
+    try {
+        const snap = await userCollection('returns').orderBy('date', 'desc').limit(20).get();
+        returns = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderReturns();
+    } catch (e) {}
+}
+
+function renderReturns() {
+    const container = document.getElementById('returns-list');
+    if (!container) return;
+    if (returns.length === 0) { container.innerHTML = '<p style="color:var(--text-light);">No hay devoluciones registradas</p>'; return; }
+    container.innerHTML = returns.map(r => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:10px;margin-bottom:6px;">
+            <div>
+                <strong>↩️ ${r.quantity}x ${esc(r.productName)}</strong>
+                <div style="font-size:0.75rem;color:var(--text-light);">${esc(r.reason)} — ${new Date(r.date).toLocaleDateString('es-CO', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</div>
+            </div>
+            <span style="font-weight:700;color:var(--danger);">-${formatCurrency(r.amount)}</span>
+        </div>`).join('');
+}
+
+
+
+// ==========================================
+// APERTURA DE CAJA
+// ==========================================
+let cashOpenings = [];
+
+async function openCashRegister() {
+    const amount = parseFloat(prompt('¿Con cuánto dinero abres caja hoy? ($)', '0'));
+    if (amount === null || isNaN(amount)) return;
+    const shift = prompt('¿Qué turno? (mañana/noche):', 'mañana') || 'mañana';
+
+    const opening = {
+        id: generateId(),
+        amount,
+        shift,
+        openedBy: sessionStorage.getItem('activeEmployee') || 'Dueño',
+        date: new Date().toISOString().split('T')[0],
+        time: new Date().toISOString()
+    };
+
+    cashOpenings.push(opening);
+    await firestoreOperation(() => userCollection('cashOpenings').doc(opening.id).set(opening));
+    renderCashOpening();
+    showToast(`✅ Caja abierta con ${formatCurrency(amount)} (${shift})`, 'success');
+}
+
+async function loadCashOpenings() {
+    if (!currentUser) return;
+    try {
+        const today = new Date().toISOString().split('T')[0];
+        const snap = await userCollection('cashOpenings').orderBy('time', 'desc').limit(5).get();
+        cashOpenings = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderCashOpening();
+    } catch (e) {}
+}
+
+function renderCashOpening() {
+    const container = document.getElementById('cash-opening-info');
+    if (!container) return;
+    const today = new Date().toISOString().split('T')[0];
+    const todayOpenings = cashOpenings.filter(o => o.date === today);
+
+    if (todayOpenings.length === 0) {
+        container.innerHTML = `
+            <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center;">
+                <p style="color:var(--text-light);margin-bottom:10px;">⚠️ No se ha abierto caja hoy</p>
+                <button class="btn btn-sm btn-primary" onclick="openCashRegister()">🔓 Abrir Caja</button>
+            </div>`;
+        return;
+    }
+
+    container.innerHTML = todayOpenings.map(o => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:10px;margin-bottom:6px;">
+            <div>
+                <strong>🔓 Caja abierta</strong>
+                <div style="font-size:0.8rem;color:var(--text-light);">${esc(o.shift)} — ${esc(o.openedBy)} — ${new Date(o.time).toLocaleTimeString('es-CO', {hour:'2-digit',minute:'2-digit'})}</div>
+            </div>
+            <span style="font-weight:700;color:var(--success);">${formatCurrency(o.amount)}</span>
+        </div>`).join('');
+}
+
+
+
+// ==========================================
+// PEDIDOS PARA LLEVAR / DELIVERY
+// ==========================================
+let deliveryOrders = [];
+
+async function newDeliveryOrder() {
+    const client = prompt('Nombre del cliente:');
+    if (!client) return;
+    const phone = prompt('Teléfono (para contactar):', '') || '';
+    const address = prompt('Dirección de entrega (dejar vacío si es para llevar):', '') || '';
+    const type = address ? 'delivery' : 'para_llevar';
+
+    const itemsText = prompt('Productos (separados por coma):\nEj: Hamburguesa x2, Papas x1, Gaseosa x1');
+    if (!itemsText) return;
+
+    const items = itemsText.split(',').map(text => {
+        const match = text.trim().match(/(.+?)\s*x?\s*(\d+)?$/i);
+        const name = match ? match[1].trim() : text.trim();
+        const qty = match && match[2] ? parseInt(match[2]) : 1;
+        const product = products.find(p => p.name.toLowerCase().includes(name.toLowerCase()));
+        return { productId: product?.id || '', name: product?.name || name, price: product?.price || 0, cost: product?.cost || 0, qty };
+    });
+
+    const total = items.reduce((s, i) => s + (i.price * i.qty), 0);
+    const deliveryFee = type === 'delivery' ? parseFloat(prompt('Costo del domicilio ($):', '0')) || 0 : 0;
+
+    const order = {
+        id: generateId(),
+        client,
+        phone,
+        address,
+        type, // 'delivery' o 'para_llevar'
+        items,
+        subtotal: total,
+        deliveryFee,
+        total: total + deliveryFee,
+        status: 'pendiente', // pendiente → preparando → listo → entregado
+        date: new Date().toISOString(),
+        createdBy: sessionStorage.getItem('activeEmployee') || 'Dueño'
+    };
+
+    deliveryOrders.push(order);
+    await firestoreOperation(() => userCollection('deliveryOrders').doc(order.id).set(order));
+    renderDeliveryOrders();
+    showToast(`📦 Pedido ${type === 'delivery' ? 'domicilio' : 'para llevar'}: ${client} (${formatCurrency(order.total)})`, 'success');
+}
+
+async function updateDeliveryStatus(id, newStatus) {
+    const order = deliveryOrders.find(o => o.id === id);
+    if (!order) return;
+    order.status = newStatus;
+    await firestoreOperation(() => userCollection('deliveryOrders').doc(id).update({ status: newStatus, updatedAt: new Date().toISOString() }));
+
+    // Si se entrega, registrar como venta
+    if (newStatus === 'entregado') {
+        const method = prompt('Método de pago (Efectivo/Tarjeta/Transferencia):', 'Efectivo') || 'Efectivo';
+        for (const item of order.items) {
+            const sale = { id: generateId(), productId: item.productId, productName: item.name, quantity: item.qty, price: item.price, cost: item.cost, discount: 0, discountAmount: 0, total: item.price * item.qty, profit: (item.price - item.cost) * item.qty, client: order.client, method, notes: order.type === 'delivery' ? 'Domicilio' : 'Para llevar', date: new Date().toISOString(), soldBy: sessionStorage.getItem('activeEmployee') || 'Dueño' };
+            sales.push(sale);
+            await saveSale(sale);
+            const product = products.find(p => p.id === item.productId);
+            if (product) { product.quantity = Math.max(0, product.quantity - item.qty); await saveProduct(product); }
+        }
+        if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+        showToast(`✅ Pedido entregado y cobrado: ${formatCurrency(order.total)}`, 'success');
+        renderAll();
+    } else {
+        const labels = { preparando: '👨‍🍳 Preparando', listo: '✅ Listo para entregar' };
+        showToast(labels[newStatus] || newStatus, 'info');
+    }
+    renderDeliveryOrders();
+}
+
+async function loadDeliveryOrders() {
+    if (!currentUser) return;
+    try {
+        const snap = await userCollection('deliveryOrders').orderBy('date', 'desc').limit(20).get();
+        deliveryOrders = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderDeliveryOrders();
+    } catch (e) {}
+}
+
+function renderDeliveryOrders() {
+    const container = document.getElementById('delivery-orders-list');
+    if (!container) return;
+    const active = deliveryOrders.filter(o => o.status !== 'entregado');
+    if (active.length === 0) { container.innerHTML = '<p style="color:var(--text-light);">No hay pedidos para llevar/delivery activos</p>'; return; }
+
+    const statusColors = { pendiente: '#f59e0b', preparando: '#3b82f6', listo: '#10b981' };
+    const statusLabels = { pendiente: '🆕 Pendiente', preparando: '👨‍🍳 Preparando', listo: '✅ Listo' };
+    const typeLabels = { delivery: '🏍️ Domicilio', para_llevar: '🛍️ Para llevar' };
+
+    container.innerHTML = active.map(o => {
+        let actionBtn = '';
+        if (o.status === 'pendiente') actionBtn = `<button onclick="updateDeliveryStatus('${o.id}','preparando')" style="background:#3b82f6;color:white;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:0.75rem;">👨‍🍳 Preparar</button>`;
+        else if (o.status === 'preparando') actionBtn = `<button onclick="updateDeliveryStatus('${o.id}','listo')" style="background:#10b981;color:white;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:0.75rem;">✅ Listo</button>`;
+        else if (o.status === 'listo') actionBtn = `<button onclick="updateDeliveryStatus('${o.id}','entregado')" style="background:#8b5cf6;color:white;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:0.75rem;">💰 Entregar y Cobrar</button>`;
+
+        return `<div style="background:var(--bg);border:1px solid var(--border);border-left:4px solid ${statusColors[o.status]};border-radius:10px;padding:14px;margin-bottom:10px;">
+            <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px;">
+                <div>
+                    <strong>${esc(o.client)}</strong> <span style="font-size:0.75rem;background:rgba(255,255,255,0.08);padding:2px 8px;border-radius:4px;">${typeLabels[o.type]}</span>
+                    ${o.phone ? `<div style="font-size:0.8rem;color:var(--text-light);">📞 ${esc(o.phone)}</div>` : ''}
+                    ${o.address ? `<div style="font-size:0.8rem;color:var(--text-light);">📍 ${esc(o.address)}</div>` : ''}
+                </div>
+                <span style="font-size:0.75rem;color:${statusColors[o.status]};font-weight:700;">${statusLabels[o.status]}</span>
+            </div>
+            <div style="font-size:0.85rem;margin-bottom:8px;">${o.items.map(i => `${i.qty}x ${esc(i.name)}`).join(', ')}</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <strong>${formatCurrency(o.total)}${o.deliveryFee > 0 ? ` (envío: ${formatCurrency(o.deliveryFee)})` : ''}</strong>
+                ${actionBtn}
+            </div>
+        </div>`;
+    }).join('');
 }
