@@ -635,9 +635,55 @@ async function submitDeliveryFromCaja() {
 // NUEVO PEDIDO PARA LLEVAR (con nombre de cliente)
 // ==========================================
 function newLlevarOrder() {
-    const client = prompt('Nombre del cliente:');
-    if (!client || !client.trim()) return;
-    const key = 'llevar_' + client.trim().replace(/\s+/g, '_');
+    const overlay = document.createElement('div');
+    overlay.id = 'llevar-modal';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+    overlay.innerHTML = `
+        <div style="background:var(--bg-secondary,#1a1a2e);border:1px solid var(--border-glass,#333);border-radius:20px;padding:28px;max-width:380px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+            <div style="text-align:center;margin-bottom:20px;">
+                <div style="font-size:2.5rem;margin-bottom:8px;">🛍️</div>
+                <h3 style="color:var(--text-primary,white);font-size:1.2rem;">Nuevo Pedido Para Llevar</h3>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:14px;">
+                <div>
+                    <label style="display:block;font-size:0.8rem;color:var(--text-secondary,#94a3b8);margin-bottom:6px;font-weight:600;">Nombre del cliente *</label>
+                    <input type="text" id="llevar-nombre" placeholder="Ej: Juan Pérez" style="width:100%;padding:14px 16px;background:var(--bg-primary,#0f0f1a);border:1px solid var(--border-glass,#333);border-radius:12px;color:var(--text-primary,white);font-size:1rem;outline:none;" autofocus>
+                </div>
+                <div>
+                    <label style="display:block;font-size:0.8rem;color:var(--text-secondary,#94a3b8);margin-bottom:6px;font-weight:600;">Teléfono (opcional)</label>
+                    <input type="tel" id="llevar-telefono" placeholder="Ej: 315 123 4567" style="width:100%;padding:14px 16px;background:var(--bg-primary,#0f0f1a);border:1px solid var(--border-glass,#333);border-radius:12px;color:var(--text-primary,white);font-size:1rem;outline:none;">
+                </div>
+                <div>
+                    <label style="display:block;font-size:0.8rem;color:var(--text-secondary,#94a3b8);margin-bottom:6px;font-weight:600;">Nota (opcional)</label>
+                    <input type="text" id="llevar-nota" placeholder="Ej: Pasa en 20 min" style="width:100%;padding:14px 16px;background:var(--bg-primary,#0f0f1a);border:1px solid var(--border-glass,#333);border-radius:12px;color:var(--text-primary,white);font-size:1rem;outline:none;">
+                </div>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:24px;">
+                <button onclick="document.getElementById('llevar-modal').remove()" style="flex:1;padding:14px;background:rgba(255,255,255,0.06);border:1px solid var(--border-glass,#333);border-radius:12px;color:var(--text-secondary,#94a3b8);font-size:0.95rem;font-weight:600;cursor:pointer;">Cancelar</button>
+                <button onclick="confirmLlevarOrder()" style="flex:1;padding:14px;background:linear-gradient(135deg,#f59e0b,#d97706);border:none;border-radius:12px;color:white;font-size:0.95rem;font-weight:700;cursor:pointer;">🛍️ Crear Pedido</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+    setTimeout(() => document.getElementById('llevar-nombre')?.focus(), 100);
+}
+
+function confirmLlevarOrder() {
+    const nombre = document.getElementById('llevar-nombre').value.trim();
+    const telefono = document.getElementById('llevar-telefono').value.trim();
+    const nota = document.getElementById('llevar-nota').value.trim();
+    
+    if (!nombre) {
+        document.getElementById('llevar-nombre').style.borderColor = '#ef4444';
+        return;
+    }
+    
+    const key = 'llevar_' + nombre.replace(/\s+/g, '_');
     if (!orders[key]) orders[key] = [];
+    
+    // Guardar datos del cliente en sessionStorage para usarlos al cobrar
+    sessionStorage.setItem('llevar_data_' + key, JSON.stringify({ nombre, telefono, nota }));
+    
+    document.getElementById('llevar-modal').remove();
     openMesa(key);
 }
