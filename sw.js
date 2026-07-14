@@ -3,7 +3,7 @@
 // Estrategia: Network-First con fallback a cache
 // ==========================================
 
-const CACHE_NAME = 'gestionpro-v6';
+const CACHE_NAME = 'gestionpro-v7';
 
 const PRECACHE_URLS = [
     './',
