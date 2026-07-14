@@ -1345,23 +1345,25 @@ tbody tr:hover {
         align-items: center;
         justify-content: center;
         position: fixed;
-        top: 14px;
-        left: 14px;
-        z-index: 1001;
+        top: 12px;
+        left: 12px;
+        z-index: 9998;
         background: var(--primary);
         color: white;
         border: none;
-        padding: 10px 12px;
+        padding: 14px 16px;
         border-radius: var(--radius-sm);
-        font-size: 1.2rem;
+        font-size: 1.5rem;
         cursor: pointer;
-        box-shadow: 0 2px 8px rgba(99, 91, 255, 0.3);
+        box-shadow: 0 4px 12px rgba(99, 91, 255, 0.4);
+        width: 48px;
+        height: 48px;
     }
 
     .main-content {
         margin-left: 0;
         padding: 20px 16px;
-        padding-top: 64px;
+        padding-top: 72px;
     }
 
     .stats-grid {
