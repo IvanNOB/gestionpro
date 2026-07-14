@@ -94,7 +94,31 @@ async function loadData() {
 // ==========================================
 function renderMesas() {
     const grid = document.getElementById('mesas-grid');
-    grid.innerHTML = mesas.map(m => {
+    
+    // Tarjeta de Delivery/Para Llevar (siempre visible para Caja y Dueño)
+    const activeRole = sessionStorage.getItem('activeRole');
+    let deliveryCard = '';
+    if (activeRole === 'caja' || activeRole === 'owner') {
+        const hasDeliveryOrder = orders['delivery_1'] && orders['delivery_1'].length > 0;
+        const deliveryTotal = hasDeliveryOrder ? orders['delivery_1'].reduce((s, i) => s + (i.price * i.qty), 0) : 0;
+        const deliveryCount = hasDeliveryOrder ? orders['delivery_1'].reduce((s, i) => s + i.qty, 0) : 0;
+        deliveryCard = `<div class="mesa-card ${hasDeliveryOrder ? 'ocupada' : 'libre'}" onclick="openMesa('delivery_1')" style="border-color:rgba(16,185,129,0.4);">
+            ${hasDeliveryOrder ? `<div class="mesa-items-count">${deliveryCount}</div>` : ''}
+            <div class="mesa-icon">🏍️</div>
+            <div class="mesa-name">Delivery</div>
+            <div class="mesa-status">${hasDeliveryOrder ? '● Pedido activo' : '● Nuevo pedido'}</div>
+            ${hasDeliveryOrder ? `<div class="mesa-total">${formatCurrency(deliveryTotal)}</div>` : ''}
+        </div>
+        <div class="mesa-card ${orders['llevar_1']?.length > 0 ? 'ocupada' : 'libre'}" onclick="openMesa('llevar_1')" style="border-color:rgba(245,158,11,0.4);">
+            ${orders['llevar_1']?.length > 0 ? `<div class="mesa-items-count">${orders['llevar_1'].reduce((s,i)=>s+i.qty,0)}</div>` : ''}
+            <div class="mesa-icon">🛍️</div>
+            <div class="mesa-name">Para Llevar</div>
+            <div class="mesa-status">${orders['llevar_1']?.length > 0 ? '● Pedido activo' : '● Nuevo pedido'}</div>
+            ${orders['llevar_1']?.length > 0 ? `<div class="mesa-total">${formatCurrency(orders['llevar_1'].reduce((s,i)=>s+(i.price*i.qty),0))}</div>` : ''}
+        </div>`;
+    }
+    
+    grid.innerHTML = deliveryCard + mesas.map(m => {
         const hasOrder = orders[m.id] && orders[m.id].length > 0;
         const total = hasOrder ? orders[m.id].reduce((s, i) => s + (i.price * i.qty), 0) : 0;
         const itemCount = hasOrder ? orders[m.id].reduce((s, i) => s + i.qty, 0) : 0;
@@ -121,7 +145,10 @@ function showMesas() {
 function openMesa(mesaId) {
     currentMesaId = mesaId;
     const mesa = mesas.find(m => m.id === mesaId);
-    document.getElementById('order-mesa-name').textContent = mesa ? mesa.name : 'Mesa';
+    let mesaName = mesa ? mesa.name : 'Mesa';
+    if (mesaId === 'delivery_1') mesaName = '🏍️ Delivery';
+    if (mesaId === 'llevar_1') mesaName = '🛍️ Para Llevar';
+    document.getElementById('order-mesa-name').textContent = mesaName;
     
     document.getElementById('mesas-view').style.display = 'none';
     document.getElementById('order-view').classList.add('active');
@@ -287,16 +314,20 @@ async function sendOrder() {
     if (!items || items.length === 0) { showToast('El pedido está vacío', 'error'); return; }
     
     const mesa = mesas.find(m => m.id === currentMesaId);
+    let mesaName = mesa?.name || 'Mesa';
+    if (currentMesaId === 'delivery_1') mesaName = '🏍️ Delivery';
+    if (currentMesaId === 'llevar_1') mesaName = '🛍️ Para Llevar';
     
     try {
         // Guardar pedido en Firestore
         const orderDoc = {
             id: 'order_' + currentMesaId,
             mesaId: currentMesaId,
-            mesaName: mesa?.name || '',
+            mesaName: mesaName,
             items: items,
             total: items.reduce((s, i) => s + (i.price * i.qty), 0),
             status: 'active',
+            type: currentMesaId.startsWith('delivery') ? 'delivery' : currentMesaId.startsWith('llevar') ? 'para_llevar' : 'mesa',
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
         };
@@ -304,7 +335,7 @@ async function sendOrder() {
         await userCollection('orders').doc(orderDoc.id).set(orderDoc);
         
         // Imprimir ticket de cocina automáticamente
-        printKitchenTicket(mesa?.name || 'Mesa', items);
+        printKitchenTicket(mesaName, items);
         
         showToast('✅ Pedido enviado a cocina', 'success');
         showMesas();
