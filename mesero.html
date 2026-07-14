@@ -384,8 +384,8 @@
 
         .products-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(115px, 1fr));
-            gap: 10px;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 12px;
         }
 
         .product-btn {
@@ -394,7 +394,7 @@
             -webkit-backdrop-filter: blur(8px);
             border: 1px solid var(--border-glass);
             border-radius: var(--radius-md);
-            padding: 18px 12px;
+            padding: 16px 12px;
             text-align: center;
             cursor: pointer;
             transition: all var(--transition-fast);
@@ -427,7 +427,7 @@
         }
 
         .product-btn .prod-name {
-            font-size: 0.78rem;
+            font-size: 0.82rem;
             font-weight: 600;
             color: var(--text-primary);
             margin-bottom: 6px;
@@ -810,7 +810,9 @@
 
     <!-- Vista de Mesas -->
     <div id="mesas-view">
-        <div class="section-title">Selecciona una mesa</div>
+        <div class="section-title">🛍️ Para Llevar</div>
+        <div class="mesas-grid" id="llevar-grid" style="margin-bottom:8px;"></div>
+        <div class="section-title">🪑 Mesas</div>
         <div class="mesas-grid" id="mesas-grid"></div>
     </div>
 

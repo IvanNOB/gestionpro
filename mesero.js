@@ -93,37 +93,42 @@ async function loadData() {
 // VISTA DE MESAS
 // ==========================================
 function renderMesas() {
-    const grid = document.getElementById('mesas-grid');
-    
-    // Tarjetas de Para Llevar (múltiples, con nombre de cliente)
+    const mesasGrid = document.getElementById('mesas-grid');
+    const llevarGrid = document.getElementById('llevar-grid');
     const activeRole = sessionStorage.getItem('activeRole');
-    let deliveryCards = '';
-    if (activeRole === 'caja' || activeRole === 'owner') {
-        // Mostrar pedidos para llevar activos
+    
+    // --- PARA LLEVAR (separado) ---
+    if (llevarGrid && (activeRole === 'caja' || activeRole === 'owner')) {
         const llevarKeys = Object.keys(orders).filter(k => k.startsWith('llevar_'));
+        let llevarHTML = '';
         llevarKeys.forEach(key => {
             const items = orders[key];
             if (!items || items.length === 0) return;
             const total = items.reduce((s, i) => s + (i.price * i.qty), 0);
             const count = items.reduce((s, i) => s + i.qty, 0);
             const clientName = key.replace('llevar_', '').replace(/_/g, ' ');
-            deliveryCards += `<div class="mesa-card ocupada" onclick="openMesa('${key}')" style="border-color:rgba(245,158,11,0.4);">
+            llevarHTML += `<div class="mesa-card ocupada" onclick="openMesa('${key}')" style="border-color:rgba(245,158,11,0.5);background:rgba(245,158,11,0.05);">
                 <div class="mesa-items-count">${count}</div>
                 <div class="mesa-icon">🛍️</div>
                 <div class="mesa-name">${esc(clientName)}</div>
-                <div class="mesa-status">● Para Llevar</div>
+                <div class="mesa-status" style="color:#f59e0b;">● Para Llevar</div>
                 <div class="mesa-total">${formatCurrency(total)}</div>
             </div>`;
         });
-        // Botón para crear nuevo pedido para llevar
-        deliveryCards += `<div class="mesa-card libre" onclick="newLlevarOrder()" style="border-color:rgba(245,158,11,0.4);border-style:dashed;">
-            <div class="mesa-icon" style="font-size:2rem;">➕</div>
-            <div class="mesa-name">Para Llevar</div>
-            <div class="mesa-status">Nuevo pedido</div>
+        llevarHTML += `<div class="mesa-card libre" onclick="newLlevarOrder()" style="border-color:rgba(245,158,11,0.4);border-style:dashed;opacity:0.7;">
+            <div class="mesa-icon" style="font-size:1.8rem;">➕</div>
+            <div class="mesa-name">Nuevo</div>
+            <div class="mesa-status">Para Llevar</div>
         </div>`;
+        llevarGrid.innerHTML = llevarHTML;
+        llevarGrid.parentElement.querySelector('.section-title').style.display = 'block';
+    } else if (llevarGrid) {
+        llevarGrid.innerHTML = '';
+        llevarGrid.parentElement.querySelector('.section-title').style.display = 'none';
     }
     
-    grid.innerHTML = deliveryCards + mesas.map(m => {
+    // --- MESAS ---
+    mesasGrid.innerHTML = mesas.map(m => {
         const hasOrder = orders[m.id] && orders[m.id].length > 0;
         const total = hasOrder ? orders[m.id].reduce((s, i) => s + (i.price * i.qty), 0) : 0;
         const itemCount = hasOrder ? orders[m.id].reduce((s, i) => s + i.qty, 0) : 0;
