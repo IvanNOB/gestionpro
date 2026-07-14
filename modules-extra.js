@@ -849,3 +849,127 @@ function renderPurchaseLots() {
             <span style="font-size:0.75rem;color:var(--text-light);">${new Date(l.date).toLocaleDateString('es-CO', {day:'2-digit', month:'short'})}</span>
         </div>`).join('');
 }
+
+
+
+// ==========================================
+// REPORTES POR WHATSAPP (Enviar resumen del día al dueño)
+// ==========================================
+function sendDailyReportWhatsApp() {
+    const today = new Date().toISOString().split('T')[0];
+    const todaySales = sales.filter(s => s.date && s.date.startsWith(today));
+    const totalRevenue = todaySales.reduce((s, v) => s + (v.total || 0), 0);
+    const totalProfit = todaySales.reduce((s, v) => s + (v.profit || 0), 0);
+    const totalCount = todaySales.length;
+    const totalUnits = todaySales.reduce((s, v) => s + (v.quantity || 0), 0);
+
+    // Desglose por método de pago
+    const methods = {};
+    todaySales.forEach(s => {
+        methods[s.method] = (methods[s.method] || 0) + s.total;
+    });
+    const methodsText = Object.entries(methods).map(([m, t]) => `• ${m}: ${formatCurrency(t)}`).join('\n');
+
+    // Top 3 productos vendidos hoy
+    const productCount = {};
+    todaySales.forEach(s => {
+        productCount[s.productName] = (productCount[s.productName] || 0) + s.quantity;
+    });
+    const top3 = Object.entries(productCount).sort((a, b) => b[1] - a[1]).slice(0, 3);
+    const top3Text = top3.map((p, i) => `${i + 1}. ${p[0]} (${p[1]} uds)`).join('\n');
+
+    // Comparativa con ayer
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const yesterdaySales = sales.filter(s => s.date && s.date.startsWith(yesterday));
+    const yesterdayRevenue = yesterdaySales.reduce((s, v) => s + (v.total || 0), 0);
+    const change = yesterdayRevenue > 0 ? (((totalRevenue - yesterdayRevenue) / yesterdayRevenue) * 100).toFixed(1) : '0';
+    const changeEmoji = change > 0 ? '📈' : change < 0 ? '📉' : '➡️';
+
+    // Alertas de stock bajo
+    const lowStock = products.filter(p => p.quantity > 0 && p.quantity <= (p.minStock || 5));
+    const outStock = products.filter(p => p.quantity === 0);
+    let stockAlert = '';
+    if (outStock.length > 0) stockAlert += `\n\n🚨 *SIN STOCK (${outStock.length}):*\n${outStock.slice(0, 5).map(p => '• ' + p.name).join('\n')}`;
+    if (lowStock.length > 0) stockAlert += `\n\n⚠️ *Stock bajo (${lowStock.length}):*\n${lowStock.slice(0, 5).map(p => `• ${p.name} (${p.quantity} uds)`).join('\n')}`;
+
+    const businessName = settings.businessName || 'Mi Negocio';
+    const date = new Date().toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+    const msg = `📊 *REPORTE DEL DÍA*
+━━━━━━━━━━━━━━━━
+🏪 *${businessName}*
+📅 ${date}
+━━━━━━━━━━━━━━━━
+
+💰 *VENTAS:* ${formatCurrency(totalRevenue)}
+📈 *Ganancia:* ${formatCurrency(totalProfit)}
+🧾 *Transacciones:* ${totalCount}
+📦 *Unidades vendidas:* ${totalUnits}
+
+${changeEmoji} *vs Ayer:* ${change}% (${formatCurrency(yesterdayRevenue)} ayer)
+
+💳 *POR MÉTODO DE PAGO:*
+${methodsText || '• Sin ventas hoy'}
+
+🏆 *TOP 3 PRODUCTOS:*
+${top3Text || '• Sin ventas hoy'}${stockAlert}
+
+━━━━━━━━━━━━━━━━
+_Generado por GestiónPro_`;
+
+    // Abrir WhatsApp con el mensaje
+    const phone = prompt('¿A qué número enviar el reporte?\n(Con código de país, ej: 573159756975)', '57');
+    if (!phone) return;
+    window.open(`https://wa.me/${phone.replace(/\s/g, '')}?text=${encodeURIComponent(msg)}`, '_blank');
+    showToast('Reporte enviado por WhatsApp', 'success');
+}
+
+// Reporte semanal
+function sendWeeklyReportWhatsApp() {
+    const now = new Date();
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const weekSales = sales.filter(s => s.date >= weekAgo);
+    const totalRevenue = weekSales.reduce((s, v) => s + (v.total || 0), 0);
+    const totalProfit = weekSales.reduce((s, v) => s + (v.profit || 0), 0);
+    const totalCount = weekSales.length;
+    const avgDaily = totalRevenue / 7;
+
+    // Mejor día de la semana
+    const dayTotals = {};
+    weekSales.forEach(s => {
+        const day = s.date.split('T')[0];
+        dayTotals[day] = (dayTotals[day] || 0) + s.total;
+    });
+    const bestDay = Object.entries(dayTotals).sort((a, b) => b[1] - a[1])[0];
+
+    // Gastos de la semana
+    const weekExpenses = expenses ? expenses.filter(e => e.date >= weekAgo.split('T')[0]).reduce((s, e) => s + (e.amount || 0), 0) : 0;
+    const netProfit = totalProfit - weekExpenses;
+
+    const businessName = settings.businessName || 'Mi Negocio';
+
+    const msg = `📊 *REPORTE SEMANAL*
+━━━━━━━━━━━━━━━━
+🏪 *${businessName}*
+📅 Últimos 7 días
+━━━━━━━━━━━━━━━━
+
+💰 *Ingresos:* ${formatCurrency(totalRevenue)}
+📈 *Ganancia bruta:* ${formatCurrency(totalProfit)}
+💸 *Gastos:* ${formatCurrency(weekExpenses)}
+🏦 *Ganancia neta:* ${formatCurrency(netProfit)}
+
+📊 *PROMEDIOS:*
+• Venta diaria: ${formatCurrency(avgDaily)}
+• Transacciones: ${totalCount} (${Math.round(totalCount / 7)}/día)
+
+🏆 *Mejor día:* ${bestDay ? new Date(bestDay[0]).toLocaleDateString('es-CO', {weekday:'long', day:'numeric', month:'short'}) + ' (' + formatCurrency(bestDay[1]) + ')' : 'N/A'}
+
+━━━━━━━━━━━━━━━━
+_Generado por GestiónPro_`;
+
+    const phone = prompt('¿A qué número enviar el reporte semanal?\n(Con código de país, ej: 573159756975)', '57');
+    if (!phone) return;
+    window.open(`https://wa.me/${phone.replace(/\s/g, '')}?text=${encodeURIComponent(msg)}`, '_blank');
+    showToast('Reporte semanal enviado', 'success');
+}
