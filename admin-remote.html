@@ -133,6 +133,11 @@ function showTab(tab) {
             </div>`;
     } else if (tab === 'products') {
         content.innerHTML = `<div class="card"><h3>📦 Productos (${products.length})</h3>
+            <div style="margin-bottom:16px;display:flex;gap:10px;flex-wrap:wrap;">
+                <button class="btn-action btn-edit" onclick="exportProductsCSV()">📥 Exportar CSV</button>
+                <button class="btn-action btn-edit" onclick="exportProductsCarta()">📋 Exportar Carta</button>
+                <button class="btn-action btn-edit" onclick="printCarta()">🖨️ Imprimir Carta</button>
+            </div>
             <table><thead><tr><th>Nombre</th><th>Categoría</th><th>Stock</th><th>Costo</th><th>Precio</th><th>Acción</th></tr></thead>
             <tbody>${products.map(p => `<tr>
                 <td>${esc(p.name)}</td><td>${esc(p.category || '-')}</td><td>${p.quantity}</td>
@@ -228,6 +233,100 @@ function filterAdminSales() {
             <td>${esc(s.method || '-')}</td>
             <td>${esc(s.soldBy || '-')}</td>
         </tr>`).join('')}</tbody></table>`;
+}
+
+function exportProductsCSV() {
+    const businessName = userData.settings?.businessName || userData.businessName || 'Negocio';
+    const headers = ['Producto', 'Categoría', 'Precio', 'Descripción'];
+    const rows = products.map(p => [p.name, p.category || '', '$' + Math.round(p.price || 0).toLocaleString('es-CO'), p.description || '']);
+    const csv = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+    const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `productos-${businessName.replace(/\s+/g, '-')}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showNotice('CSV exportado');
+}
+
+function exportProductsCarta() {
+    const businessName = userData.settings?.businessName || userData.businessName || 'Restaurante';
+    const categories = {};
+    products.forEach(p => {
+        if (!categories[p.category]) categories[p.category] = [];
+        categories[p.category].push(p);
+    });
+
+    let text = `═══════════════════════════════\n`;
+    text += `   ${businessName.toUpperCase()}\n`;
+    text += `   CARTA DE PRODUCTOS\n`;
+    text += `═══════════════════════════════\n\n`;
+
+    Object.entries(categories).sort((a, b) => a[0].localeCompare(b[0])).forEach(([cat, items]) => {
+        text += `── ${cat.toUpperCase()} ──\n`;
+        items.sort((a, b) => a.name.localeCompare(b.name)).forEach(p => {
+            const price = '$' + Math.round(p.price || 0).toLocaleString('es-CO');
+            const desc = p.description ? `  (${p.description})` : '';
+            text += `  ${p.name}${desc}\n`;
+            text += `    ${price}\n`;
+        });
+        text += `\n`;
+    });
+
+    text += `═══════════════════════════════\n`;
+    text += `  Restaurante aliado GestiónPro\n`;
+
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `carta-${businessName.replace(/\s+/g, '-')}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showNotice('Carta exportada');
+}
+
+function printCarta() {
+    const businessName = userData.settings?.businessName || userData.businessName || 'Restaurante';
+    const categories = {};
+    products.forEach(p => {
+        if (!categories[p.category]) categories[p.category] = [];
+        categories[p.category].push(p);
+    });
+
+    let itemsHtml = '';
+    Object.entries(categories).sort((a, b) => a[0].localeCompare(b[0])).forEach(([cat, items]) => {
+        itemsHtml += `<h3 style="margin:24px 0 12px;color:#1e293b;border-bottom:2px solid #e2e8f0;padding-bottom:8px;">${esc(cat)}</h3>`;
+        items.sort((a, b) => a.name.localeCompare(b.name)).forEach(p => {
+            itemsHtml += `<div style="display:flex;justify-content:space-between;align-items:baseline;padding:8px 0;border-bottom:1px solid #f1f5f9;">
+                <div>
+                    <strong style="font-size:1rem;">${esc(p.name)}</strong>
+                    ${p.description ? `<div style="font-size:0.8rem;color:#64748b;">${esc(p.description)}</div>` : ''}
+                </div>
+                <span style="font-weight:700;color:#dc2626;white-space:nowrap;margin-left:12px;">$${Math.round(p.price || 0).toLocaleString('es-CO')}</span>
+            </div>`;
+        });
+    });
+
+    const html = `<!DOCTYPE html><html><head><style>
+        body{font-family:'Georgia',serif;max-width:700px;margin:0 auto;padding:40px 30px;color:#1e293b;}
+        h1{text-align:center;font-size:2rem;margin-bottom:4px;}
+        .subtitle{text-align:center;color:#64748b;font-size:0.9rem;margin-bottom:32px;}
+        h3{font-family:-apple-system,sans-serif;font-size:1.1rem;text-transform:uppercase;letter-spacing:0.5px;}
+        .footer{text-align:center;margin-top:40px;padding-top:20px;border-top:2px solid #e2e8f0;color:#94a3b8;font-size:0.8rem;}
+        @media print{body{padding:20px;}}
+    </style></head><body>
+        <h1>${esc(businessName)}</h1>
+        <p class="subtitle">Carta de Productos</p>
+        ${itemsHtml}
+        <div class="footer">Restaurante aliado GestiónPro</div>
+        <script>window.onload=function(){window.print();}<\/script>
+    </body></html>`;
+
+    const win = window.open('', '_blank', 'width=800,height=600');
+    if (win) { win.document.write(html); win.document.close(); }
+    else { showNotice('Permite ventanas emergentes'); }
 }
 
 function showNotice(msg) {
