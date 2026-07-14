@@ -95,23 +95,35 @@ async function loadData() {
 function renderMesas() {
     const grid = document.getElementById('mesas-grid');
     
-    // Tarjeta de Para Llevar (visible para Caja y Dueño)
+    // Tarjetas de Para Llevar (múltiples, con nombre de cliente)
     const activeRole = sessionStorage.getItem('activeRole');
-    let deliveryCard = '';
+    let deliveryCards = '';
     if (activeRole === 'caja' || activeRole === 'owner') {
-        const hasLlevarOrder = orders['llevar_1'] && orders['llevar_1'].length > 0;
-        const llevarTotal = hasLlevarOrder ? orders['llevar_1'].reduce((s, i) => s + (i.price * i.qty), 0) : 0;
-        const llevarCount = hasLlevarOrder ? orders['llevar_1'].reduce((s, i) => s + i.qty, 0) : 0;
-        deliveryCard = `<div class="mesa-card ${hasLlevarOrder ? 'ocupada' : 'libre'}" onclick="openMesa('llevar_1')" style="border-color:rgba(245,158,11,0.4);">
-            ${hasLlevarOrder ? `<div class="mesa-items-count">${llevarCount}</div>` : ''}
-            <div class="mesa-icon">🛍️</div>
+        // Mostrar pedidos para llevar activos
+        const llevarKeys = Object.keys(orders).filter(k => k.startsWith('llevar_'));
+        llevarKeys.forEach(key => {
+            const items = orders[key];
+            if (!items || items.length === 0) return;
+            const total = items.reduce((s, i) => s + (i.price * i.qty), 0);
+            const count = items.reduce((s, i) => s + i.qty, 0);
+            const clientName = key.replace('llevar_', '').replace(/_/g, ' ');
+            deliveryCards += `<div class="mesa-card ocupada" onclick="openMesa('${key}')" style="border-color:rgba(245,158,11,0.4);">
+                <div class="mesa-items-count">${count}</div>
+                <div class="mesa-icon">🛍️</div>
+                <div class="mesa-name">${esc(clientName)}</div>
+                <div class="mesa-status">● Para Llevar</div>
+                <div class="mesa-total">${formatCurrency(total)}</div>
+            </div>`;
+        });
+        // Botón para crear nuevo pedido para llevar
+        deliveryCards += `<div class="mesa-card libre" onclick="newLlevarOrder()" style="border-color:rgba(245,158,11,0.4);border-style:dashed;">
+            <div class="mesa-icon" style="font-size:2rem;">➕</div>
             <div class="mesa-name">Para Llevar</div>
-            <div class="mesa-status">${hasLlevarOrder ? '● Pedido activo' : '● Nuevo pedido'}</div>
-            ${hasLlevarOrder ? `<div class="mesa-total">${formatCurrency(llevarTotal)}</div>` : ''}
+            <div class="mesa-status">Nuevo pedido</div>
         </div>`;
     }
     
-    grid.innerHTML = deliveryCard + mesas.map(m => {
+    grid.innerHTML = deliveryCards + mesas.map(m => {
         const hasOrder = orders[m.id] && orders[m.id].length > 0;
         const total = hasOrder ? orders[m.id].reduce((s, i) => s + (i.price * i.qty), 0) : 0;
         const itemCount = hasOrder ? orders[m.id].reduce((s, i) => s + i.qty, 0) : 0;
@@ -140,7 +152,7 @@ function openMesa(mesaId) {
     const mesa = mesas.find(m => m.id === mesaId);
     let mesaName = mesa ? mesa.name : 'Mesa';
     if (mesaId === 'delivery_1') mesaName = '🏍️ Delivery';
-    if (mesaId === 'llevar_1') mesaName = '🛍️ Para Llevar';
+    if (mesaId.startsWith('llevar_')) mesaName = '🛍️ ' + mesaId.replace('llevar_', '').replace(/_/g, ' ');
     document.getElementById('order-mesa-name').textContent = mesaName;
     
     document.getElementById('mesas-view').style.display = 'none';
@@ -610,4 +622,17 @@ async function submitDeliveryFromCaja() {
     document.getElementById('delivery-panel-overlay').remove();
     showToast(`✅ Pedido ${type === 'delivery' ? 'domicilio' : 'para llevar'}: ${client} (${formatCurrency(order.total)})`, 'success');
     if (navigator.vibrate) navigator.vibrate(100);
+}
+
+
+
+// ==========================================
+// NUEVO PEDIDO PARA LLEVAR (con nombre de cliente)
+// ==========================================
+function newLlevarOrder() {
+    const client = prompt('Nombre del cliente:');
+    if (!client || !client.trim()) return;
+    const key = 'llevar_' + client.trim().replace(/\s+/g, '_');
+    if (!orders[key]) orders[key] = [];
+    openMesa(key);
 }
