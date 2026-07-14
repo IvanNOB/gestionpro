@@ -141,15 +141,15 @@ function showTab(tab) {
                 <td><button class="btn-action btn-delete" onclick="deleteRemoteDoc('products','${p.id}','${esc(p.name)}')">🗑️</button></td>
             </tr>`).join('')}</tbody></table></div>`;
     } else if (tab === 'sales') {
-        content.innerHTML = `<div class="card"><h3>💰 Todas las Ventas (${sales.length})</h3>
-            <table><thead><tr><th>Fecha</th><th>Producto</th><th>Cant</th><th>Total</th><th>Método</th><th>Vendió</th></tr></thead>
-            <tbody>${sales.map(s => `<tr>
-                <td>${new Date(s.date).toLocaleDateString('es-CO', {day:'2-digit',month:'short'})}</td>
-                <td>${esc(s.productName || '-')}</td><td>${s.quantity}</td>
-                <td>$${Math.round(s.total || 0).toLocaleString('es-CO')}</td>
-                <td>${esc(s.method || '-')}</td>
-                <td>${esc(s.soldBy || '-')}</td>
-            </tr>`).join('')}</tbody></table></div>`;
+        const today = new Date().toISOString().split('T')[0];
+        content.innerHTML = `<div class="card"><h3>💰 Ventas</h3>
+            <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
+                <input type="date" id="admin-sales-date" value="${today}" onchange="filterAdminSales()" style="padding:8px 12px;border:1px solid #334155;border-radius:8px;background:#0a0e1a;color:#e2e8f0;font-size:0.85rem;">
+                <button onclick="document.getElementById('admin-sales-date').value='';filterAdminSales()" class="btn-action btn-edit">Ver todas</button>
+                <span id="admin-sales-count" style="color:#94a3b8;font-size:0.85rem;"></span>
+            </div>
+            <div id="admin-sales-table"></div></div>`;
+        filterAdminSales();
     } else if (tab === 'employees') {
         content.innerHTML = `<div class="card"><h3>👥 Empleados (${employees.length})</h3>
             <table><thead><tr><th>Nombre</th><th>Rol</th><th>PIN (hash)</th><th>Activo</th><th>Acción</th></tr></thead>
@@ -207,6 +207,27 @@ async function clearUserSales() {
         showNotice('Ventas borradas');
         await loadUserData();
     } catch (e) { showNotice('Error: ' + e.message); }
+}
+
+function filterAdminSales() {
+    const dateFilter = document.getElementById('admin-sales-date')?.value || '';
+    let filtered = sales;
+    if (dateFilter) {
+        filtered = sales.filter(s => s.date && s.date.startsWith(dateFilter));
+    }
+    const total = filtered.reduce((s, v) => s + (v.total || 0), 0);
+    const countEl = document.getElementById('admin-sales-count');
+    if (countEl) countEl.textContent = `${filtered.length} ventas — Total: $${Math.round(total).toLocaleString('es-CO')}`;
+    const container = document.getElementById('admin-sales-table');
+    if (!container) return;
+    container.innerHTML = `<table><thead><tr><th>Fecha</th><th>Producto</th><th>Cant</th><th>Total</th><th>Método</th><th>Vendió</th></tr></thead>
+        <tbody>${filtered.map(s => `<tr>
+            <td>${new Date(s.date).toLocaleDateString('es-CO', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</td>
+            <td>${esc(s.productName || '-')}</td><td>${s.quantity}</td>
+            <td>$${Math.round(s.total || 0).toLocaleString('es-CO')}</td>
+            <td>${esc(s.method || '-')}</td>
+            <td>${esc(s.soldBy || '-')}</td>
+        </tr>`).join('')}</tbody></table>`;
 }
 
 function showNotice(msg) {
