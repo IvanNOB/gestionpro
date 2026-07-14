@@ -1926,3 +1926,88 @@ input, select, textarea {
         top: calc(14px + env(safe-area-inset-top));
     }
 }
+
+
+
+/* ==========================================
+   FIX MOBILE - No requiere "versión de escritorio"
+   ========================================== */
+@media (max-width: 900px) {
+    /* Asegurar que el contenido nunca exceda el ancho de la pantalla */
+    .main-content {
+        width: 100%;
+        max-width: 100vw;
+        overflow-x: hidden;
+    }
+
+    /* Tablas no fuerzan ancho */
+    .table-container {
+        max-width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Grids se adaptan a 1 columna en mobile */
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+
+    .charts-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Cards no exceden el ancho */
+    .card {
+        max-width: 100%;
+        overflow: hidden;
+    }
+
+    /* Formularios en 1 columna */
+    .form-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Filtros en columna */
+    .filters-row {
+        flex-direction: column;
+    }
+
+    /* Selector de turno en columna */
+    .calc-tabs {
+        flex-wrap: wrap;
+    }
+
+    /* Botones de acción más grandes para touch */
+    .action-btn {
+        min-width: 36px;
+        min-height: 36px;
+        font-size: 1rem;
+    }
+
+    /* Sidebar no empuja contenido */
+    .app-layout {
+        flex-direction: column;
+    }
+
+    .main-content {
+        margin-left: 0 !important;
+    }
+}
+
+@media (max-width: 400px) {
+    .stats-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .page-header {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .header-actions {
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+}

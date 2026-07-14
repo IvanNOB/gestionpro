@@ -191,20 +191,16 @@ async function cancelAppointment(id) {
 
 function renderAppointments() {
     const container = document.getElementById('appointments-list');
-    if (!container) return;
+    const containerPage = document.getElementById('appointments-list-page');
     const pending = appointments.filter(a => a.status === 'pendiente');
-    container.innerHTML = pending.length === 0 ? '<p style="color:var(--text-light);">No hay citas pendientes</p>' :
+    const html = pending.length === 0 ? '<p style="color:var(--text-light);">No hay citas pendientes</p>' :
         pending.map(a => `<div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;">
             <div><strong>${esc(a.client)}</strong><br><span style="font-size:0.8rem;color:var(--text-light);">${esc(a.service)} — ${a.date}</span></div>
             <div><button onclick="completeAppointment('${a.id}')" style="background:#10b981;color:white;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;margin-right:4px;">✓</button><button onclick="cancelAppointment('${a.id}')" style="background:#ef4444;color:white;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;">✕</button></div>
         </div>`).join('');
+    if (container) container.innerHTML = html;
+    if (containerPage) containerPage.innerHTML = html;
 }
-
-
-
-// ==========================================
-// #4 CUENTAS POR COBRAR / FIADOS
-// ==========================================
 let debts = [];
 
 async function loadDebts() {
@@ -243,12 +239,16 @@ async function payDebt(id) {
 
 function renderDebts() {
     const container = document.getElementById('debts-list');
-    if (!container) return;
+    const containerPage = document.getElementById('debts-list-page');
     const pending = debts.filter(d => d.status === 'pendiente');
     const totalDebt = pending.reduce((s, d) => s + (d.amount - d.paid), 0);
+    
     const header = document.getElementById('debts-total');
+    const headerPage = document.getElementById('debts-total-page');
     if (header) header.textContent = formatCurrency(totalDebt);
-    container.innerHTML = pending.length === 0 ? '<p style="color:var(--text-light);">No hay fiados pendientes 🎉</p>' :
+    if (headerPage) headerPage.textContent = formatCurrency(totalDebt);
+    
+    const html = pending.length === 0 ? '<p style="color:var(--text-light);">No hay fiados pendientes 🎉</p>' :
         pending.map(d => `<div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;">
             <div><strong>${esc(d.client)}</strong><br><span style="font-size:0.8rem;color:var(--text-light);">${esc(d.concept)} — ${new Date(d.date).toLocaleDateString('es-CO')}</span></div>
             <div style="text-align:right;"><div style="font-weight:700;color:var(--danger);">${formatCurrency(d.amount - d.paid)}</div>
@@ -1212,9 +1212,16 @@ async function loadDeliveryOrders() {
 
 function renderDeliveryOrders() {
     const container = document.getElementById('delivery-orders-list');
-    if (!container) return;
+    const containerPage = document.getElementById('delivery-orders-page');
     const active = deliveryOrders.filter(o => o.status !== 'entregado');
-    if (active.length === 0) { container.innerHTML = '<p style="color:var(--text-light);">No hay pedidos para llevar/delivery activos</p>'; return; }
+
+    const html = generateDeliveryHTML(active);
+    if (container) container.innerHTML = html;
+    if (containerPage) containerPage.innerHTML = html;
+}
+
+function generateDeliveryHTML(active) {
+    if (active.length === 0) return '<p style="color:var(--text-light);">No hay pedidos para llevar/delivery activos</p>';
 
     const statusColors = { pendiente: '#f59e0b', preparando: '#3b82f6', listo: '#10b981' };
     const statusLabels = { pendiente: '🆕 Pendiente', preparando: '👨‍🍳 Preparando', listo: '✅ Listo' };
@@ -1243,3 +1250,5 @@ function renderDeliveryOrders() {
         </div>`;
     }).join('');
 }
+
+

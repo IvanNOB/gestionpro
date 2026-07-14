@@ -51,7 +51,9 @@
                 <!-- Operaciones -->
                 <li style="padding:4px 16px;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.08em;color:#484f58;font-weight:600;margin-top:16px;">Operaciones</li>
                 <li><a href="#" class="nav-link" data-section="sales">💰 Ventas</a></li>
+                <li><a href="#" class="nav-link" data-section="pos">⚡ Venta Rápida</a></li>
                 <li><a href="#" class="nav-link" data-section="mesas">🪑 Mesas y Pedidos</a></li>
+                <li><a href="#" class="nav-link" data-section="delivery">🏍️ Delivery</a></li>
                 <li><a href="#" class="nav-link" data-section="cashclose">🧾 Cierre de Caja</a></li>
                 
                 <!-- Inventario -->
@@ -65,6 +67,8 @@
                 <li><a href="#" class="nav-link" data-section="clients">👥 Clientes</a></li>
                 <li><a href="#" class="nav-link" data-section="suppliers">🚚 Proveedores</a></li>
                 <li><a href="#" class="nav-link" data-section="expenses">💸 Gastos</a></li>
+                <li><a href="#" class="nav-link" data-section="debts">📝 Fiados</a></li>
+                <li><a href="#" class="nav-link" data-section="appointments">📅 Citas</a></li>
                 
                 <!-- Análisis -->
                 <li style="padding:4px 16px;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.08em;color:#484f58;font-weight:600;margin-top:16px;">Análisis</li>
@@ -1393,6 +1397,65 @@
                     <div id="branches-list"></div>
                 </div>
             </div>
+            </section>
+
+            <!-- ======================== VENTA RÁPIDA POS ======================== -->
+            <section class="page" id="page-pos">
+                <div class="page-header">
+                    <h2>⚡ Venta Rápida POS</h2>
+                </div>
+                <div class="card">
+                    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+                        <button class="btn btn-sm btn-outline" onclick="document.getElementById('btn-scan-barcode')?.click()">📷 Escanear Código</button>
+                        <button class="btn btn-sm btn-outline" onclick="calculateChange()">💵 Calcular Vuelto</button>
+                        <select id="pos-method-page" style="padding:8px 14px;border:1px solid var(--border);border-radius:8px;background:var(--card-bg);color:var(--text);font-size:0.9rem;">
+                            <option value="Efectivo">💵 Efectivo</option>
+                            <option value="Tarjeta">💳 Tarjeta</option>
+                            <option value="Transferencia">🏦 Transferencia</option>
+                        </select>
+                    </div>
+                    <p style="color:var(--text-light);margin-bottom:12px;">Toca un producto para agregarlo al carrito:</p>
+                    <div id="pos-products-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-bottom:16px;"></div>
+                    <div id="pos-cart-page" style="margin-bottom:12px;border:1px solid var(--border);border-radius:10px;padding:12px;min-height:60px;"></div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:14px;background:var(--bg);border-radius:10px;">
+                        <strong style="font-size:1.2rem;">Total: <span id="pos-total-page">$0</span></strong>
+                        <button class="btn btn-success" onclick="processPOSSale()" style="font-size:1rem;padding:12px 24px;">💰 Cobrar</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ======================== DELIVERY ======================== -->
+            <section class="page" id="page-delivery">
+                <div class="page-header">
+                    <h2>🏍️ Delivery / Para Llevar</h2>
+                    <button class="btn btn-sm btn-primary" onclick="newDeliveryOrder()">+ Nuevo Pedido</button>
+                </div>
+                <div class="card">
+                    <div id="delivery-orders-page"></div>
+                </div>
+            </section>
+
+            <!-- ======================== FIADOS ======================== -->
+            <section class="page" id="page-debts">
+                <div class="page-header">
+                    <h2>📝 Cuentas por Cobrar (Fiados)</h2>
+                    <button class="btn btn-sm btn-primary" onclick="addDebt()">+ Agregar Fiado</button>
+                </div>
+                <div class="card">
+                    <div style="margin-bottom:16px;font-size:1.1rem;">Total pendiente: <strong id="debts-total-page" style="color:var(--danger);">$0</strong></div>
+                    <div id="debts-list-page"></div>
+                </div>
+            </section>
+
+            <!-- ======================== CITAS ======================== -->
+            <section class="page" id="page-appointments">
+                <div class="page-header">
+                    <h2>📅 Agenda de Citas</h2>
+                    <button class="btn btn-sm btn-primary" onclick="addAppointment()">+ Nueva Cita</button>
+                </div>
+                <div class="card">
+                    <div id="appointments-list-page"></div>
+                </div>
             </section>
 
             <!-- ======================== ALERTAS ======================== -->
