@@ -477,10 +477,12 @@ function applyMeseroRoleRestrictions(role) {
         payMethods.forEach(btn => btn.style.display = 'none');
     }
 
-    // Caja y Dueño pueden ver la cocina
+    // Caja y Dueño pueden ver la cocina y delivery
     if (role === 'caja' || role === 'owner') {
         const btnCocina = document.getElementById('btn-cocina-mesero');
+        const btnDelivery = document.getElementById('btn-delivery-mesero');
         if (btnCocina) btnCocina.style.display = '';
+        if (btnDelivery) btnDelivery.style.display = '';
     }
 
     // Solo el dueño puede ver el botón de ir al panel principal
@@ -519,3 +521,69 @@ window.addEventListener('online', () => {
     el.innerHTML = '✅ Conectado — Sincronizando...';
     setTimeout(() => { el.style.display = 'none'; }, 3000);
 });
+
+
+
+// ==========================================
+// DELIVERY DESDE CAJA
+// ==========================================
+function openDeliveryPanel() {
+    const overlay = document.createElement('div');
+    overlay.id = 'delivery-panel-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+    overlay.innerHTML = `
+        <div style="background:var(--bg-secondary,#1a1a2e);border-radius:16px;padding:24px;max-width:500px;width:100%;max-height:90vh;overflow-y:auto;border:1px solid var(--border-glass,#333);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                <h3 style="color:var(--text-primary,white);font-size:1.2rem;">🏍️ Nuevo Pedido Delivery</h3>
+                <button onclick="document.getElementById('delivery-panel-overlay').remove()" style="background:none;border:none;color:var(--text-secondary,#94a3b8);font-size:1.5rem;cursor:pointer;">✕</button>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:12px;">
+                <input type="text" id="del-client" placeholder="Nombre del cliente" style="padding:12px;background:var(--bg-primary,#0f0f1a);border:1px solid var(--border-glass,#333);border-radius:10px;color:var(--text-primary,white);font-size:0.95rem;">
+                <input type="tel" id="del-phone" placeholder="Teléfono" style="padding:12px;background:var(--bg-primary,#0f0f1a);border:1px solid var(--border-glass,#333);border-radius:10px;color:var(--text-primary,white);font-size:0.95rem;">
+                <input type="text" id="del-address" placeholder="Dirección (vacío = para llevar)" style="padding:12px;background:var(--bg-primary,#0f0f1a);border:1px solid var(--border-glass,#333);border-radius:10px;color:var(--text-primary,white);font-size:0.95rem;">
+                <input type="text" id="del-items" placeholder="Productos: Hamburguesa x2, Papas x1" style="padding:12px;background:var(--bg-primary,#0f0f1a);border:1px solid var(--border-glass,#333);border-radius:10px;color:var(--text-primary,white);font-size:0.95rem;">
+                <input type="number" id="del-fee" placeholder="Costo envío ($) - 0 si es para llevar" value="0" style="padding:12px;background:var(--bg-primary,#0f0f1a);border:1px solid var(--border-glass,#333);border-radius:10px;color:var(--text-primary,white);font-size:0.95rem;">
+                <button onclick="submitDeliveryFromCaja()" style="padding:14px;background:linear-gradient(135deg,#10b981,#059669);color:white;border:none;border-radius:10px;font-weight:700;font-size:1rem;cursor:pointer;">📦 Crear Pedido</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+}
+
+async function submitDeliveryFromCaja() {
+    const client = document.getElementById('del-client').value.trim();
+    const phone = document.getElementById('del-phone').value.trim();
+    const address = document.getElementById('del-address').value.trim();
+    const itemsText = document.getElementById('del-items').value.trim();
+    const deliveryFee = parseFloat(document.getElementById('del-fee').value) || 0;
+
+    if (!client) { showToast('Ingresa el nombre del cliente', 'error'); return; }
+    if (!itemsText) { showToast('Ingresa los productos', 'error'); return; }
+
+    const type = address ? 'delivery' : 'para_llevar';
+    const items = itemsText.split(',').map(text => {
+        const match = text.trim().match(/(.+?)\s*x?\s*(\d+)?$/i);
+        const name = match ? match[1].trim() : text.trim();
+        const qty = match && match[2] ? parseInt(match[2]) : 1;
+        const product = products.find(p => p.name.toLowerCase().includes(name.toLowerCase()));
+        return { productId: product?.id || '', name: product?.name || name, price: product?.price || 0, cost: product?.cost || 0, qty };
+    });
+
+    const total = items.reduce((s, i) => s + (i.price * i.qty), 0);
+
+    const order = {
+        id: generateId(),
+        client, phone, address, type, items,
+        subtotal: total,
+        deliveryFee,
+        total: total + deliveryFee,
+        status: 'pendiente',
+        date: new Date().toISOString(),
+        createdBy: sessionStorage.getItem('activeEmployee') || 'Caja'
+    };
+
+    await userCollection('deliveryOrders').doc(order.id).set(order);
+    document.getElementById('delivery-panel-overlay').remove();
+    showToast(`✅ Pedido ${type === 'delivery' ? 'domicilio' : 'para llevar'}: ${client} (${formatCurrency(order.total)})`, 'success');
+    if (navigator.vibrate) navigator.vibrate(100);
+}
