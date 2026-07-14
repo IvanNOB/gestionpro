@@ -85,7 +85,7 @@ async function loadUserData() {
 
         const [prodSnap, salesSnap, empSnap, mesasSnap, expSnap] = await Promise.all([
             db.collection('users').doc(targetUid).collection('products').get(),
-            db.collection('users').doc(targetUid).collection('sales').orderBy('date', 'desc').limit(50).get(),
+            db.collection('users').doc(targetUid).collection('sales').orderBy('date', 'desc').get(),
             db.collection('users').doc(targetUid).collection('employees').get(),
             db.collection('users').doc(targetUid).collection('mesas').get(),
             db.collection('users').doc(targetUid).collection('expenses').get()
@@ -117,7 +117,7 @@ function showTab(tab) {
         content.innerHTML = `
             <div class="stat-grid">
                 <div class="stat"><div class="value">${products.length}</div><div class="label">Productos</div></div>
-                <div class="stat"><div class="value">${sales.length}</div><div class="label">Ventas (últimas 50)</div></div>
+                <div class="stat"><div class="value">${sales.length}</div><div class="label">Ventas (total)</div></div>
                 <div class="stat"><div class="value">${employees.length}</div><div class="label">Empleados</div></div>
                 <div class="stat"><div class="value">${mesas.length}</div><div class="label">Mesas</div></div>
                 <div class="stat"><div class="value">$${Math.round(totalSales).toLocaleString('es-CO')}</div><div class="label">Ingresos</div></div>
@@ -141,7 +141,7 @@ function showTab(tab) {
                 <td><button class="btn-action btn-delete" onclick="deleteRemoteDoc('products','${p.id}','${esc(p.name)}')">🗑️</button></td>
             </tr>`).join('')}</tbody></table></div>`;
     } else if (tab === 'sales') {
-        content.innerHTML = `<div class="card"><h3>💰 Últimas Ventas (${sales.length})</h3>
+        content.innerHTML = `<div class="card"><h3>💰 Todas las Ventas (${sales.length})</h3>
             <table><thead><tr><th>Fecha</th><th>Producto</th><th>Cant</th><th>Total</th><th>Método</th><th>Vendió</th></tr></thead>
             <tbody>${sales.map(s => `<tr>
                 <td>${new Date(s.date).toLocaleDateString('es-CO', {day:'2-digit',month:'short'})}</td>
