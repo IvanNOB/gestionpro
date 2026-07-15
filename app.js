@@ -1293,11 +1293,19 @@ function renderAllProductsRankingChart() {
         }
     });
 
+    // Incluir TODOS los productos (incluso los que no se han vendido)
+    products.forEach(p => {
+        if (!productSales[p.name]) {
+            productSales[p.name] = 0;
+        }
+    });
+
     // Ordenar de más vendido a menos vendido
     const sorted = Object.entries(productSales).sort((a, b) => b[1] - a[1]);
 
     // Colores degradados del más vendido (verde) al menos vendido (rojo)
-    const colors = sorted.map((_, i) => {
+    const colors = sorted.map((entry, i) => {
+        if (entry[1] === 0) return 'rgba(148, 163, 184, 0.5)'; // Gris para sin ventas
         const ratio = i / Math.max(sorted.length - 1, 1);
         const r = Math.round(34 + ratio * 205);
         const g = Math.round(197 - ratio * 150);
@@ -1308,7 +1316,7 @@ function renderAllProductsRankingChart() {
     charts.allProductsRanking = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: sorted.map(s => s[0]),
+            labels: sorted.map(s => s[1] === 0 ? s[0] + ' ⚠️' : s[0]),
             datasets: [{
                 label: 'Unidades vendidas',
                 data: sorted.map(s => s[1]),
@@ -1323,7 +1331,7 @@ function renderAllProductsRankingChart() {
                 legend: { display: false },
                 tooltip: {
                     callbacks: {
-                        label: (ctx) => ` ${ctx.raw} unidades vendidas`
+                        label: (ctx) => ctx.raw === 0 ? ' Sin ventas' : ` ${ctx.raw} unidades vendidas`
                     }
                 }
             },
