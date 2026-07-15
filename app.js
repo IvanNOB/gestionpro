@@ -1274,10 +1274,65 @@ function renderCharts() {
     if (typeof Chart === 'undefined') return;
     Object.values(charts).forEach(c => c.destroy && c.destroy());
     charts = {};
+    renderAllProductsRankingChart();
     renderSalesWeekChart();
     renderTopProductsChart();
     renderCategoriesChart();
     renderProfitCategoryChart();
+}
+
+function renderAllProductsRankingChart() {
+    const ctx = document.getElementById('chart-all-products-ranking');
+    if (!ctx) return;
+
+    // Calcular ventas totales por producto
+    const productSales = {};
+    sales.forEach(s => {
+        if (!s.voided) {
+            productSales[s.productName] = (productSales[s.productName] || 0) + s.quantity;
+        }
+    });
+
+    // Ordenar de más vendido a menos vendido
+    const sorted = Object.entries(productSales).sort((a, b) => b[1] - a[1]);
+
+    // Colores degradados del más vendido (verde) al menos vendido (rojo)
+    const colors = sorted.map((_, i) => {
+        const ratio = i / Math.max(sorted.length - 1, 1);
+        const r = Math.round(34 + ratio * 205);
+        const g = Math.round(197 - ratio * 150);
+        const b = Math.round(94 - ratio * 50);
+        return `rgba(${r}, ${g}, ${b}, 0.8)`;
+    });
+
+    charts.allProductsRanking = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: sorted.map(s => s[0]),
+            datasets: [{
+                label: 'Unidades vendidas',
+                data: sorted.map(s => s[1]),
+                backgroundColor: colors,
+                borderRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            indexAxis: 'y',
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => ` ${ctx.raw} unidades vendidas`
+                    }
+                }
+            },
+            scales: {
+                x: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } },
+                y: { grid: { display: false } }
+            }
+        }
+    });
 }
 
 function renderSalesWeekChart() {
