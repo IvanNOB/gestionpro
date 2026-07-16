@@ -1399,6 +1399,12 @@ function updateDashboardStats() {
     setText('dash-net-profit', formatCurrency(stats.netProfitMonth));
     const netEl = document.getElementById('dash-net-profit');
     if (netEl) netEl.style.color = stats.netProfitMonth >= 0 ? 'var(--success)' : 'var(--danger)';
+
+    // Stock critical and low counters
+    const stockCritical = products.filter(p => p.quantity === 0).length;
+    const stockLow = products.filter(p => p.quantity > 0 && p.quantity <= (p.minStock || 5)).length;
+    setText('dash-stock-critical', stockCritical);
+    setText('dash-stock-low', stockLow);
 }
 
 function setText(id, value) {
