@@ -160,12 +160,18 @@ async function loadAppointments() {
 }
 
 async function addAppointment() {
-    const client = prompt('Nombre del cliente:');
-    if (!client) return;
-    const date = prompt('Fecha y hora (YYYY-MM-DD HH:MM):', new Date().toISOString().slice(0, 16).replace('T', ' '));
-    if (!date) return;
-    const service = prompt('Servicio:');
-    if (!service) return;
+    const result = await showModal({
+        title: '📅 Nueva Cita',
+        fields: [
+            { label: 'Nombre del cliente', placeholder: 'Ej: María López', type: 'text' },
+            { label: 'Fecha y hora', placeholder: '', type: 'datetime-local', defaultValue: new Date().toISOString().slice(0, 16) },
+            { label: 'Servicio', placeholder: 'Ej: Corte de cabello', type: 'text' }
+        ],
+        confirmText: 'Agendar'
+    });
+    if (!result) return;
+    const [client, date, service] = result;
+    if (!client || !date || !service) { showToast('Completa todos los campos', 'error'); return; }
     const apt = { id: generateId(), client, date, service, status: 'pendiente', createdAt: new Date().toISOString() };
     appointments.push(apt);
     await firestoreOperation(() => userCollection('appointments').doc(apt.id).set(apt));
@@ -213,11 +219,18 @@ async function loadDebts() {
 }
 
 async function addDebt() {
-    const client = prompt('¿Quién debe?');
-    if (!client) return;
-    const amount = parseFloat(prompt('¿Cuánto debe? ($)'));
-    if (!amount || amount <= 0) return;
-    const concept = prompt('Concepto:', 'Fiado');
+    const result = await showModal({
+        title: '📋 Nuevo Fiado',
+        fields: [
+            { label: '¿Quién debe?', placeholder: 'Nombre del cliente', type: 'text' },
+            { label: 'Monto ($)', placeholder: '0', type: 'number', min: 1 },
+            { label: 'Concepto', placeholder: 'Ej: Almuerzo', type: 'text', defaultValue: 'Fiado' }
+        ],
+        confirmText: 'Registrar'
+    });
+    if (!result) return;
+    const [client, amount, concept] = result;
+    if (!client || !amount || amount <= 0) { showToast('Completa nombre y monto', 'error'); return; }
     const debt = { id: generateId(), client, amount, concept: concept || 'Fiado', paid: 0, date: new Date().toISOString(), status: 'pendiente' };
     debts.push(debt);
     await firestoreOperation(() => userCollection('debts').doc(debt.id).set(debt));
@@ -228,8 +241,10 @@ async function addDebt() {
 async function payDebt(id) {
     const debt = debts.find(d => d.id === id);
     if (!debt) return;
-    const amount = parseFloat(prompt(`¿Cuánto abona ${debt.client}? (Debe: ${formatCurrency(debt.amount - debt.paid)})`, debt.amount - debt.paid));
-    if (!amount || amount <= 0) return;
+    const remaining = debt.amount - debt.paid;
+    const result = await showPrompt(`Abono de ${debt.client}`, `Debe: ${formatCurrency(remaining)}`, remaining, 'number');
+    if (!result || parseFloat(result) <= 0) return;
+    const amount = parseFloat(result);
     debt.paid += amount;
     if (debt.paid >= debt.amount) debt.status = 'pagado';
     await firestoreOperation(() => userCollection('debts').doc(id).update({ paid: debt.paid, status: debt.status }));
@@ -924,10 +939,11 @@ ${top3Text || '• Sin ventas hoy'}${stockAlert}
 _Generado por GestiónPro_`;
 
     // Abrir WhatsApp con el mensaje
-    const phone = prompt('¿A qué número enviar el reporte?\n(Con código de país, ej: 573159756975)', '57');
-    if (!phone) return;
-    window.open(`https://wa.me/${phone.replace(/\s/g, '')}?text=${encodeURIComponent(msg)}`, '_blank');
-    showToast('Reporte enviado por WhatsApp', 'success');
+    showPrompt('📲 Enviar reporte por WhatsApp', 'Número con código de país (ej: 573001234567)', '57', 'text').then(phone => {
+        if (!phone) return;
+        window.open(`https://wa.me/${phone.replace(/\s/g, '')}?text=${encodeURIComponent(msg)}`, '_blank');
+        showToast('Reporte enviado por WhatsApp', 'success');
+    });
 }
 
 // Reporte semanal
@@ -974,10 +990,11 @@ function sendWeeklyReportWhatsApp() {
 ━━━━━━━━━━━━━━━━
 _Generado por GestiónPro_`;
 
-    const phone = prompt('¿A qué número enviar el reporte semanal?\n(Con código de país, ej: 573159756975)', '57');
-    if (!phone) return;
-    window.open(`https://wa.me/${phone.replace(/\s/g, '')}?text=${encodeURIComponent(msg)}`, '_blank');
-    showToast('Reporte semanal enviado', 'success');
+    showPrompt('📲 Enviar reporte semanal', 'Número con código de país (ej: 573001234567)', '57', 'text').then(phone => {
+        if (!phone) return;
+        window.open(`https://wa.me/${phone.replace(/\s/g, '')}?text=${encodeURIComponent(msg)}`, '_blank');
+        showToast('Reporte semanal enviado', 'success');
+    });
 }
 
 
@@ -1137,14 +1154,20 @@ function renderCashOpening() {
 let deliveryOrders = [];
 
 async function newDeliveryOrder() {
-    const client = prompt('Nombre del cliente:');
-    if (!client) return;
-    const phone = prompt('Teléfono (para contactar):', '') || '';
-    const address = prompt('Dirección de entrega (dejar vacío si es para llevar):', '') || '';
+    const result = await showModal({
+        title: '🛍️ Nuevo Pedido Para Llevar',
+        fields: [
+            { label: 'Nombre del cliente', placeholder: 'Ej: Juan Pérez', type: 'text' },
+            { label: 'Teléfono', placeholder: 'Ej: 300 123 4567', type: 'text' },
+            { label: 'Dirección (vacío = para llevar)', placeholder: 'Dirección de entrega', type: 'text' },
+            { label: 'Productos (separados por coma)', placeholder: 'Ej: Hamburguesa x2, Papas x1', type: 'text' }
+        ],
+        confirmText: 'Crear Pedido'
+    });
+    if (!result) return;
+    const [client, phone, address, itemsText] = result;
+    if (!client || !itemsText) { showToast('Necesitas nombre y productos', 'error'); return; }
     const type = address ? 'delivery' : 'para_llevar';
-
-    const itemsText = prompt('Productos (separados por coma):\nEj: Hamburguesa x2, Papas x1, Gaseosa x1');
-    if (!itemsText) return;
 
     const items = itemsText.split(',').map(text => {
         const match = text.trim().match(/(.+?)\s*x?\s*(\d+)?$/i);

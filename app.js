@@ -4,6 +4,129 @@
 // Versión optimizada con caché en memoria y mejoras de rendimiento
 
 // ==========================================
+// MODAL PERSONALIZADO (reemplaza prompt/confirm nativos)
+// ==========================================
+function showModal({ title, fields, confirmText, cancelText, onConfirm }) {
+    return new Promise((resolve) => {
+        // Eliminar modal anterior si existe
+        const existing = document.getElementById('custom-modal-overlay');
+        if (existing) existing.remove();
+
+        const overlay = document.createElement('div');
+        overlay.id = 'custom-modal-overlay';
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);animation:modalFadeIn 0.2s ease;';
+
+        const fieldsHTML = fields.map((f, i) => {
+            if (f.type === 'select') {
+                const options = f.options.map(o => `<option value="${o.value}" ${o.value === f.defaultValue ? 'selected' : ''}>${o.label}</option>`).join('');
+                return `<div style="margin-bottom:14px;">
+                    <label style="display:block;font-size:0.78rem;font-weight:600;color:#475569;margin-bottom:5px;">${f.label}</label>
+                    <select id="modal-field-${i}" style="width:100%;padding:10px 13px;border:1px solid #e2e8f0;border-radius:8px;font-size:0.88rem;background:#f8fafc;color:#1e293b;outline:none;transition:border 0.2s;" onfocus="this.style.borderColor='#635bff';this.style.boxShadow='0 0 0 3px rgba(99,91,255,0.12)'" onblur="this.style.borderColor='#e2e8f0';this.style.boxShadow='none'">${options}</select>
+                </div>`;
+            }
+            return `<div style="margin-bottom:14px;">
+                <label style="display:block;font-size:0.78rem;font-weight:600;color:#475569;margin-bottom:5px;">${f.label}</label>
+                <input id="modal-field-${i}" type="${f.type || 'text'}" value="${f.defaultValue || ''}" placeholder="${f.placeholder || ''}" ${f.min !== undefined ? `min="${f.min}"` : ''} ${f.step ? `step="${f.step}"` : ''} style="width:100%;padding:10px 13px;border:1px solid #e2e8f0;border-radius:8px;font-size:0.88rem;background:#f8fafc;color:#1e293b;outline:none;transition:border 0.2s;font-family:${f.type === 'number' ? "'JetBrains Mono',monospace" : 'inherit'};" onfocus="this.style.borderColor='#635bff';this.style.boxShadow='0 0 0 3px rgba(99,91,255,0.12)'" onblur="this.style.borderColor='#e2e8f0';this.style.boxShadow='none'">
+            </div>`;
+        }).join('');
+
+        overlay.innerHTML = `
+            <div style="background:white;border-radius:16px;padding:28px 24px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.15);animation:modalSlideIn 0.25s cubic-bezier(0.16,1,0.3,1);">
+                <h3 style="font-size:1.1rem;font-weight:700;color:#1e293b;margin-bottom:18px;letter-spacing:-0.02em;">${title}</h3>
+                <div>${fieldsHTML}</div>
+                <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
+                    <button id="modal-cancel-btn" style="padding:9px 18px;border:1px solid #e2e8f0;border-radius:8px;background:#f8fafc;color:#475569;font-size:0.82rem;font-weight:600;cursor:pointer;transition:all 0.2s;">${cancelText || 'Cancelar'}</button>
+                    <button id="modal-confirm-btn" style="padding:9px 18px;border:none;border-radius:8px;background:#635bff;color:white;font-size:0.82rem;font-weight:600;cursor:pointer;transition:all 0.2s;box-shadow:0 2px 8px rgba(99,91,255,0.3);">${confirmText || 'Confirmar'}</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+
+        // Focus en el primer campo
+        setTimeout(() => {
+            const firstField = document.getElementById('modal-field-0');
+            if (firstField) firstField.focus();
+        }, 100);
+
+        // Handlers
+        const getValues = () => {
+            return fields.map((f, i) => {
+                const el = document.getElementById(`modal-field-${i}`);
+                if (f.type === 'number') return parseFloat(el.value) || 0;
+                return el.value.trim();
+            });
+        };
+
+        const close = (result) => {
+            overlay.style.opacity = '0';
+            setTimeout(() => overlay.remove(), 150);
+            resolve(result);
+        };
+
+        document.getElementById('modal-confirm-btn').addEventListener('click', () => {
+            const values = getValues();
+            close(values);
+        });
+
+        document.getElementById('modal-cancel-btn').addEventListener('click', () => close(null));
+
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) close(null);
+        });
+
+        // Enter para confirmar, Escape para cancelar
+        overlay.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const values = getValues();
+                close(values);
+            }
+            if (e.key === 'Escape') close(null);
+        });
+    });
+}
+
+// Versión simplificada para un solo campo (reemplazo directo de prompt())
+function showPrompt(title, placeholder, defaultValue, type) {
+    return showModal({
+        title,
+        fields: [{ label: '', placeholder: placeholder || '', defaultValue: defaultValue || '', type: type || 'text' }],
+    }).then(result => result ? result[0] : null);
+}
+
+// Reemplazo de confirm() nativo
+function showConfirmModal(title, message) {
+    return new Promise((resolve) => {
+        const existing = document.getElementById('custom-modal-overlay');
+        if (existing) existing.remove();
+
+        const overlay = document.createElement('div');
+        overlay.id = 'custom-modal-overlay';
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);animation:modalFadeIn 0.2s ease;';
+
+        overlay.innerHTML = `
+            <div style="background:white;border-radius:16px;padding:28px 24px;max-width:380px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.15);animation:modalSlideIn 0.25s cubic-bezier(0.16,1,0.3,1);">
+                <h3 style="font-size:1.1rem;font-weight:700;color:#1e293b;margin-bottom:10px;letter-spacing:-0.02em;">${title}</h3>
+                ${message ? `<p style="color:#64748b;font-size:0.88rem;margin-bottom:20px;line-height:1.5;">${message}</p>` : ''}
+                <div style="display:flex;gap:10px;justify-content:flex-end;">
+                    <button id="modal-cancel-btn" style="padding:9px 18px;border:1px solid #e2e8f0;border-radius:8px;background:#f8fafc;color:#475569;font-size:0.82rem;font-weight:600;cursor:pointer;transition:all 0.2s;">Cancelar</button>
+                    <button id="modal-confirm-btn" style="padding:9px 18px;border:none;border-radius:8px;background:#ef4444;color:white;font-size:0.82rem;font-weight:600;cursor:pointer;transition:all 0.2s;box-shadow:0 2px 8px rgba(239,68,68,0.3);">Confirmar</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+
+        const close = (val) => { overlay.style.opacity = '0'; setTimeout(() => overlay.remove(), 150); resolve(val); };
+        document.getElementById('modal-confirm-btn').addEventListener('click', () => close(true));
+        document.getElementById('modal-cancel-btn').addEventListener('click', () => close(false));
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) close(false); });
+        overlay.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(false); });
+    });
+}
+
+// ==========================================
 // MANEJO DE ERRORES GLOBAL
 // ==========================================
 window.onerror = function(message, source, lineno, colno, error) {
@@ -2889,12 +3012,13 @@ function deleteInsumo(id) {
 function restockInsumo(id) {
     const i = insumos.find(x => x.id === id);
     if (!i) return;
-    const qty = prompt(`¿Cuántas ${i.unit} de "${i.name}" compraste?`, i.purchaseQty);
-    if (!qty || parseFloat(qty) <= 0) return;
-    i.currentStock += parseFloat(qty);
-    saveInsumo(i);
-    renderInsumos();
-    showToast(`Stock de "${i.name}" actualizado: ${i.currentStock} ${i.unit}`, 'success');
+    showPrompt(`Reabastecer "${i.name}"`, `Cantidad en ${i.unit}`, i.purchaseQty, 'number').then(qty => {
+        if (!qty || parseFloat(qty) <= 0) return;
+        i.currentStock += parseFloat(qty);
+        saveInsumo(i);
+        renderInsumos();
+        showToast(`Stock de "${i.name}" actualizado: ${i.currentStock} ${i.unit}`, 'success');
+    });
 }
 
 function renderInsumos() {
