@@ -297,14 +297,23 @@ function sendWhatsAppReceipt(sale) {
 function addVariantToProduct(productId) {
     const product = products.find(p => p.id === productId);
     if (!product) return;
-    const varName = prompt('Nombre de la variante (ej: Talla M, Color Rojo, Sabor Chocolate):');
-    if (!varName) return;
-    const varStock = parseInt(prompt('Stock de esta variante:', '10')) || 0;
-    if (!product.variants) product.variants = [];
-    product.variants.push({ name: varName.trim(), stock: varStock });
-    saveProduct(product);
-    renderAll();
-    showToast(`Variante "${varName}" agregada a ${product.name}`, 'success');
+    showModal({
+        title: '🏷️ Nueva Variante',
+        fields: [
+            { label: 'Nombre de la variante', placeholder: 'Ej: Talla M, Color Rojo', type: 'text' },
+            { label: 'Stock', placeholder: '10', type: 'number', defaultValue: '10', min: 0 }
+        ],
+        confirmText: 'Agregar'
+    }).then(result => {
+        if (!result) return;
+        const [varName, varStock] = result;
+        if (!varName) return;
+        if (!product.variants) product.variants = [];
+        product.variants.push({ name: varName.trim(), stock: parseInt(varStock) || 0 });
+        saveProduct(product);
+        renderAll();
+        showToast(`Variante "${varName}" agregada a ${product.name}`, 'success');
+    });
 }
 
 // ==========================================
@@ -355,11 +364,18 @@ async function loadPromotions() {
 }
 
 async function addPromotion() {
-    const name = prompt('Nombre de la promoción (ej: 2x1 Martes, 10% descuento):');
-    if (!name) return;
-    const discount = parseFloat(prompt('Porcentaje de descuento (%):', '10'));
-    if (!discount) return;
-    const validUntil = prompt('Válida hasta (YYYY-MM-DD):', new Date(Date.now() + 7*24*60*60*1000).toISOString().split('T')[0]);
+    const result = await showModal({
+        title: '🎉 Nueva Promoción',
+        fields: [
+            { label: 'Nombre', placeholder: 'Ej: 2x1 Martes, 10% descuento', type: 'text' },
+            { label: 'Descuento (%)', placeholder: '10', type: 'number', defaultValue: '10', min: 1 },
+            { label: 'Válida hasta', type: 'date', defaultValue: new Date(Date.now() + 7*24*60*60*1000).toISOString().split('T')[0] }
+        ],
+        confirmText: 'Crear Promoción'
+    });
+    if (!result) return;
+    const [name, discount, validUntil] = result;
+    if (!name || !discount) { showToast('Completa nombre y descuento', 'error'); return; }
     const promo = { id: generateId(), name: name.trim(), discount, validUntil: validUntil || '', active: true, createdAt: new Date().toISOString() };
     promotions.push(promo);
     await firestoreOperation(() => userCollection('promotions').doc(promo.id).set(promo));
@@ -506,10 +522,18 @@ async function loadBranches() {
 }
 
 async function addBranch() {
-    const name = prompt('Nombre de la sucursal (ej: Local Centro, Sede Norte):');
-    if (!name) return;
-    const address = prompt('Dirección (opcional):', '');
-    const phone = prompt('Teléfono (opcional):', '');
+    const result = await showModal({
+        title: '📍 Nueva Sucursal',
+        fields: [
+            { label: 'Nombre', placeholder: 'Ej: Local Centro, Sede Norte', type: 'text' },
+            { label: 'Dirección (opcional)', placeholder: 'Dirección', type: 'text' },
+            { label: 'Teléfono (opcional)', placeholder: 'Teléfono', type: 'text' }
+        ],
+        confirmText: 'Crear Sucursal'
+    });
+    if (!result) return;
+    const [name, address, phone] = result;
+    if (!name) { showToast('El nombre es obligatorio', 'error'); return; }
     const branch = {
         id: generateId(),
         name: name.trim(),
@@ -619,15 +643,18 @@ async function loadCombos() {
 }
 
 async function addCombo() {
-    const name = prompt('Nombre del combo (ej: Combo Hamburguesa + Bebida):');
-    if (!name) return;
-    const price = parseFloat(prompt('Precio del combo ($):'));
-    if (!price || price <= 0) return;
-
-    // Seleccionar productos del combo
-    const availableProducts = products.map(p => `${p.name} ($${Math.round(p.price).toLocaleString('es-CO')})`).join('\n');
-    const selectedNames = prompt(`Escribe los productos del combo separados por coma:\n\nDisponibles:\n${availableProducts}\n\nEj: Hamburguesa, Papas, Gaseosa`);
-    if (!selectedNames) return;
+    const result = await showModal({
+        title: '🎁 Nuevo Combo',
+        fields: [
+            { label: 'Nombre del combo', placeholder: 'Ej: Combo Hamburguesa + Bebida', type: 'text' },
+            { label: 'Precio del combo ($)', placeholder: '0', type: 'number', min: 1 },
+            { label: 'Productos (separados por coma)', placeholder: 'Ej: Hamburguesa, Papas, Gaseosa', type: 'text' }
+        ],
+        confirmText: 'Crear Combo'
+    });
+    if (!result) return;
+    const [name, price, selectedNames] = result;
+    if (!name || !price || price <= 0 || !selectedNames) { showToast('Completa todos los campos', 'error'); return; }
 
     const items = selectedNames.split(',').map(n => {
         const trimmed = n.trim();
@@ -711,10 +738,17 @@ async function loadQuotes() {
 }
 
 async function addQuote() {
-    const client = prompt('Cliente para la cotización:');
-    if (!client) return;
-    const itemsText = prompt('Productos (separados por coma):\nEj: Hamburguesa x2, Papas x1, Gaseosa x3');
-    if (!itemsText) return;
+    const result = await showModal({
+        title: '📋 Nueva Cotización',
+        fields: [
+            { label: 'Cliente', placeholder: 'Nombre del cliente', type: 'text' },
+            { label: 'Productos (separados por coma)', placeholder: 'Ej: Hamburguesa x2, Papas x1', type: 'text' }
+        ],
+        confirmText: 'Crear Cotización'
+    });
+    if (!result) return;
+    const [client, itemsText] = result;
+    if (!client || !itemsText) { showToast('Completa cliente y productos', 'error'); return; }
 
     const items = itemsText.split(',').map(text => {
         const match = text.trim().match(/(.+?)\s*x?\s*(\d+)?$/i);
@@ -735,7 +769,17 @@ async function addQuote() {
 async function convertQuoteToSale(id) {
     const quote = quotes.find(q => q.id === id);
     if (!quote) return;
-    const method = prompt('Método de pago (Efectivo/Tarjeta/Transferencia):', 'Efectivo') || 'Efectivo';
+    const methodResult = await showModal({
+        title: '💰 Convertir Cotización en Venta',
+        fields: [{ label: 'Método de pago', type: 'select', defaultValue: 'Efectivo', options: [
+            { value: 'Efectivo', label: '💵 Efectivo' },
+            { value: 'Tarjeta', label: '💳 Tarjeta' },
+            { value: 'Transferencia', label: '🏦 Transferencia' }
+        ]}],
+        confirmText: '💰 Cobrar'
+    });
+    if (!methodResult) return;
+    const method = methodResult[0];
 
     for (const item of quote.items) {
         const product = products.find(p => p.name === item.name);
@@ -802,16 +846,17 @@ function calculateChange() {
     if (!totalEl) return;
     const totalText = totalEl.textContent.replace(/[^0-9]/g, '');
     const total = parseInt(totalText) || 0;
-    const paid = parseFloat(prompt(`Total a pagar: ${formatCurrency(total)}\n\n¿Con cuánto paga el cliente?`));
-    if (!paid || paid <= 0) return;
-    const change = paid - total;
-    if (change < 0) {
-        showToast(`⚠️ Faltan ${formatCurrency(Math.abs(change))}`, 'error');
-    } else if (change === 0) {
-        showToast('✅ Pago exacto', 'success');
-    } else {
-        showToast(`💵 Vuelto: ${formatCurrency(change)}`, 'success');
-    }
+    showPrompt(`💵 Calcular Vuelto (Total: ${formatCurrency(total)})`, '¿Con cuánto paga el cliente?', '', 'number').then(paid => {
+        if (!paid || parseFloat(paid) <= 0) return;
+        const change = parseFloat(paid) - total;
+        if (change < 0) {
+            showToast(`⚠️ Faltan ${formatCurrency(Math.abs(change))}`, 'error');
+        } else if (change === 0) {
+            showToast('✅ Pago exacto', 'success');
+        } else {
+            showToast(`💵 Vuelto: ${formatCurrency(change)}`, 'success');
+        }
+    });
 }
 
 // ==========================================
@@ -829,15 +874,20 @@ async function loadPurchaseLots() {
 }
 
 async function addPurchaseLot() {
-    const productName = prompt('¿Qué producto compraste?');
-    if (!productName) return;
+    const result = await showModal({
+        title: '📦 Registrar Compra',
+        fields: [
+            { label: 'Producto comprado', placeholder: 'Nombre del producto', type: 'text' },
+            { label: 'Unidades compradas', placeholder: '0', type: 'number', min: 1 },
+            { label: 'Total pagado ($)', placeholder: '0', type: 'number', min: 1 },
+            { label: 'Proveedor (opcional)', placeholder: 'Nombre del proveedor', type: 'text' }
+        ],
+        confirmText: 'Registrar Compra'
+    });
+    if (!result) return;
+    const [productName, qty, totalCost, supplier] = result;
+    if (!productName || !qty || qty <= 0 || !totalCost || totalCost <= 0) { showToast('Completa producto, cantidad y costo', 'error'); return; }
     const product = products.find(p => p.name.toLowerCase().includes(productName.toLowerCase()));
-
-    const qty = parseInt(prompt('¿Cuántas unidades compraste?'));
-    if (!qty || qty <= 0) return;
-    const totalCost = parseFloat(prompt('¿Cuánto pagaste en total? ($)'));
-    if (!totalCost || totalCost <= 0) return;
-    const supplier = prompt('Proveedor (opcional):', '') || '';
 
     const costPerUnit = totalCost / qty;
     const lot = { id: generateId(), productId: product?.id || '', productName: product?.name || productName, quantity: qty, totalCost, costPerUnit: Math.round(costPerUnit * 100) / 100, supplier, date: new Date().toISOString() };
@@ -1003,20 +1053,29 @@ _Generado por GestiónPro_`;
 // DEVOLUCIONES PARCIALES
 // ==========================================
 async function partialReturn() {
-    const saleId = prompt('ID o nombre del producto vendido a devolver:\n(Busca en la tabla de ventas)');
-    if (!saleId) return;
+    const saleIdResult = await showPrompt('↩️ Devolución', 'Nombre del producto vendido a devolver', '', 'text');
+    if (!saleIdResult) return;
 
     // Buscar la venta por nombre de producto
-    const matchingSales = sales.filter(s => s.productName && s.productName.toLowerCase().includes(saleId.toLowerCase()) && !s.voided);
+    const matchingSales = sales.filter(s => s.productName && s.productName.toLowerCase().includes(saleIdResult.toLowerCase()) && !s.voided);
     if (matchingSales.length === 0) { showToast('No se encontró la venta', 'error'); return; }
 
     const sale = matchingSales[0]; // La más reciente
     const maxQty = sale.quantity;
-    const returnQty = parseInt(prompt(`Venta encontrada: ${sale.quantity}x ${sale.productName} (${formatCurrency(sale.total)})\n\n¿Cuántas unidades devolver? (máx: ${maxQty})`));
+    const returnResult = await showModal({
+        title: `↩️ Devolver: ${sale.productName}`,
+        fields: [
+            { label: `Unidades a devolver (máx: ${maxQty})`, placeholder: '1', type: 'number', defaultValue: '1', min: 1 },
+            { label: 'Motivo', placeholder: 'Ej: Producto defectuoso', type: 'text', defaultValue: 'Devolución del cliente' }
+        ],
+        confirmText: 'Procesar'
+    });
+    if (!returnResult) return;
+    const returnQty = parseInt(returnResult[0]);
     if (!returnQty || returnQty <= 0 || returnQty > maxQty) { showToast('Cantidad inválida', 'error'); return; }
 
     const returnAmount = (sale.price * returnQty) - (sale.discountAmount ? (sale.discountAmount / sale.quantity) * returnQty : 0);
-    const reason = prompt('Motivo de la devolución:', 'Devolución del cliente') || 'Devolución';
+    const reason = returnResult[1] || 'Devolución';
 
     // Crear registro de devolución
     const returnDoc = {
@@ -1092,9 +1151,21 @@ function renderReturns() {
 let cashOpenings = [];
 
 async function openCashRegister() {
-    const amount = parseFloat(prompt('¿Con cuánto dinero abres caja hoy? ($)', '0'));
-    if (amount === null || isNaN(amount)) return;
-    const shift = prompt('¿Qué turno? (mañana/noche):', 'mañana') || 'mañana';
+    const result = await showModal({
+        title: '🔓 Abrir Caja',
+        fields: [
+            { label: 'Monto base inicial ($)', placeholder: '0', type: 'number', defaultValue: '0', min: 0 },
+            { label: 'Turno', type: 'select', defaultValue: 'mañana', options: [
+                { value: 'mañana', label: '☀️ Mañana' },
+                { value: 'noche', label: '🌙 Noche' },
+                { value: 'todo', label: '📊 Todo el día' }
+            ]}
+        ],
+        confirmText: '🔓 Abrir Caja'
+    });
+    if (!result) return;
+    const [amount, shift] = result;
+    if (isNaN(amount)) return;
 
     const opening = {
         id: generateId(),
@@ -1178,7 +1249,11 @@ async function newDeliveryOrder() {
     });
 
     const total = items.reduce((s, i) => s + (i.price * i.qty), 0);
-    const deliveryFee = type === 'delivery' ? parseFloat(prompt('Costo del domicilio ($):', '0')) || 0 : 0;
+    let deliveryFee = 0;
+    if (type === 'delivery') {
+        const feeResult = await showPrompt('🏍️ Costo del domicilio ($)', '0', '0', 'number');
+        deliveryFee = feeResult ? parseFloat(feeResult) || 0 : 0;
+    }
 
     const order = {
         id: generateId(),
@@ -1209,7 +1284,16 @@ async function updateDeliveryStatus(id, newStatus) {
 
     // Si se entrega, registrar como venta
     if (newStatus === 'entregado') {
-        const method = prompt('Método de pago (Efectivo/Tarjeta/Transferencia):', 'Efectivo') || 'Efectivo';
+        const methodResult = await showModal({
+            title: '💰 Cobrar Pedido',
+            fields: [{ label: 'Método de pago', type: 'select', defaultValue: 'Efectivo', options: [
+                { value: 'Efectivo', label: '💵 Efectivo' },
+                { value: 'Tarjeta', label: '💳 Tarjeta' },
+                { value: 'Transferencia', label: '🏦 Transferencia' }
+            ]}],
+            confirmText: '💰 Cobrar'
+        });
+        const method = methodResult ? methodResult[0] : 'Efectivo';
         for (const item of order.items) {
             const sale = { id: generateId(), productId: item.productId, productName: item.name, quantity: item.qty, price: item.price, cost: item.cost, discount: 0, discountAmount: 0, total: item.price * item.qty, profit: (item.price - item.cost) * item.qty, client: order.client, method, notes: order.type === 'delivery' ? 'Domicilio' : 'Para llevar', date: new Date().toISOString(), soldBy: sessionStorage.getItem('activeEmployee') || 'Dueño' };
             sales.push(sale);
