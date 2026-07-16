@@ -254,6 +254,9 @@ function renderDebts() {
             <div style="text-align:right;"><div style="font-weight:700;color:var(--danger);">${formatCurrency(d.amount - d.paid)}</div>
             <button onclick="payDebt('${d.id}')" style="background:#10b981;color:white;border:none;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:0.75rem;margin-top:4px;">💵 Abonar</button></div>
         </div>`).join('');
+    
+    if (container) container.innerHTML = html;
+    if (containerPage) containerPage.innerHTML = html;
 }
 
 
@@ -1227,7 +1230,7 @@ function generateDeliveryHTML(active) {
     const statusLabels = { pendiente: '🆕 Pendiente', preparando: '👨‍🍳 Preparando', listo: '✅ Listo' };
     const typeLabels = { delivery: '🏍️ Domicilio', para_llevar: '🛍️ Para llevar' };
 
-    container.innerHTML = active.map(o => {
+    return active.map(o => {
         let actionBtn = '';
         if (o.status === 'pendiente') actionBtn = `<button onclick="updateDeliveryStatus('${o.id}','preparando')" style="background:#3b82f6;color:white;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:0.75rem;">👨‍🍳 Preparar</button>`;
         else if (o.status === 'preparando') actionBtn = `<button onclick="updateDeliveryStatus('${o.id}','listo')" style="background:#10b981;color:white;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:0.75rem;">✅ Listo</button>`;
@@ -1236,11 +1239,11 @@ function generateDeliveryHTML(active) {
         return `<div style="background:var(--bg);border:1px solid var(--border);border-left:4px solid ${statusColors[o.status]};border-radius:10px;padding:14px;margin-bottom:10px;">
             <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px;">
                 <div>
-                    <strong>${esc(o.client)}</strong> <span style="font-size:0.75rem;background:rgba(255,255,255,0.08);padding:2px 8px;border-radius:4px;">${typeLabels[o.type]}</span>
+                    <strong>${esc(o.client)}</strong> <span style="font-size:0.75rem;background:rgba(255,255,255,0.08);padding:2px 8px;border-radius:4px;">${typeLabels[o.type] || ''}</span>
                     ${o.phone ? `<div style="font-size:0.8rem;color:var(--text-light);">📞 ${esc(o.phone)}</div>` : ''}
                     ${o.address ? `<div style="font-size:0.8rem;color:var(--text-light);">📍 ${esc(o.address)}</div>` : ''}
                 </div>
-                <span style="font-size:0.75rem;color:${statusColors[o.status]};font-weight:700;">${statusLabels[o.status]}</span>
+                <span style="font-size:0.75rem;color:${statusColors[o.status]};font-weight:700;">${statusLabels[o.status] || ''}</span>
             </div>
             <div style="font-size:0.85rem;margin-bottom:8px;">${o.items.map(i => `${i.qty}x ${esc(i.name)}`).join(', ')}</div>
             <div style="display:flex;justify-content:space-between;align-items:center;">

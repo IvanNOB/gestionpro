@@ -1080,17 +1080,26 @@ function updateCategoryFilter() {
 }
 
 // ==========================================
-// RENDERIZADO
+// RENDERIZADO (Optimizado con requestAnimationFrame)
 // ==========================================
+let _renderScheduled = false;
+
 function renderAll() {
     // Invalidar caché de estadísticas al re-renderizar
     AppCache.invalidatePrefix('stats_');
     rebuildProductsIndex();
-    renderInventoryTable();
-    renderSalesTable();
-    updateDashboardStats();
-    updateCategoryFilter();
-    checkAlerts();
+
+    // Batch DOM updates en un solo frame para evitar layout thrashing
+    if (_renderScheduled) return;
+    _renderScheduled = true;
+    requestAnimationFrame(() => {
+        _renderScheduled = false;
+        renderInventoryTable();
+        renderSalesTable();
+        updateDashboardStats();
+        updateCategoryFilter();
+        checkAlerts();
+    });
 }
 
 
@@ -1104,7 +1113,7 @@ function renderInventoryTable() {
 
     let filtered = products;
 
-    // Filtrado optimizado: aplicar filtros en un solo pass cuando sea posible
+    // Filtrado optimizado: aplicar filtros en un solo pass
     if (search || catFilter || stockFilter) {
         filtered = products.filter(p => {
             if (search && !(p.name.toLowerCase().includes(search) || p.category.toLowerCase().includes(search) ||
@@ -1135,13 +1144,23 @@ function renderInventoryTable() {
     }
     emptyMsg.style.display = 'none';
 
-    // Usar DocumentFragment para batch DOM update
-    const fragment = document.createDocumentFragment();
-    const tempContainer = document.createElement('tbody');
+    // Renderizar en chunks si hay muchos productos (>100) para no bloquear UI
+    const CHUNK_SIZE = 100;
+    if (filtered.length > CHUNK_SIZE) {
+        tbody.innerHTML = buildProductRows(filtered.slice(0, CHUNK_SIZE));
+        // Renderizar el resto de forma asíncrona
+        setTimeout(() => {
+            tbody.innerHTML += buildProductRows(filtered.slice(CHUNK_SIZE));
+        }, 50);
+    } else {
+        tbody.innerHTML = buildProductRows(filtered);
+    }
+}
 
-    tempContainer.innerHTML = filtered.map(p => {
+function buildProductRows(items) {
+    return items.map(p => {
         const profit = p.price - p.cost;
-        const margin = ((profit / p.cost) * 100).toFixed(1);
+        const margin = p.cost > 0 ? ((profit / p.cost) * 100).toFixed(1) : '0.0';
         const suggested = calculateSuggestedPrice(p.cost, p.margin);
         let stockClass = '', stockText = p.quantity;
         if (p.quantity === 0) { stockClass = 'no-stock'; stockText = '0 ❌'; }
@@ -1163,8 +1182,6 @@ function renderInventoryTable() {
             </td>
         </tr>`;
     }).join('');
-
-    tbody.innerHTML = tempContainer.innerHTML;
 }
 
 
@@ -1268,12 +1285,19 @@ function setText(id, value) {
 
 
 // ==========================================
-// GRÁFICAS (Chart.js)
+// GRÁFICAS (Chart.js) - Lazy render solo cuando es visible
 // ==========================================
+let _chartsRendered = false;
+
 function renderCharts() {
     if (typeof Chart === 'undefined') return;
+    // Solo renderizar si el dashboard es visible
+    const dashboardPage = document.getElementById('page-dashboard');
+    if (dashboardPage && !dashboardPage.classList.contains('active')) return;
+    
     Object.values(charts).forEach(c => c.destroy && c.destroy());
     charts = {};
+    _chartsRendered = true;
     renderAllProductsRankingChart();
     renderSalesWeekChart();
     renderTopProductsChart();
@@ -2715,6 +2739,27 @@ function executeUndo() {
 
 // Renderizar gráficas al cargar si estamos en dashboard
 setTimeout(() => { if (currentUser) { renderCharts(); renderHistory(); } }, 1000);
+
+// ==========================================
+// AUTO-ACTUALIZACIÓN DEL SERVICE WORKER
+// ==========================================
+// Detectar nuevo SW disponible y notificar al usuario
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.ready.then(reg => {
+        reg.addEventListener('updatefound', () => {
+            const newWorker = reg.installing;
+            newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'activated') {
+                    // Nuevo SW activo - mostrar toast para recargar
+                    showToast('🔄 Nueva versión disponible. Recargando...', 'info');
+                    setTimeout(() => window.location.reload(), 1500);
+                }
+            });
+        });
+        // Verificar actualizaciones cada 5 minutos
+        setInterval(() => reg.update(), 5 * 60 * 1000);
+    });
+}
 
 // ==========================================
 // INDICADOR OFFLINE/ONLINE
