@@ -1257,149 +1257,84 @@
                         </div>
                     </div>
                 </div>
-            <!-- ============ MÓDULOS EXTRA (reorganizados por grupo) ============ -->
+            <!-- ============ ACCESOS RÁPIDOS (botones tipo app) ============ -->
             <div id="branch-selector" style="display:none;margin-bottom:16px;"></div>
 
-            <!-- GRUPO: OPERACIONES DIARIAS -->
-            <div style="margin-top:24px;margin-bottom:12px;padding:4px 0;border-bottom:2px solid var(--border);">
-                <h3 style="font-size:0.9rem;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;">⚡ Operaciones Rápidas</h3>
+            <div style="margin-top:28px;margin-bottom:16px;">
+                <h3 style="font-size:1rem;color:var(--text);font-weight:700;">⚡ Accesos Rápidos</h3>
             </div>
 
-            <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(350px, 1fr));gap:16px;">
+            <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(100px, 1fr));gap:12px;margin-bottom:32px;">
+                <div onclick="document.querySelector('[data-section=sales]').click()" style="background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:18px 10px;text-align:center;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+                    <div style="font-size:1.8rem;margin-bottom:6px;">💰</div>
+                    <div style="font-size:0.75rem;font-weight:600;color:var(--text);">Vender</div>
+                </div>
+                <div onclick="document.querySelector('[data-section=pos]').click()" style="background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:18px 10px;text-align:center;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+                    <div style="font-size:1.8rem;margin-bottom:6px;">⚡</div>
+                    <div style="font-size:0.75rem;font-weight:600;color:var(--text);">POS</div>
+                </div>
+                <div onclick="document.querySelector('[data-section=cashclose]').click()" style="background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:18px 10px;text-align:center;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+                    <div style="font-size:1.8rem;margin-bottom:6px;">🧾</div>
+                    <div style="font-size:0.75rem;font-weight:600;color:var(--text);">Caja</div>
+                </div>
+                <div onclick="document.querySelector('[data-section=inventory]').click()" style="background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:18px 10px;text-align:center;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+                    <div style="font-size:1.8rem;margin-bottom:6px;">📦</div>
+                    <div style="font-size:0.75rem;font-weight:600;color:var(--text);">Productos</div>
+                </div>
+                <div onclick="document.querySelector('[data-section=debts]').click()" style="background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:18px 10px;text-align:center;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+                    <div style="font-size:1.8rem;margin-bottom:6px;">📝</div>
+                    <div style="font-size:0.75rem;font-weight:600;color:var(--text);">Fiados</div>
+                </div>
+                <div onclick="document.querySelector('[data-section=reports]').click()" style="background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:18px 10px;text-align:center;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+                    <div style="font-size:1.8rem;margin-bottom:6px;">📊</div>
+                    <div style="font-size:0.75rem;font-weight:600;color:var(--text);">Reportes</div>
+                </div>
+                <div onclick="sendDailyReportWhatsApp()" style="background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:18px 10px;text-align:center;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+                    <div style="font-size:1.8rem;margin-bottom:6px;">📲</div>
+                    <div style="font-size:0.75rem;font-weight:600;color:var(--text);">WhatsApp</div>
+                </div>
+                <div onclick="document.querySelector('[data-section=settings]').click()" style="background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:18px 10px;text-align:center;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+                    <div style="font-size:1.8rem;margin-bottom:6px;">⚙️</div>
+                    <div style="font-size:0.75rem;font-weight:600;color:var(--text);">Ajustes</div>
+                </div>
+            </div>
+
+            <!-- Apertura de caja + Inteligencia (compacto) -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(300px, 1fr));gap:16px;">
                 <div class="card" id="cash-opening-card">
                     <h3>🔓 Apertura de Caja</h3>
                     <div id="cash-opening-info"></div>
                 </div>
-
-                <div class="card" id="pos-card">
-                    <h3>⚡ Venta Rápida POS</h3>
-                    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
-                        <button class="btn btn-sm btn-outline" id="btn-scan-barcode">📷 Escanear Código</button>
-                        <button class="btn btn-sm btn-outline" onclick="calculateChange()">💵 Calcular Vuelto</button>
-                        <select id="pos-method" style="padding:6px 12px;border:1px solid var(--border);border-radius:8px;background:var(--card-bg);color:var(--text);font-size:0.85rem;">
-                            <option value="Efectivo">💵 Efectivo</option>
-                            <option value="Tarjeta">💳 Tarjeta</option>
-                            <option value="Transferencia">🏦 Transferencia</option>
-                        </select>
-                    </div>
-                    <div id="pos-cart" style="margin-bottom:12px;"></div>
-                    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--bg);border-radius:10px;">
-                        <strong>Total: <span id="pos-total">$0</span></strong>
-                        <button class="btn btn-success" onclick="processPOSSale()">💰 Cobrar POS</button>
-                    </div>
-                </div>
-
-                <div class="card" id="delivery-card">
-                    <h3>🏍️ Pedidos para Llevar / Delivery</h3>
-                    <div style="margin-bottom:12px;">
-                        <button class="btn btn-sm btn-primary" onclick="newDeliveryOrder()">+ Nuevo Pedido</button>
-                    </div>
-                    <div id="delivery-orders-list"></div>
-                </div>
-
-                <div class="card" id="combos-card">
-                    <h3>🎁 Combos / Paquetes</h3>
-                    <div style="margin-bottom:12px;">
-                        <button class="btn btn-sm btn-primary" onclick="addCombo()">+ Crear Combo</button>
-                    </div>
-                    <div id="combos-list"></div>
-                </div>
-            </div>
-
-            <!-- GRUPO: INTELIGENCIA Y REPORTES -->
-            <div style="margin-top:32px;margin-bottom:12px;padding:4px 0;border-bottom:2px solid var(--border);">
-                <h3 style="font-size:0.9rem;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;">📊 Inteligencia del Negocio</h3>
-            </div>
-
-            <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(350px, 1fr));gap:16px;">
                 <div class="card" id="month-comparison-card">
                     <h3>📊 Comparativa vs Mes Anterior</h3>
                     <div id="month-comparison"></div>
                 </div>
-
                 <div class="card" id="stock-predictions-card">
                     <h3>🔮 Predicción de Stock</h3>
                     <p style="color:var(--text-light);font-size:0.85rem;margin-bottom:12px;">Productos que se agotarán pronto</p>
                     <div id="stock-predictions"></div>
                 </div>
-
                 <div class="card" id="expiration-card">
-                    <h3>📅 Control de Vencimientos</h3>
+                    <h3>📅 Vencimientos</h3>
                     <div id="expiration-alerts"></div>
                 </div>
-
-                <div class="card" id="whatsapp-reports-card">
-                    <h3>📲 Reportes por WhatsApp</h3>
-                    <p style="color:var(--text-light);font-size:0.85rem;margin-bottom:12px;">Envía el resumen directo a tu celular</p>
-                    <div style="display:flex;gap:10px;flex-wrap:wrap;">
-                        <button class="btn btn-sm btn-success" onclick="sendDailyReportWhatsApp()">📊 Reporte del Día</button>
-                        <button class="btn btn-sm btn-primary" onclick="sendWeeklyReportWhatsApp()">📈 Reporte Semanal</button>
-                    </div>
-                </div>
             </div>
 
-            <!-- GRUPO: CLIENTES Y FINANZAS -->
-            <div style="margin-top:32px;margin-bottom:12px;padding:4px 0;border-bottom:2px solid var(--border);">
-                <h3 style="font-size:0.9rem;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;">💰 Finanzas y Clientes</h3>
-            </div>
-
-            <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(350px, 1fr));gap:16px;">
-                <div class="card" id="debts-card">
-                    <h3>📝 Cuentas por Cobrar (Fiados)</h3>
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-                        <span>Total pendiente: <strong id="debts-total">$0</strong></span>
-                        <button class="btn btn-sm btn-primary" onclick="addDebt()">+ Agregar Fiado</button>
-                    </div>
-                    <div id="debts-list"></div>
-                </div>
-
-                <div class="card" id="quotes-card">
-                    <h3>📋 Cotizaciones</h3>
-                    <div style="margin-bottom:12px;">
-                        <button class="btn btn-sm btn-primary" onclick="addQuote()">+ Nueva Cotización</button>
-                    </div>
-                    <div id="quotes-list"></div>
-                </div>
-
-                <div class="card" id="returns-card">
-                    <h3>↩️ Devoluciones</h3>
-                    <div style="margin-bottom:12px;">
-                        <button class="btn btn-sm btn-primary" onclick="partialReturn()">+ Registrar Devolución</button>
-                    </div>
-                    <div id="returns-list"></div>
-                </div>
-
-                <div class="card" id="purchase-lots-card">
-                    <h3>📦 Registro de Compras (Lotes)</h3>
-                    <div style="margin-bottom:12px;">
-                        <button class="btn btn-sm btn-primary" onclick="addPurchaseLot()">+ Registrar Compra</button>
-                    </div>
-                    <div id="purchase-lots-list"></div>
-                </div>
-            </div>
-
-            <!-- GRUPO: AGENDA Y ADMINISTRACIÓN -->
-            <div style="margin-top:32px;margin-bottom:12px;padding:4px 0;border-bottom:2px solid var(--border);">
-                <h3 style="font-size:0.9rem;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;">🗓️ Agenda y Administración</h3>
-            </div>
-
-            <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(350px, 1fr));gap:16px;">
-                <div class="card" id="appointments-card">
-                    <h3>📅 Agenda de Citas</h3>
-                    <div style="margin-bottom:12px;">
-                        <button class="btn btn-sm btn-primary" onclick="addAppointment()">+ Nueva Cita</button>
-                    </div>
-                    <div id="appointments-list"></div>
-                </div>
-
-                <div class="card" id="branches-card">
-                    <h3>🏢 Sucursales</h3>
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-                        <span style="color:var(--text-light);font-size:0.85rem;">Administra múltiples locales</span>
-                        <button class="btn btn-sm btn-primary" onclick="addBranch()">+ Nueva Sucursal</button>
-                    </div>
-                    <div id="branches-list"></div>
-                </div>
+            <!-- IDs ocultos necesarios para modules-extra.js -->
+            <div style="display:none;">
+                <div id="pos-cart"></div>
+                <span id="pos-total">$0</span>
+                <select id="pos-method"><option value="Efectivo">Efectivo</option></select>
+                <button id="btn-scan-barcode"></button>
+                <div id="debts-list"></div>
+                <span id="debts-total">$0</span>
+                <div id="appointments-list"></div>
+                <div id="delivery-orders-list"></div>
+                <div id="combos-list"></div>
+                <div id="quotes-list"></div>
+                <div id="purchase-lots-list"></div>
+                <div id="returns-list"></div>
+                <div id="branches-list"></div>
             </div>
             </section>
 
