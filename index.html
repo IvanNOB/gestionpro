@@ -43,41 +43,37 @@
                 <button class="btn-logout" id="btn-logout" title="Cerrar sesión" aria-label="Cerrar sesión">🚪</button>
             </div>
             <ul class="nav-menu">
-                <!-- Principal -->
-                <li style="padding:4px 16px;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.08em;color:#484f58;font-weight:600;margin-top:8px;">General</li>
+                <li class="nav-section-label">Inicio</li>
                 <li><a href="#" class="nav-link active" data-section="dashboard">📊 Dashboard</a></li>
                 <li><a href="#" class="nav-link" data-section="alerts">🔔 Alertas</a></li>
                 
-                <!-- Operaciones -->
-                <li style="padding:4px 16px;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.08em;color:#484f58;font-weight:600;margin-top:16px;">Operaciones</li>
-                <li><a href="#" class="nav-link" data-section="sales">💰 Ventas</a></li>
-                <li><a href="#" class="nav-link" data-section="pos">⚡ Venta Rápida</a></li>
-                <li><a href="#" class="nav-link" data-section="mesas">🪑 Mesas y Pedidos</a></li>
-                <li><a href="#" class="nav-link" data-section="delivery">🏍️ Delivery</a></li>
+                <li class="nav-section-label">Ventas</li>
+                <li><a href="#" class="nav-link" data-section="sales">💰 Registrar Venta</a></li>
+                <li><a href="#" class="nav-link" data-section="pos">⚡ POS Rápido</a></li>
                 <li><a href="#" class="nav-link" data-section="cashclose">🧾 Cierre de Caja</a></li>
                 
-                <!-- Inventario -->
-                <li style="padding:4px 16px;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.08em;color:#484f58;font-weight:600;margin-top:16px;">Inventario</li>
-                <li><a href="#" class="nav-link" data-section="inventory">📋 Productos</a></li>
+                <li class="nav-section-label">Operaciones</li>
+                <li><a href="#" class="nav-link" data-section="mesas">🪑 Mesas y Pedidos</a></li>
+                <li><a href="#" class="nav-link" data-section="delivery">🛍️ Para Llevar</a></li>
+                <li><a href="#" class="nav-link" data-section="debts">📋 Fiados</a></li>
+                <li><a href="#" class="nav-link" data-section="appointments">📅 Citas</a></li>
+                
+                <li class="nav-section-label">Inventario</li>
+                <li><a href="#" class="nav-link" data-section="inventory">📦 Productos</a></li>
                 <li><a href="#" class="nav-link" data-section="insumos">🧂 Insumos</a></li>
                 <li><a href="#" class="nav-link" data-section="recipes">📝 Recetas</a></li>
                 
-                <!-- Gestión -->
-                <li style="padding:4px 16px;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.08em;color:#484f58;font-weight:600;margin-top:16px;">Gestión</li>
+                <li class="nav-section-label">Personas</li>
                 <li><a href="#" class="nav-link" data-section="clients">👥 Clientes</a></li>
                 <li><a href="#" class="nav-link" data-section="suppliers">🚚 Proveedores</a></li>
                 <li><a href="#" class="nav-link" data-section="expenses">💸 Gastos</a></li>
-                <li><a href="#" class="nav-link" data-section="debts">📝 Fiados</a></li>
-                <li><a href="#" class="nav-link" data-section="appointments">📅 Citas</a></li>
                 
-                <!-- Análisis -->
-                <li style="padding:4px 16px;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.08em;color:#484f58;font-weight:600;margin-top:16px;">Análisis</li>
+                <li class="nav-section-label">Análisis</li>
                 <li><a href="#" class="nav-link" data-section="reports">📈 Reportes</a></li>
                 <li><a href="#" class="nav-link" data-section="calculator">🧮 Calculadora</a></li>
                 <li><a href="#" class="nav-link" data-section="history">📜 Historial</a></li>
                 
-                <!-- Config -->
-                <li style="padding:4px 16px;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.08em;color:#484f58;font-weight:600;margin-top:16px;">Configuración</li>
+                <li class="nav-section-label">Sistema</li>
                 <li><a href="#" class="nav-link" data-section="settings">⚙️ Ajustes</a></li>
             </ul>
             <div class="sidebar-footer">
@@ -97,35 +93,46 @@
                     <span class="date-display" id="current-date"></span>
                 </div>
 
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-icon">📦</div>
-                        <div class="stat-info">
-                            <span class="stat-value" id="dash-total-products">0</span>
-                            <span class="stat-label">Productos</span>
-                        </div>
+                <!-- ===== ACCESOS RÁPIDOS (primer bloque visible) ===== -->
+                <div id="branch-selector" style="display:none;margin-bottom:16px;"></div>
+                <div class="dashboard-shortcuts">
+                    <div class="shortcut-btn" onclick="document.querySelector('[data-section=sales]').click()">
+                        <span class="shortcut-icon" style="background:linear-gradient(135deg,#635bff,#4f46e5);">💰</span>
+                        <span class="shortcut-label">Vender</span>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">🏷️</div>
-                        <div class="stat-info">
-                            <span class="stat-value" id="dash-total-stock">0</span>
-                            <span class="stat-label">Unidades</span>
-                        </div>
+                    <div class="shortcut-btn" onclick="document.querySelector('[data-section=pos]').click()">
+                        <span class="shortcut-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706);">⚡</span>
+                        <span class="shortcut-label">POS</span>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">💵</div>
-                        <div class="stat-info">
-                            <span class="stat-value" id="dash-investment">$0</span>
-                            <span class="stat-label">Inversión</span>
-                        </div>
+                    <div class="shortcut-btn" onclick="document.querySelector('[data-section=cashclose]').click()">
+                        <span class="shortcut-icon" style="background:linear-gradient(135deg,#0ea574,#059669);">🧾</span>
+                        <span class="shortcut-label">Caja</span>
                     </div>
-                    <div class="stat-card highlight">
-                        <div class="stat-icon">📈</div>
-                        <div class="stat-info">
-                            <span class="stat-value" id="dash-profit">$0</span>
-                            <span class="stat-label">Ganancia Potencial</span>
-                        </div>
+                    <div class="shortcut-btn" onclick="document.querySelector('[data-section=inventory]').click()">
+                        <span class="shortcut-icon" style="background:linear-gradient(135deg,#3b82f6,#2563eb);">📦</span>
+                        <span class="shortcut-label">Productos</span>
                     </div>
+                    <div class="shortcut-btn" onclick="document.querySelector('[data-section=debts]').click()">
+                        <span class="shortcut-icon" style="background:linear-gradient(135deg,#ef4444,#dc2626);">📋</span>
+                        <span class="shortcut-label">Fiados</span>
+                    </div>
+                    <div class="shortcut-btn" onclick="document.querySelector('[data-section=reports]').click()">
+                        <span class="shortcut-icon" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);">📊</span>
+                        <span class="shortcut-label">Reportes</span>
+                    </div>
+                    <div class="shortcut-btn" onclick="sendDailyReportWhatsApp()">
+                        <span class="shortcut-icon" style="background:linear-gradient(135deg,#22c55e,#16a34a);">📲</span>
+                        <span class="shortcut-label">WhatsApp</span>
+                    </div>
+                    <div class="shortcut-btn" onclick="openCocina()">
+                        <span class="shortcut-icon" style="background:linear-gradient(135deg,#e56f4a,#dc4a20);">👨‍🍳</span>
+                        <span class="shortcut-label">Cocina</span>
+                    </div>
+                </div>
+
+                <!-- ===== RESUMEN DEL DÍA ===== -->
+                <div class="dashboard-section-title">📅 Resumen del Día</div>
+                <div class="stats-grid stats-grid-2">
                     <div class="stat-card sales">
                         <div class="stat-icon">💰</div>
                         <div class="stat-info">
@@ -133,6 +140,18 @@
                             <span class="stat-label">Ventas Hoy</span>
                         </div>
                     </div>
+                    <div class="stat-card highlight">
+                        <div class="stat-icon">📈</div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="dash-net-profit">$0</span>
+                            <span class="stat-label">Ganancia Neta del Mes</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== RESUMEN DEL MES ===== -->
+                <div class="dashboard-section-title">📆 Resumen del Mes</div>
+                <div class="stats-grid">
                     <div class="stat-card sales">
                         <div class="stat-icon">📅</div>
                         <div class="stat-info">
@@ -148,38 +167,89 @@
                         </div>
                     </div>
                     <div class="stat-card highlight">
+                        <div class="stat-icon">💵</div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="dash-investment">$0</span>
+                            <span class="stat-label">Inversión</span>
+                        </div>
+                    </div>
+                    <div class="stat-card highlight">
                         <div class="stat-icon">🏦</div>
                         <div class="stat-info">
-                            <span class="stat-value" id="dash-net-profit">$0</span>
-                            <span class="stat-label">Ganancia Neta del Mes</span>
+                            <span class="stat-value" id="dash-profit">$0</span>
+                            <span class="stat-label">Ganancia Potencial</span>
                         </div>
                     </div>
                 </div>
 
-                <!-- Pedidos Pendientes -->
+                <!-- ===== INVENTARIO RÁPIDO ===== -->
+                <div class="dashboard-section-title">📦 Inventario</div>
+                <div class="stats-grid stats-grid-2">
+                    <div class="stat-card">
+                        <div class="stat-icon">📦</div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="dash-total-products">0</span>
+                            <span class="stat-label">Productos</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🏷️</div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="dash-total-stock">0</span>
+                            <span class="stat-label">Unidades en Stock</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== PEDIDOS PENDIENTES ===== -->
                 <div class="card" id="pending-orders-card">
                     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-                        <h3 style="margin-bottom:0;">🔔 Pedidos Pendientes</h3>
+                        <h3 style="margin:0;">🔔 Pedidos Pendientes</h3>
                         <a href="#" onclick="openCocina()" class="btn btn-sm btn-outline">👨‍🍳 Pantalla Cocina</a>
                     </div>
                     <div id="pending-orders-list">
-                        <p class="empty-message" style="display:block;">No hay pedidos pendientes</p>
+                        <p class="empty-message" style="display:block;">No hay pedidos pendientes. ¡Todo al día! ✅</p>
                     </div>
                 </div>
 
-                <!-- Meta de ventas del mes -->
-                <div class="card" id="goal-progress-card" style="display:none;">
-                    <h3>🎯 Meta de Ventas del Mes</h3>
-                    <div class="goal-header">
-                        <span><strong id="goal-current">$0</strong> de <strong id="goal-target">$0</strong></span>
-                        <span class="goal-pct" id="goal-pct">0%</span>
+                <!-- ===== META + COMPARATIVA (lado a lado) ===== -->
+                <div class="dashboard-grid-2">
+                    <div class="card" id="goal-progress-card" style="display:none;">
+                        <h3>🎯 Meta de Ventas del Mes</h3>
+                        <div class="goal-header">
+                            <span><strong id="goal-current">$0</strong> de <strong id="goal-target">$0</strong></span>
+                            <span class="goal-pct" id="goal-pct">0%</span>
+                        </div>
+                        <div class="goal-bar-bg">
+                            <div class="goal-bar-fill" id="goal-bar"></div>
+                        </div>
+                        <p class="goal-message" id="goal-message"></p>
                     </div>
-                    <div class="goal-bar-bg">
-                        <div class="goal-bar-fill" id="goal-bar"></div>
+                    <div class="card" id="month-comparison-card">
+                        <h3>📊 vs Mes Anterior</h3>
+                        <div id="month-comparison"></div>
                     </div>
-                    <p class="goal-message" id="goal-message"></p>
                 </div>
 
+                <!-- ===== APERTURA DE CAJA + PREDICCIONES + VENCIMIENTOS ===== -->
+                <div class="dashboard-grid-3">
+                    <div class="card" id="cash-opening-card">
+                        <h3>🔓 Apertura de Caja</h3>
+                        <div id="cash-opening-info"></div>
+                    </div>
+                    <div class="card" id="stock-predictions-card">
+                        <h3>🔮 Predicción de Stock</h3>
+                        <p style="color:var(--text-light);font-size:0.8rem;margin-bottom:10px;">Productos que se agotarán pronto</p>
+                        <div id="stock-predictions"></div>
+                    </div>
+                    <div class="card" id="expiration-card">
+                        <h3>📅 Vencimientos</h3>
+                        <div id="expiration-alerts"></div>
+                    </div>
+                </div>
+
+                <!-- ===== GRÁFICAS ===== -->
+                <div class="dashboard-section-title">📈 Gráficas de Rendimiento</div>
                 <div class="charts-grid">
                     <div class="chart-card" style="grid-column:1/-1;">
                         <h3>🏆 Ranking de Productos (más vendidos)</h3>
@@ -201,6 +271,23 @@
                         <h3>Ganancia por Categoría</h3>
                         <canvas id="chart-profit-category"></canvas>
                     </div>
+                </div>
+
+                <!-- IDs ocultos necesarios para modules-extra.js -->
+                <div style="display:none;">
+                    <div id="pos-cart"></div>
+                    <span id="pos-total">$0</span>
+                    <select id="pos-method"><option value="Efectivo">Efectivo</option></select>
+                    <button id="btn-scan-barcode"></button>
+                    <div id="debts-list"></div>
+                    <span id="debts-total">$0</span>
+                    <div id="appointments-list"></div>
+                    <div id="delivery-orders-list"></div>
+                    <div id="combos-list"></div>
+                    <div id="quotes-list"></div>
+                    <div id="purchase-lots-list"></div>
+                    <div id="returns-list"></div>
+                    <div id="branches-list"></div>
                 </div>
             </section>
 
@@ -1257,85 +1344,6 @@
                         </div>
                     </div>
                 </div>
-            <!-- ============ ACCESOS RÁPIDOS (botones tipo app) ============ -->
-            <div id="branch-selector" style="display:none;margin-bottom:16px;"></div>
-
-            <div style="margin-top:28px;margin-bottom:16px;">
-                <h3 style="font-size:1rem;color:var(--text);font-weight:700;">⚡ Accesos Rápidos</h3>
-            </div>
-
-            <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(100px, 1fr));gap:12px;margin-bottom:32px;">
-                <div onclick="document.querySelector('[data-section=sales]').click()" style="background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:18px 10px;text-align:center;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
-                    <div style="font-size:1.8rem;margin-bottom:6px;">💰</div>
-                    <div style="font-size:0.75rem;font-weight:600;color:var(--text);">Vender</div>
-                </div>
-                <div onclick="document.querySelector('[data-section=pos]').click()" style="background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:18px 10px;text-align:center;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
-                    <div style="font-size:1.8rem;margin-bottom:6px;">⚡</div>
-                    <div style="font-size:0.75rem;font-weight:600;color:var(--text);">POS</div>
-                </div>
-                <div onclick="document.querySelector('[data-section=cashclose]').click()" style="background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:18px 10px;text-align:center;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
-                    <div style="font-size:1.8rem;margin-bottom:6px;">🧾</div>
-                    <div style="font-size:0.75rem;font-weight:600;color:var(--text);">Caja</div>
-                </div>
-                <div onclick="document.querySelector('[data-section=inventory]').click()" style="background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:18px 10px;text-align:center;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
-                    <div style="font-size:1.8rem;margin-bottom:6px;">📦</div>
-                    <div style="font-size:0.75rem;font-weight:600;color:var(--text);">Productos</div>
-                </div>
-                <div onclick="document.querySelector('[data-section=debts]').click()" style="background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:18px 10px;text-align:center;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
-                    <div style="font-size:1.8rem;margin-bottom:6px;">📝</div>
-                    <div style="font-size:0.75rem;font-weight:600;color:var(--text);">Fiados</div>
-                </div>
-                <div onclick="document.querySelector('[data-section=reports]').click()" style="background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:18px 10px;text-align:center;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
-                    <div style="font-size:1.8rem;margin-bottom:6px;">📊</div>
-                    <div style="font-size:0.75rem;font-weight:600;color:var(--text);">Reportes</div>
-                </div>
-                <div onclick="sendDailyReportWhatsApp()" style="background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:18px 10px;text-align:center;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
-                    <div style="font-size:1.8rem;margin-bottom:6px;">📲</div>
-                    <div style="font-size:0.75rem;font-weight:600;color:var(--text);">WhatsApp</div>
-                </div>
-                <div onclick="document.querySelector('[data-section=settings]').click()" style="background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:18px 10px;text-align:center;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
-                    <div style="font-size:1.8rem;margin-bottom:6px;">⚙️</div>
-                    <div style="font-size:0.75rem;font-weight:600;color:var(--text);">Ajustes</div>
-                </div>
-            </div>
-
-            <!-- Apertura de caja + Inteligencia (compacto) -->
-            <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(300px, 1fr));gap:16px;">
-                <div class="card" id="cash-opening-card">
-                    <h3>🔓 Apertura de Caja</h3>
-                    <div id="cash-opening-info"></div>
-                </div>
-                <div class="card" id="month-comparison-card">
-                    <h3>📊 Comparativa vs Mes Anterior</h3>
-                    <div id="month-comparison"></div>
-                </div>
-                <div class="card" id="stock-predictions-card">
-                    <h3>🔮 Predicción de Stock</h3>
-                    <p style="color:var(--text-light);font-size:0.85rem;margin-bottom:12px;">Productos que se agotarán pronto</p>
-                    <div id="stock-predictions"></div>
-                </div>
-                <div class="card" id="expiration-card">
-                    <h3>📅 Vencimientos</h3>
-                    <div id="expiration-alerts"></div>
-                </div>
-            </div>
-
-            <!-- IDs ocultos necesarios para modules-extra.js -->
-            <div style="display:none;">
-                <div id="pos-cart"></div>
-                <span id="pos-total">$0</span>
-                <select id="pos-method"><option value="Efectivo">Efectivo</option></select>
-                <button id="btn-scan-barcode"></button>
-                <div id="debts-list"></div>
-                <span id="debts-total">$0</span>
-                <div id="appointments-list"></div>
-                <div id="delivery-orders-list"></div>
-                <div id="combos-list"></div>
-                <div id="quotes-list"></div>
-                <div id="purchase-lots-list"></div>
-                <div id="returns-list"></div>
-                <div id="branches-list"></div>
-            </div>
             </section>
 
             <!-- ======================== VENTA RÁPIDA POS ======================== -->
