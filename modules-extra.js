@@ -128,8 +128,13 @@ function renderPOSProducts() {
     grid.innerHTML = filtered.map(p => {
         const stockClass = p.quantity === 0 ? 'out' : p.quantity <= (p.minStock || 5) ? 'low' : '';
         const stockLabel = p.quantity === 0 ? '0 disp.' : `${p.quantity} disp.`;
+        const hasImage = p.image && p.image.trim() && p.image.startsWith('data:');
+        const hasUrlImage = p.image && p.image.trim() && p.image.startsWith('http');
+        const imgHtml = hasImage || hasUrlImage
+            ? `<img src="${p.image}" style="width:100%;height:80px;object-fit:cover;border-radius:8px;margin-bottom:8px;" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='block'"><div style="display:none;font-size:2rem;margin-bottom:8px;">📦</div>`
+            : `<div style="font-size:2rem;margin-bottom:8px;">📦</div>`;
         return `<div class="pos-product-card" onclick="addToPOS('${p.id}')">
-            <div class="pos-prod-emoji">${p.image && p.image.startsWith('data:') ? `<img src="${p.image}" style="width:40px;height:40px;border-radius:8px;object-fit:cover;">` : '📦'}</div>
+            ${imgHtml}
             <div class="pos-prod-name">${esc(p.name)}</div>
             <div class="pos-prod-cat">${esc(p.category)}</div>
             <span class="pos-prod-price">${formatCurrency(p.price)}</span>

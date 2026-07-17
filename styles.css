@@ -1585,6 +1585,14 @@ tr:last-child td { border-bottom: none; }
     margin-bottom: 10px;
 }
 
+.pos-product-card img {
+    width: 100%;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 8px;
+}
+
 .pos-product-card .pos-prod-id {
     position: absolute;
     top: 10px;
