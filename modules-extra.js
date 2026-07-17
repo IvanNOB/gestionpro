@@ -92,17 +92,62 @@ function closeBarcodeScanner() {
 // #2 VENTA RÁPIDA POS
 // ==========================================
 let posCart = [];
+let posActiveCategory = '';
 
 function openPOS() {
     const section = document.getElementById('page-pos');
     if (section) { section.classList.add('active'); document.querySelectorAll('.page').forEach(p => { if (p.id !== 'page-pos') p.classList.remove('active'); }); }
+    renderPOSProducts();
+    renderPOSCategoriesBar();
+}
+
+function renderPOSCategoriesBar() {
+    const bar = document.getElementById('pos-categories-bar');
+    if (!bar) return;
+    const cats = [...new Set(products.map(p => p.category))].sort();
+    bar.innerHTML = `<button class="pos-cat-pill ${posActiveCategory === '' ? 'active' : ''}" onclick="filterPOSCategory(this, '')">Todos</button>` +
+        cats.map(c => `<button class="pos-cat-pill ${posActiveCategory === c ? 'active' : ''}" onclick="filterPOSCategory(this, '${c}')">${c}</button>`).join('');
+}
+
+function filterPOSCategory(btn, cat) {
+    posActiveCategory = cat;
+    document.querySelectorAll('.pos-cat-pill').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderPOSProducts();
+}
+
+function renderPOSProducts() {
+    const grid = document.getElementById('pos-products-grid');
+    if (!grid) return;
+    const search = (document.getElementById('pos-search-input')?.value || '').toLowerCase();
+    
+    let filtered = products.filter(p => p.quantity > 0 || true); // Show all
+    if (posActiveCategory) filtered = filtered.filter(p => p.category === posActiveCategory);
+    if (search) filtered = filtered.filter(p => p.name.toLowerCase().includes(search) || p.category.toLowerCase().includes(search));
+
+    grid.innerHTML = filtered.map(p => {
+        const stockClass = p.quantity === 0 ? 'out' : p.quantity <= (p.minStock || 5) ? 'low' : '';
+        const stockLabel = p.quantity === 0 ? '0 disp.' : `${p.quantity} disp.`;
+        return `<div class="pos-product-card" onclick="addToPOS('${p.id}')">
+            <div class="pos-prod-emoji">${p.image && p.image.startsWith('data:') ? `<img src="${p.image}" style="width:40px;height:40px;border-radius:8px;object-fit:cover;">` : '📦'}</div>
+            <div class="pos-prod-name">${esc(p.name)}</div>
+            <div class="pos-prod-cat">${esc(p.category)}</div>
+            <span class="pos-prod-price">${formatCurrency(p.price)}</span>
+            <span class="pos-prod-stock ${stockClass}">${stockLabel}</span>
+        </div>`;
+    }).join('') || '<p style="grid-column:1/-1;text-align:center;color:var(--text-muted);padding:40px;">No hay productos</p>';
 }
 
 function addToPOS(productId) {
     const product = products.find(p => p.id === productId);
     if (!product || product.quantity <= 0) { showToast('Sin stock', 'error'); return; }
     const existing = posCart.find(i => i.productId === productId);
-    if (existing) { existing.qty++; } else { posCart.push({ productId, name: product.name, price: product.price, cost: product.cost, qty: 1 }); }
+    if (existing) {
+        if (existing.qty >= product.quantity) { showToast(`Solo hay ${product.quantity} disponibles`, 'warning'); return; }
+        existing.qty++;
+    } else {
+        posCart.push({ productId, name: product.name, price: product.price, cost: product.cost, qty: 1 });
+    }
     if (navigator.vibrate) navigator.vibrate(50);
     renderPOSCart();
 }
@@ -112,34 +157,87 @@ function removePOSItem(productId) {
     renderPOSCart();
 }
 
+function changePOSQty(productId, delta) {
+    const item = posCart.find(i => i.productId === productId);
+    if (!item) return;
+    const product = products.find(p => p.id === productId);
+    item.qty += delta;
+    if (item.qty <= 0) { removePOSItem(productId); return; }
+    if (product && item.qty > product.quantity) { item.qty = product.quantity; showToast(`Máximo: ${product.quantity}`, 'warning'); }
+    renderPOSCart();
+}
+
+function clearPOSCart() {
+    posCart = [];
+    const discountInput = document.getElementById('pos-discount-input');
+    if (discountInput) discountInput.value = '0';
+    renderPOSCart();
+}
+
+function updatePOSTotal() { renderPOSCart(); }
+
 function renderPOSCart() {
-    const container = document.getElementById('pos-cart');
-    const totalEl = document.getElementById('pos-total');
+    const container = document.getElementById('pos-cart-items');
+    const countEl = document.getElementById('pos-cart-count');
+    const subtotalEl = document.getElementById('pos-subtotal-display');
+    const totalEl = document.getElementById('pos-total-page');
+    const totalHidden = document.getElementById('pos-total');
     if (!container) return;
-    const total = posCart.reduce((s, i) => s + (i.price * i.qty), 0);
-    totalEl.textContent = formatCurrency(total);
-    container.innerHTML = posCart.length === 0 ? '<p style="color:var(--text-light);text-align:center;">Carrito vacío</p>' :
-        posCart.map(i => `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
-            <span>${i.qty}x ${esc(i.name)}</span>
-            <span>${formatCurrency(i.price * i.qty)} <button onclick="removePOSItem('${i.productId}')" style="background:none;border:none;cursor:pointer;">✕</button></span>
-        </div>`).join('');
+
+    const totalItems = posCart.reduce((s, i) => s + i.qty, 0);
+    if (countEl) countEl.textContent = `${totalItems} items`;
+
+    if (posCart.length === 0) {
+        container.innerHTML = '<p class="pos-cart-empty">Toca un producto para agregarlo</p>';
+        if (subtotalEl) subtotalEl.textContent = '$0';
+        if (totalEl) totalEl.textContent = '$0';
+        if (totalHidden) totalHidden.textContent = '$0';
+        return;
+    }
+
+    container.innerHTML = posCart.map(i => `<div class="pos-cart-item">
+        <div class="pos-cart-item-info">
+            <div class="pos-cart-item-name">${esc(i.name)}</div>
+            <div class="pos-cart-item-price">${formatCurrency(i.price)} COP/ud</div>
+        </div>
+        <div class="pos-cart-item-controls">
+            <button onclick="changePOSQty('${i.productId}', -1)">−</button>
+            <span class="pos-qty">${i.qty}</span>
+            <button onclick="changePOSQty('${i.productId}', 1)">+</button>
+            <button class="pos-delete-btn" onclick="removePOSItem('${i.productId}')">🗑</button>
+        </div>
+    </div>`).join('');
+
+    const subtotal = posCart.reduce((s, i) => s + (i.price * i.qty), 0);
+    const discount = parseFloat(document.getElementById('pos-discount-input')?.value) || 0;
+    const total = Math.max(0, subtotal - discount);
+
+    if (subtotalEl) subtotalEl.textContent = formatCurrency(subtotal);
+    if (totalEl) totalEl.textContent = formatCurrency(total) + ' COP';
+    if (totalHidden) totalHidden.textContent = formatCurrency(total);
 }
 
 async function processPOSSale() {
     if (posCart.length === 0) { showToast('Carrito vacío', 'error'); return; }
-    const method = document.getElementById('pos-method')?.value || 'Efectivo';
+    const method = document.getElementById('pos-method-page')?.value || document.getElementById('pos-method')?.value || 'Efectivo';
+    const client = document.getElementById('pos-client-input')?.value?.trim() || '';
+    const discount = parseFloat(document.getElementById('pos-discount-input')?.value) || 0;
+    
     for (const item of posCart) {
-        const sale = { id: generateId(), productId: item.productId, productName: item.name, quantity: item.qty, price: item.price, cost: item.cost, discount: 0, discountAmount: 0, total: item.price * item.qty, profit: (item.price - item.cost) * item.qty, client: '', method, notes: 'Venta POS', date: new Date().toISOString(), soldBy: sessionStorage.getItem('activeEmployee') || 'Dueño' };
+        const sale = { id: generateId(), productId: item.productId, productName: item.name, quantity: item.qty, price: item.price, cost: item.cost, discount: 0, discountAmount: 0, total: item.price * item.qty, profit: (item.price - item.cost) * item.qty, client: client, method, notes: 'Venta POS', date: new Date().toISOString(), soldBy: sessionStorage.getItem('activeEmployee') || 'Dueño' };
         sales.push(sale);
         await saveSale(sale);
         const product = products.find(p => p.id === item.productId);
         if (product) { product.quantity -= item.qty; await saveProduct(product); }
     }
-    const total = posCart.reduce((s, i) => s + (i.price * i.qty), 0);
+    const total = posCart.reduce((s, i) => s + (i.price * i.qty), 0) - discount;
     showToast(`💰 Venta POS: ${formatCurrency(total)}`, 'success');
     if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
     posCart = [];
+    if (document.getElementById('pos-discount-input')) document.getElementById('pos-discount-input').value = '0';
+    if (document.getElementById('pos-client-input')) document.getElementById('pos-client-input').value = '';
     renderPOSCart();
+    renderPOSProducts();
     renderAll();
 }
 
@@ -493,6 +591,8 @@ function initModulesExtra() {
     renderMonthComparison();
     renderStockPredictions();
     renderExpirationAlerts();
+    renderPOSProducts();
+    renderPOSCategoriesBar();
 }
 
 // Ejecutar cuando la app esté lista (después de initApp)

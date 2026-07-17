@@ -1197,25 +1197,55 @@
 
             <!-- ======================== VENTA RÁPIDA POS ======================== -->
             <section class="page" id="page-pos">
-                <div class="page-header">
-                    <h2>⚡ Venta Rápida POS</h2>
-                </div>
-                <div class="card">
-                    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
-                        <button class="btn btn-sm btn-outline" onclick="document.getElementById('btn-scan-barcode')?.click()">📷 Escanear Código</button>
-                        <button class="btn btn-sm btn-outline" onclick="calculateChange()">💵 Calcular Vuelto</button>
-                        <select id="pos-method-page" style="padding:8px 14px;border:1px solid var(--border);border-radius:8px;background:var(--card-bg);color:var(--text);font-size:0.9rem;">
-                            <option value="Efectivo">💵 Efectivo</option>
-                            <option value="Tarjeta">💳 Tarjeta</option>
-                            <option value="Transferencia">🏦 Transferencia</option>
-                        </select>
+                <div class="pos-layout">
+                    <!-- LEFT: Products Grid -->
+                    <div class="pos-products-panel">
+                        <!-- Search Bar -->
+                        <div class="pos-search-bar">
+                            <input type="text" id="pos-search-input" placeholder="🔍 Buscar por nombre o categoría..." oninput="renderPOSProducts()">
+                            <button class="btn btn-sm btn-primary" onclick="document.getElementById('btn-scan-barcode')?.click()">📷 Cámara/Escanear</button>
+                        </div>
+                        <!-- Category Filters -->
+                        <div class="pos-categories" id="pos-categories-bar">
+                            <button class="pos-cat-pill active" onclick="filterPOSCategory(this, '')">Todos</button>
+                        </div>
+                        <!-- Products Grid -->
+                        <div class="pos-grid" id="pos-products-grid"></div>
                     </div>
-                    <p style="color:var(--text-light);margin-bottom:12px;">Toca un producto para agregarlo al carrito:</p>
-                    <div id="pos-products-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-bottom:16px;"></div>
-                    <div id="pos-cart-page" style="margin-bottom:12px;border:1px solid var(--border);border-radius:10px;padding:12px;min-height:60px;"></div>
-                    <div style="display:flex;justify-content:space-between;align-items:center;padding:14px;background:var(--bg);border-radius:10px;">
-                        <strong style="font-size:1.2rem;">Total: <span id="pos-total-page">$0</span></strong>
-                        <button class="btn btn-success" onclick="processPOSSale()" style="font-size:1rem;padding:12px 24px;">💰 Cobrar</button>
+                    <!-- RIGHT: Cart -->
+                    <div class="pos-cart-panel">
+                        <div class="pos-cart-header">
+                            <h3>🛒 Carrito de Venta</h3>
+                            <span class="pos-cart-badge" id="pos-cart-count">0 items</span>
+                        </div>
+                        <div class="pos-cart-items" id="pos-cart-items">
+                            <p class="pos-cart-empty">Toca un producto para agregarlo</p>
+                        </div>
+                        <div class="pos-cart-footer">
+                            <div class="pos-cart-fields">
+                                <div class="pos-cart-field">
+                                    <label>CLIENTE (OPCIONAL)</label>
+                                    <input type="text" id="pos-client-input" placeholder="Nombre cliente" list="clients-datalist">
+                                </div>
+                                <div class="pos-cart-field">
+                                    <label>DESCUENTO ($)</label>
+                                    <input type="number" id="pos-discount-input" placeholder="0" min="0" value="0" oninput="updatePOSTotal()">
+                                </div>
+                            </div>
+                            <div class="pos-cart-summary">
+                                <div class="pos-cart-row"><span>Subtotal (Base)</span><span id="pos-subtotal-display">$0</span></div>
+                                <div class="pos-cart-row pos-cart-total"><span>Total a Cobrar</span><span id="pos-total-page">$0</span></div>
+                            </div>
+                            <div class="pos-cart-actions">
+                                <select id="pos-method-page" class="pos-method-select">
+                                    <option value="Efectivo">💵 Efectivo</option>
+                                    <option value="Tarjeta">💳 Tarjeta</option>
+                                    <option value="Transferencia">🏦 Transferencia</option>
+                                </select>
+                                <button class="btn btn-outline" onclick="clearPOSCart()">Limpiar</button>
+                                <button class="btn btn-primary pos-btn-cobrar" onclick="processPOSSale()">Cobrar Venta</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
