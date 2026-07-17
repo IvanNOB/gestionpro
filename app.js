@@ -688,6 +688,7 @@ function initNavigation() {
             if (section === 'reports') renderReports();
             if (section === 'alerts') renderAlerts();
             if (section === 'sales') updateSaleProductList();
+            if (section === 'pos') { if (typeof renderPOSProducts === 'function') { renderPOSProducts(); renderPOSCategoriesBar(); } }
             if (section === 'cashclose') renderCashClose();
             if (section === 'clients') renderClients();
             if (section === 'suppliers') renderSuppliers();
