@@ -210,19 +210,19 @@ function renderProducts(category = '', search = '') {
     }
     grid.innerHTML = filtered.map(p => {
         const hasImage = p.image && p.image.trim();
-        const hasDesc = p.description && p.description.trim();
         const imgHtml = hasImage 
-            ? `<img src="${esc(p.image)}" style="width:100%;height:80px;object-fit:cover;border-radius:10px;margin-bottom:8px;" loading="lazy" onerror="this.style.display='none'">`
+            ? `<img src="${esc(p.image)}" style="width:100%;height:70px;object-fit:cover;border-radius:8px;margin-bottom:8px;" loading="lazy" onerror="this.style.display='none'">`
             : '';
-        const descHtml = hasDesc 
-            ? `<div style="font-size:0.7rem;color:var(--text-secondary,#94a3b8);margin-top:4px;line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${esc(p.description)}</div>` 
-            : '';
+        const stockClass = p.quantity <= 5 ? (p.quantity <= 0 ? 'out' : 'low') : '';
+        const stockBadge = `<span style="font-size:0.6rem;font-weight:600;padding:2px 6px;border-radius:4px;${stockClass === 'out' ? 'background:rgba(239,68,68,0.15);color:#ef4444;' : stockClass === 'low' ? 'background:rgba(245,158,11,0.15);color:#f59e0b;' : 'background:rgba(255,255,255,0.06);color:var(--text-muted,#64748b);'}">${p.quantity} disp.</span>`;
         return `<div class="product-btn ${hasImage ? 'with-image' : ''}" onclick="addToOrder('${p.id}')">
             ${imgHtml}
             <div class="prod-name">${esc(p.name)}</div>
-            <div class="prod-price">${formatCurrency(p.price)}</div>
-            ${descHtml}
-            <div class="prod-stock">${p.quantity > 5 ? 'Stock: ' + p.quantity : '⚠️ ' + p.quantity}</div>
+            <div style="font-size:0.65rem;color:var(--text-muted,#64748b);margin-bottom:6px;">${esc(p.category)}</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:4px;">
+                <span class="prod-price">${formatCurrency(p.price)}</span>
+                ${stockBadge}
+            </div>
         </div>`;
     }).join('');
 }
