@@ -556,35 +556,42 @@ function userCollection(name) {
 // Cargar todos los datos del usuario desde Firestore
 async function loadAllData() {
     try {
-        // Cargar settings del usuario
+        // Cargar settings del usuario (rápido, 1 doc)
         const userDocSnap = await userDoc().get();
         if (userDocSnap.exists && userDocSnap.data().settings) {
             settings = { ...settings, ...userDocSnap.data().settings };
         }
 
-        // Cargar colecciones
-        const [productsSnap, salesSnap, historySnap, clientsSnap, suppliersSnap, expensesSnap, insumosSnap, recipesSnap] = await Promise.all([
+        // FASE 1: Datos críticos para mostrar la UI (products + sales recientes)
+        const [productsSnap, salesSnap] = await Promise.all([
             userCollection('products').get(),
-            userCollection('sales').orderBy('date', 'desc').limit(500).get(),
-            userCollection('history').orderBy('date', 'desc').limit(200).get(),
+            userCollection('sales').orderBy('date', 'desc').limit(200).get()
+        ]);
+
+        products = productsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        sales = salesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        rebuildProductsIndex();
+
+        // FASE 2: Datos secundarios (en background, no bloquean UI)
+        Promise.all([
+            userCollection('history').orderBy('date', 'desc').limit(100).get(),
             userCollection('clients').get(),
             userCollection('suppliers').get(),
             userCollection('expenses').get(),
             userCollection('insumos').get(),
             userCollection('recipes').get()
-        ]);
+        ]).then(([historySnap, clientsSnap, suppliersSnap, expensesSnap, insumosSnap, recipesSnap]) => {
+            history = historySnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            clients = clientsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            suppliers = suppliersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            expenses = expensesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            insumos = insumosSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            recipes = recipesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            // Re-render con datos completos
+            renderAll();
+            renderHistory();
+        }).catch(e => console.warn('Error cargando datos secundarios:', e));
 
-        products = productsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        sales = salesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        history = historySnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        clients = clientsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        suppliers = suppliersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        expenses = expensesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        insumos = insumosSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        recipes = recipesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-        // Reconstruir índice de productos para búsquedas O(1)
-        rebuildProductsIndex();
     } catch (error) {
         console.error('Error cargando datos:', error);
         throw error;
@@ -2866,8 +2873,8 @@ function executeUndo() {
     }
 }
 
-// Renderizar gráficas al cargar si estamos en dashboard
-setTimeout(() => { if (currentUser) { renderCharts(); renderHistory(); } }, 1000);
+// Renderizar gráficas al cargar si estamos en dashboard (con delay para no bloquear)
+setTimeout(() => { if (currentUser) { requestAnimationFrame(() => { renderCharts(); renderHistory(); }); } }, 2000);
 
 // ==========================================
 // AUTO-ACTUALIZACIÓN DEL SERVICE WORKER

@@ -595,8 +595,8 @@ function initModulesExtra() {
     renderPOSCategoriesBar();
 }
 
-// Ejecutar cuando la app esté lista (después de initApp)
-setTimeout(() => { if (typeof currentUser !== 'undefined' && currentUser) initModulesExtra(); }, 2000);
+// Ejecutar cuando la app esté lista (después de initApp, con delay mayor)
+setTimeout(() => { if (typeof currentUser !== 'undefined' && currentUser) initModulesExtra(); }, 3000);
 
 
 
