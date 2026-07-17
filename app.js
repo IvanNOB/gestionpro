@@ -4192,6 +4192,175 @@ async function loadDemoProducts() {
 
 
 // ==========================================
+// DEMO COMPLETA DEL SISTEMA
+// ==========================================
+async function loadFullDemo() {
+    const confirmed = await showConfirmModal('🧪 Cargar Demo Completa', 'Esto agregará productos, mesas, empleados, clientes, proveedores, ventas, gastos, insumos y recetas de prueba. ¿Continuar?');
+    if (!confirmed) return;
+
+    showAppLoading(true);
+    showToast('⏳ Cargando demo completa...', 'info');
+
+    try {
+        // 1. PRODUCTOS (8 productos con categorías variadas)
+        const demoProducts = [
+            { name: 'Café Tinto Campesino', category: 'Cafetería', quantity: 120, cost: 800, margin: 65, price: 2500, minStock: 10, supplier: 'Café Colombia', description: 'Café colombiano filtrado, servido caliente', image: '' },
+            { name: 'Buñuelo Calentano', category: 'Panadería', quantity: 45, cost: 1200, margin: 60, price: 3000, minStock: 8, supplier: 'Panadería El Sol', description: 'Buñuelo artesanal de queso', image: '' },
+            { name: 'Pandebono Especial', category: 'Panadería', quantity: 35, cost: 1500, margin: 55, price: 3500, minStock: 5, supplier: 'Panadería El Sol', description: 'Pandebono grande con queso doble', image: '' },
+            { name: 'Empanada Valluna de Carne', category: 'Frituras', quantity: 60, cost: 1000, margin: 65, price: 2800, minStock: 10, supplier: 'Distribuidora Luz', description: 'Empanada frita rellena de carne molida', image: '' },
+            { name: 'Jugo de Lulo Natural', category: 'Bebidas', quantity: 40, cost: 2000, margin: 55, price: 4500, minStock: 5, supplier: 'Fruver Natural', description: 'Jugo natural sin azúcar añadida', image: '' },
+            { name: 'Gaseosa Postobón 350ml', category: 'Bebidas', quantity: 80, cost: 1200, margin: 50, price: 2500, minStock: 15, supplier: 'Postobón', description: 'Gaseosa fría', image: '' },
+            { name: 'Arroz Diana 1kg', category: 'Abarrotes', quantity: 150, cost: 3200, margin: 25, price: 4200, minStock: 20, supplier: 'Distribuidora San José', description: 'Arroz blanco premium', image: '' },
+            { name: 'Aceite de Girasol 1L', category: 'Abarrotes', quantity: 8, cost: 9000, margin: 22, price: 11500, minStock: 5, supplier: 'Distribuidora San José', description: 'Aceite vegetal para cocina', image: '' },
+            { name: 'Hamburguesa Clásica', category: 'Comidas', quantity: 30, cost: 8000, margin: 50, price: 15000, minStock: 5, supplier: '', description: 'Carne 150g, lechuga, tomate, salsa especial', image: '' },
+            { name: 'Almuerzo Ejecutivo', category: 'Comidas', quantity: 25, cost: 6000, margin: 60, price: 12000, minStock: 3, supplier: '', description: 'Sopa, principio, arroz, carne, ensalada y jugo', image: '' }
+        ];
+
+        for (const p of demoProducts) {
+            const product = { ...p, id: generateId(), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+            products.push(product);
+            await saveProduct(product);
+        }
+
+        // 2. MESAS (6 mesas)
+        const demoMesas = ['Mesa 1', 'Mesa 2', 'Mesa 3', 'Mesa 4', 'Mesa 5', 'Mesa 6'];
+        for (const name of demoMesas) {
+            const mesa = { id: generateId(), name, capacity: 4, status: 'libre', createdAt: new Date().toISOString() };
+            mesasList.push(mesa);
+            await saveMesa(mesa);
+        }
+
+        // 3. EMPLEADOS (3 con PIN)
+        const demoEmployees = [
+            { name: 'Carlos (Dueño)', role: 'owner', pin: '1234' },
+            { name: 'Laura (Cajera)', role: 'caja', pin: '5678' },
+            { name: 'Miguel (Mesero)', role: 'waiter', pin: '0000' }
+        ];
+        for (const emp of demoEmployees) {
+            const hashedPin = await hashPin(emp.pin);
+            const employee = { id: generateId(), name: emp.name, email: '', role: emp.role, pin: hashedPin, active: true, createdAt: new Date().toISOString() };
+            employees.push(employee);
+            await saveEmployee(employee);
+        }
+
+        // 4. CLIENTES (4)
+        const demoClients = [
+            { name: 'María González', phone: '310 123 4567', email: 'maria@correo.com', notes: 'Cliente frecuente' },
+            { name: 'Pedro Martínez', phone: '300 987 6543', email: '', notes: 'Pide siempre almuerzo' },
+            { name: 'Ana López', phone: '315 456 7890', email: 'ana.lopez@mail.com', notes: 'Alérgica al gluten' },
+            { name: 'Don Felipe Jaramillo', phone: '312 111 2222', email: '', notes: 'Fiado autorizado' }
+        ];
+        for (const c of demoClients) {
+            const client = { id: generateId(), ...c, createdAt: new Date().toISOString() };
+            clients.push(client);
+            await saveClient(client);
+        }
+
+        // 5. PROVEEDORES (3)
+        const demoSuppliers = [
+            { name: 'Distribuidora San José', contact: 'Roberto Díaz', phone: '604 333 4444', products: 'Abarrotes, granos, aceites' },
+            { name: 'Panadería El Sol', contact: 'Carmen Ruiz', phone: '310 555 6666', products: 'Buñuelos, pandebonos, pan' },
+            { name: 'Fruver Natural', contact: 'Juan Torres', phone: '315 777 8888', products: 'Frutas, verduras, pulpas' }
+        ];
+        for (const s of demoSuppliers) {
+            const supplier = { id: generateId(), ...s, createdAt: new Date().toISOString() };
+            suppliers.push(supplier);
+            await saveSupplier(supplier);
+        }
+
+        // 6. GASTOS (5)
+        const today = new Date().toISOString().split('T')[0];
+        const demoExpenses = [
+            { concept: 'Arriendo del local', category: 'Arriendo', amount: 1500000, date: today },
+            { concept: 'Recibo de luz', category: 'Servicios', amount: 180000, date: today },
+            { concept: 'Internet y teléfono', category: 'Servicios', amount: 95000, date: today },
+            { concept: 'Sueldo Laura (cajera)', category: 'Sueldos', amount: 1300000, date: today },
+            { concept: 'Compra insumos cocina', category: 'Insumos', amount: 350000, date: today }
+        ];
+        for (const ex of demoExpenses) {
+            const expense = { id: generateId(), ...ex };
+            expenses.push(expense);
+            await saveExpense(expense);
+        }
+
+        // 7. VENTAS SIMULADAS (últimos 7 días)
+        const methods = ['Efectivo', 'Tarjeta', 'Transferencia'];
+        for (let day = 0; day < 7; day++) {
+            const salesCount = Math.floor(Math.random() * 5) + 3;
+            for (let i = 0; i < salesCount; i++) {
+                const product = demoProducts[Math.floor(Math.random() * demoProducts.length)];
+                const qty = Math.floor(Math.random() * 3) + 1;
+                const method = methods[Math.floor(Math.random() * methods.length)];
+                const saleDate = new Date();
+                saleDate.setDate(saleDate.getDate() - day);
+                saleDate.setHours(Math.floor(Math.random() * 12) + 8, Math.floor(Math.random() * 60));
+                
+                const sale = {
+                    id: generateId(),
+                    productId: products.find(p => p.name === product.name)?.id || '',
+                    productName: product.name,
+                    quantity: qty,
+                    price: product.price,
+                    cost: product.cost,
+                    discount: 0,
+                    discountAmount: 0,
+                    total: product.price * qty,
+                    profit: (product.price - product.cost) * qty,
+                    client: Math.random() > 0.7 ? demoClients[Math.floor(Math.random() * demoClients.length)].name : '',
+                    method,
+                    notes: '',
+                    date: saleDate.toISOString(),
+                    soldBy: demoEmployees[Math.floor(Math.random() * 2)].name
+                };
+                sales.push(sale);
+                await saveSale(sale);
+            }
+        }
+
+        // 8. INSUMOS (5)
+        const demoInsumos = [
+            { name: 'Café molido', unit: 'g', purchasePrice: 35000, purchaseQty: 1000, currentStock: 800, minStock: 200 },
+            { name: 'Leche entera', unit: 'ml', purchasePrice: 8000, purchaseQty: 1000, currentStock: 600, minStock: 200 },
+            { name: 'Queso campesino', unit: 'g', purchasePrice: 18000, purchaseQty: 500, currentStock: 350, minStock: 100 },
+            { name: 'Carne molida', unit: 'g', purchasePrice: 28000, purchaseQty: 1000, currentStock: 500, minStock: 200 },
+            { name: 'Pan hamburguesa', unit: 'unidad', purchasePrice: 6000, purchaseQty: 12, currentStock: 8, minStock: 3 }
+        ];
+        for (const ins of demoInsumos) {
+            const insumo = { id: generateId(), ...ins, costPerUnit: ins.purchasePrice / ins.purchaseQty, createdAt: new Date().toISOString() };
+            insumos.push(insumo);
+            await firestoreOperation(() => userCollection('insumos').doc(insumo.id).set(insumo));
+        }
+
+        // Actualizar meta de ventas
+        settings.monthlyGoal = 5000000;
+        await saveSettings();
+
+        // Rebuild everything
+        rebuildProductsIndex();
+        AppCache.clear();
+        renderAll();
+        renderHistory();
+        renderClients();
+        renderSuppliers();
+        renderExpenses();
+        renderInsumos();
+        loadMesas();
+        renderEmployees();
+        renderGoalProgress();
+
+        showAppLoading(false);
+        showToast('🎉 Demo completa cargada: 10 productos, 6 mesas, 3 empleados, 4 clientes, 3 proveedores, ~30 ventas, 5 gastos, 5 insumos', 'success');
+        addHistory('add', 'Demo completa del sistema cargada');
+
+    } catch (error) {
+        console.error('Error cargando demo:', error);
+        showAppLoading(false);
+        showToast('Error cargando demo: ' + error.message, 'error');
+    }
+}
+
+
+// ==========================================
 // ABRIR PANTALLAS EXTERNAS CON ROL
 // ==========================================
 function openCocina() {

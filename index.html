@@ -1416,7 +1416,15 @@
                         <p class="card-description">Estas acciones no se pueden deshacer.</p>
                         <div class="form-actions">
                             <button class="btn btn-danger" id="btn-clear-all">🗑️ Borrar Todos los Datos</button>
-                            <button class="btn" id="btn-demo-products" style="background:#6366f1;color:white;margin-top:8px;" onclick="loadDemoProducts()">🧪 Cargar Productos de Prueba (con fotos)</button>
+                        </div>
+                    </div>
+
+                    <div class="card" style="border:2px solid var(--primary);border-radius:var(--radius);">
+                        <h3>🧪 Cargar Demo Completa</h3>
+                        <p class="card-description">Carga datos de prueba para probar TODO el sistema: productos con fotos, mesas, empleados con PIN, clientes, proveedores, ventas simuladas, gastos e insumos con recetas. Ideal para demostrar el sistema a un cliente.</p>
+                        <div class="form-actions">
+                            <button class="btn" style="background:var(--primary);color:white;" onclick="loadFullDemo()">🚀 Cargar Demo Completa del Sistema</button>
+                            <button class="btn btn-outline" onclick="loadDemoProducts()">📦 Solo Productos (con fotos)</button>
                         </div>
                     </div>
                 </div>
