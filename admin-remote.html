@@ -42,6 +42,7 @@ th { color: #94a3b8; font-weight: 600; font-size: 0.75rem; text-transform: upper
         <div class="tab" onclick="showTab('sales')">💰 Ventas</div>
         <div class="tab" onclick="showTab('employees')">👥 Empleados</div>
         <div class="tab" onclick="showTab('settings')">⚙️ Config</div>
+        <div class="tab" onclick="showTab('demo')" style="background:rgba(99,91,255,0.15);color:#818cf8;border-color:rgba(99,91,255,0.3);">🧪 Demo</div>
     </div>
 
     <div id="content">
@@ -172,6 +173,28 @@ function showTab(tab) {
                 <button class="btn-action btn-edit" onclick="resetUserSettings()">🔄 Resetear Settings</button>
                 <button class="btn-action btn-edit" onclick="fixUserPlan()">💳 Activar Plan Restaurant</button>
                 <button class="btn-action btn-delete" onclick="clearUserSales()">🗑️ Borrar Ventas</button>
+            </div>`;
+    } else if (tab === 'demo') {
+        const businessName = userData.settings?.businessName || userData.businessName || 'Este negocio';
+        content.innerHTML = `
+            <div class="card" style="border:2px solid #635bff;">
+                <h3 style="color:#818cf8;">🧪 Cargar Demo Completa en "${esc(businessName)}"</h3>
+                <p style="color:#94a3b8;font-size:0.85rem;margin-bottom:20px;">Esto cargará datos de prueba en la cuenta de <strong style="color:#f1f5f9;">${esc(businessName)}</strong> (UID: ${targetUid.substring(0,8)}...). Incluye:</p>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px;">
+                    <div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px 14px;font-size:0.8rem;">📦 <strong>10 productos</strong><br><span style="color:#64748b;">Cafetería, Panadería, Bebidas, Comidas</span></div>
+                    <div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px 14px;font-size:0.8rem;">🪑 <strong>6 mesas</strong><br><span style="color:#64748b;">Mesa 1 a Mesa 6</span></div>
+                    <div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px 14px;font-size:0.8rem;">👥 <strong>3 empleados</strong><br><span style="color:#64748b;">Carlos/1234, Laura/5678, Miguel/0000</span></div>
+                    <div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px 14px;font-size:0.8rem;">🧑 <strong>4 clientes</strong><br><span style="color:#64748b;">Con teléfono y notas</span></div>
+                    <div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px 14px;font-size:0.8rem;">🚚 <strong>3 proveedores</strong><br><span style="color:#64748b;">Con contacto</span></div>
+                    <div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px 14px;font-size:0.8rem;">💰 <strong>~30 ventas</strong><br><span style="color:#64748b;">Últimos 7 días (gráficas)</span></div>
+                    <div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px 14px;font-size:0.8rem;">💸 <strong>5 gastos</strong><br><span style="color:#64748b;">Arriendo, servicios, sueldos</span></div>
+                    <div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px 14px;font-size:0.8rem;">🧂 <strong>5 insumos</strong><br><span style="color:#64748b;">Café, leche, queso, carne, pan</span></div>
+                </div>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                    <button class="btn-action" style="background:#635bff;color:white;padding:12px 24px;font-size:0.9rem;border-radius:10px;" onclick="loadDemoForRemoteUser()">🚀 Cargar Demo Completa</button>
+                    <button class="btn-action" style="background:rgba(99,91,255,0.15);color:#818cf8;padding:12px 24px;font-size:0.9rem;border-radius:10px;border:1px solid rgba(99,91,255,0.3);" onclick="loadDemoProductsOnly()">📦 Solo Productos</button>
+                </div>
+                <p style="color:#64748b;font-size:0.75rem;margin-top:14px;">⚠️ Esto NO borra datos existentes — solo agrega los de demo encima.</p>
             </div>`;
     }
 }
@@ -359,6 +382,115 @@ function showNotice(msg) {
     n.textContent = msg;
     document.body.appendChild(n);
     setTimeout(() => n.remove(), 3000);
+}
+
+function generateId() { return 'id_' + Date.now() + '_' + Math.random().toString(36).substr(2,9); }
+
+async function hashPinAdmin(pin) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(pin + '_gestionpro_salt');
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function loadDemoForRemoteUser() {
+    if (!confirm(`¿Cargar demo completa en la cuenta "${userData.settings?.businessName || targetUid}"?\n\nEsto NO borra datos existentes.`)) return;
+    showNotice('⏳ Cargando demo...');
+
+    const userRef = db.collection('users').doc(targetUid);
+    try {
+        // Productos
+        const demoProducts = [
+            { name: 'Café Tinto Campesino', category: 'Cafetería', quantity: 120, cost: 800, margin: 65, price: 2500, minStock: 10, description: 'Café colombiano filtrado' },
+            { name: 'Buñuelo Calentano', category: 'Panadería', quantity: 45, cost: 1200, margin: 60, price: 3000, minStock: 8, description: 'Buñuelo artesanal de queso' },
+            { name: 'Pandebono Especial', category: 'Panadería', quantity: 35, cost: 1500, margin: 55, price: 3500, minStock: 5, description: 'Pandebono grande' },
+            { name: 'Empanada Valluna', category: 'Frituras', quantity: 60, cost: 1000, margin: 65, price: 2800, minStock: 10, description: 'Empanada de carne' },
+            { name: 'Jugo de Lulo Natural', category: 'Bebidas', quantity: 40, cost: 2000, margin: 55, price: 4500, minStock: 5, description: 'Jugo natural' },
+            { name: 'Gaseosa Postobón 350ml', category: 'Bebidas', quantity: 80, cost: 1200, margin: 50, price: 2500, minStock: 15, description: '' },
+            { name: 'Arroz Diana 1kg', category: 'Abarrotes', quantity: 150, cost: 3200, margin: 25, price: 4200, minStock: 20, description: '' },
+            { name: 'Aceite Girasol 1L', category: 'Abarrotes', quantity: 8, cost: 9000, margin: 22, price: 11500, minStock: 5, description: '' },
+            { name: 'Hamburguesa Clásica', category: 'Comidas', quantity: 30, cost: 8000, margin: 50, price: 15000, minStock: 5, description: 'Carne 150g, lechuga, tomate' },
+            { name: 'Almuerzo Ejecutivo', category: 'Comidas', quantity: 25, cost: 6000, margin: 60, price: 12000, minStock: 3, description: 'Sopa, arroz, carne, jugo' }
+        ];
+        for (const p of demoProducts) {
+            const id = generateId();
+            await userRef.collection('products').doc(id).set({ ...p, id, image: '', supplier: '', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+        }
+
+        // Mesas
+        for (let i = 1; i <= 6; i++) {
+            const id = generateId();
+            await userRef.collection('mesas').doc(id).set({ id, name: 'Mesa ' + i, capacity: 4, status: 'libre', createdAt: new Date().toISOString() });
+        }
+
+        // Empleados
+        const emps = [{ name: 'Carlos (Dueño)', role: 'owner', pin: '1234' }, { name: 'Laura (Cajera)', role: 'caja', pin: '5678' }, { name: 'Miguel (Mesero)', role: 'waiter', pin: '0000' }];
+        for (const emp of emps) {
+            const id = generateId();
+            const hashedPin = await hashPinAdmin(emp.pin);
+            await userRef.collection('employees').doc(id).set({ id, name: emp.name, email: '', role: emp.role, pin: hashedPin, active: true, createdAt: new Date().toISOString() });
+        }
+
+        // Clientes
+        const cls = [{ name: 'María González', phone: '310 123 4567', email: 'maria@correo.com', notes: 'Frecuente' }, { name: 'Pedro Martínez', phone: '300 987 6543', email: '', notes: '' }, { name: 'Ana López', phone: '315 456 7890', email: '', notes: 'Sin gluten' }, { name: 'Don Felipe', phone: '312 111 2222', email: '', notes: 'Fiado OK' }];
+        for (const c of cls) { const id = generateId(); await userRef.collection('clients').doc(id).set({ id, ...c, createdAt: new Date().toISOString() }); }
+
+        // Proveedores
+        const provs = [{ name: 'Distribuidora San José', contact: 'Roberto', phone: '604 333 4444', products: 'Abarrotes' }, { name: 'Panadería El Sol', contact: 'Carmen', phone: '310 555 6666', products: 'Pan, buñuelos' }, { name: 'Fruver Natural', contact: 'Juan', phone: '315 777 8888', products: 'Frutas' }];
+        for (const s of provs) { const id = generateId(); await userRef.collection('suppliers').doc(id).set({ id, ...s, createdAt: new Date().toISOString() }); }
+
+        // Gastos
+        const today = new Date().toISOString().split('T')[0];
+        const gastos = [{ concept: 'Arriendo', category: 'Arriendo', amount: 1500000 }, { concept: 'Recibo luz', category: 'Servicios', amount: 180000 }, { concept: 'Internet', category: 'Servicios', amount: 95000 }, { concept: 'Sueldo Laura', category: 'Sueldos', amount: 1300000 }, { concept: 'Insumos cocina', category: 'Insumos', amount: 350000 }];
+        for (const g of gastos) { const id = generateId(); await userRef.collection('expenses').doc(id).set({ id, ...g, date: today }); }
+
+        // Ventas simuladas (7 días)
+        const methods = ['Efectivo', 'Tarjeta', 'Transferencia'];
+        for (let day = 0; day < 7; day++) {
+            const count = Math.floor(Math.random() * 5) + 3;
+            for (let i = 0; i < count; i++) {
+                const p = demoProducts[Math.floor(Math.random() * demoProducts.length)];
+                const qty = Math.floor(Math.random() * 3) + 1;
+                const d = new Date(); d.setDate(d.getDate() - day); d.setHours(8 + Math.floor(Math.random() * 12), Math.floor(Math.random() * 60));
+                const id = generateId();
+                await userRef.collection('sales').doc(id).set({ id, productId: '', productName: p.name, quantity: qty, price: p.price, cost: p.cost, discount: 0, discountAmount: 0, total: p.price * qty, profit: (p.price - p.cost) * qty, client: '', method: methods[Math.floor(Math.random() * 3)], notes: '', date: d.toISOString(), soldBy: emps[Math.floor(Math.random() * 2)].name });
+            }
+        }
+
+        // Insumos
+        const ins = [{ name: 'Café molido', unit: 'g', purchasePrice: 35000, purchaseQty: 1000, currentStock: 800, minStock: 200 }, { name: 'Leche', unit: 'ml', purchasePrice: 8000, purchaseQty: 1000, currentStock: 600, minStock: 200 }, { name: 'Queso', unit: 'g', purchasePrice: 18000, purchaseQty: 500, currentStock: 350, minStock: 100 }, { name: 'Carne', unit: 'g', purchasePrice: 28000, purchaseQty: 1000, currentStock: 500, minStock: 200 }, { name: 'Pan hamburguesa', unit: 'unidad', purchasePrice: 6000, purchaseQty: 12, currentStock: 8, minStock: 3 }];
+        for (const insumo of ins) { const id = generateId(); await userRef.collection('insumos').doc(id).set({ id, ...insumo, costPerUnit: insumo.purchasePrice / insumo.purchaseQty, createdAt: new Date().toISOString() }); }
+
+        // Meta de ventas
+        await userRef.update({ 'settings.monthlyGoal': 5000000 });
+
+        showNotice('✅ Demo completa cargada en esta cuenta');
+        await loadUserData();
+    } catch (e) {
+        showNotice('❌ Error: ' + e.message);
+    }
+}
+
+async function loadDemoProductsOnly() {
+    if (!confirm('¿Cargar solo productos de demo?')) return;
+    const userRef = db.collection('users').doc(targetUid);
+    const demoProducts = [
+        { name: 'Café Tinto', category: 'Cafetería', quantity: 120, cost: 800, price: 2500, minStock: 10 },
+        { name: 'Buñuelo', category: 'Panadería', quantity: 45, cost: 1200, price: 3000, minStock: 8 },
+        { name: 'Empanada', category: 'Frituras', quantity: 60, cost: 1000, price: 2800, minStock: 10 },
+        { name: 'Jugo Natural', category: 'Bebidas', quantity: 40, cost: 2000, price: 4500, minStock: 5 },
+        { name: 'Hamburguesa', category: 'Comidas', quantity: 30, cost: 8000, price: 15000, minStock: 5 },
+        { name: 'Almuerzo Ejecutivo', category: 'Comidas', quantity: 25, cost: 6000, price: 12000, minStock: 3 }
+    ];
+    try {
+        for (const p of demoProducts) {
+            const id = generateId();
+            await userRef.collection('products').doc(id).set({ ...p, id, margin: 30, image: '', supplier: '', description: '', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+        }
+        showNotice('✅ 6 productos demo cargados');
+        await loadUserData();
+    } catch (e) { showNotice('❌ Error: ' + e.message); }
 }
 
 function esc(t) { const d = document.createElement('div'); d.textContent = t || ''; return d.innerHTML; }
