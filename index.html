@@ -412,6 +412,16 @@
                                 <label for="mesa-capacity">Capacidad (personas)</label>
                                 <input type="number" id="mesa-capacity" min="1" value="4" placeholder="4">
                             </div>
+                            <div class="form-group">
+                                <label for="mesa-shape">Forma de la Mesa</label>
+                                <select id="mesa-shape">
+                                    <option value="auto">Automática (según capacidad)</option>
+                                    <option value="round">Redonda</option>
+                                    <option value="square">Cuadrada</option>
+                                    <option value="rect">Rectangular</option>
+                                </select>
+                                <small>Define cómo se ve en el plano visual</small>
+                            </div>
                         </div>
                         <div class="form-actions">
                             <button type="submit" class="btn btn-primary" id="btn-mesa-submit">Agregar Mesa</button>

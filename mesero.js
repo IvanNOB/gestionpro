@@ -81,8 +81,10 @@ async function loadData() {
 
     // Si no hay mesas, crear unas por defecto
     if (mesas.length === 0) {
+        const defaultShapes = ['round', 'round', 'square', 'rect', 'round', 'rect'];
+        const defaultCapacities = [4, 6, 4, 8, 4, 6];
         for (let i = 1; i <= 6; i++) {
-            const mesa = { id: 'mesa_' + i, name: 'Mesa ' + i, capacity: 4, status: 'libre' };
+            const mesa = { id: 'mesa_' + i, name: 'Mesa ' + i, capacity: defaultCapacities[i-1], shape: defaultShapes[i-1], status: 'libre' };
             mesas.push(mesa);
             await userCollection('mesas').doc(mesa.id).set(mesa);
         }
@@ -90,8 +92,132 @@ async function loadData() {
 }
 
 // ==========================================
-// VISTA DE MESAS
+// VISTA DE MESAS - FLOOR PLAN
 // ==========================================
+
+/**
+ * Genera el SVG de una mesa según su capacidad y forma
+ * Tipos: 'round' (redonda), 'square' (cuadrada), 'rect' (rectangular)
+ */
+function getTableShape(capacity, shapeOverride) {
+    if (shapeOverride && shapeOverride !== 'auto') return shapeOverride;
+    if (capacity <= 6) return 'round';
+    return 'rect';
+}
+
+function generateTableSVG(capacity, isOccupied, shapeOverride) {
+    const shape = getTableShape(capacity, shapeOverride);
+    const chairColor = isOccupied ? '#f59e0b' : '#94a3b8';
+    const tableColor = isOccupied ? '#fbbf24' : '#e2e8f0';
+    const tableBorder = isOccupied ? '#d97706' : '#94a3b8';
+    
+    let svg = '';
+    
+    if (shape === 'round') {
+        const size = capacity <= 4 ? 100 : (capacity <= 6 ? 120 : 140);
+        const tableR = capacity <= 4 ? 20 : (capacity <= 6 ? 24 : 28);
+        const cx = size / 2;
+        const cy = size / 2;
+        const chairR = 7;
+        const chairDist = tableR + 14;
+        
+        svg = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" fill="none" xmlns="http://www.w3.org/2000/svg">`;
+        
+        // Sillas distribuidas en círculo
+        for (let i = 0; i < capacity; i++) {
+            const angle = (2 * Math.PI * i) / capacity - Math.PI / 2;
+            const chairX = cx + Math.cos(angle) * chairDist;
+            const chairY = cy + Math.sin(angle) * chairDist;
+            svg += `<rect x="${chairX - chairR}" y="${chairY - chairR}" width="${chairR * 2}" height="${chairR * 2}" rx="3" fill="${chairColor}" opacity="0.7" stroke="${tableBorder}" stroke-width="1.5"/>`;
+        }
+        
+        // Mesa redonda
+        svg += `<circle cx="${cx}" cy="${cy}" r="${tableR}" fill="${tableColor}" stroke="${tableBorder}" stroke-width="2"/>`;
+        svg += `</svg>`;
+        
+    } else if (shape === 'square') {
+        // Mesa cuadrada con sillas en los 4 lados
+        const size = capacity <= 4 ? 100 : 120;
+        const tableSize = capacity <= 4 ? 32 : 38;
+        const cx = size / 2;
+        const cy = size / 2;
+        const chairSize = 13;
+        const dist = tableSize / 2 + chairSize / 2 + 5;
+        
+        svg = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" fill="none" xmlns="http://www.w3.org/2000/svg">`;
+        
+        // Distribuir sillas en 4 lados
+        const sides = [
+            { dx: 0, dy: -dist },   // arriba
+            { dx: dist, dy: 0 },    // derecha
+            { dx: 0, dy: dist },    // abajo
+            { dx: -dist, dy: 0 }    // izquierda
+        ];
+        
+        const chairsPerSide = Math.ceil(capacity / 4);
+        let chairCount = 0;
+        for (let side = 0; side < 4 && chairCount < capacity; side++) {
+            const numOnThisSide = Math.min(chairsPerSide, capacity - chairCount);
+            for (let i = 0; i < numOnThisSide && chairCount < capacity; i++) {
+                let offsetX = 0, offsetY = 0;
+                if (numOnThisSide > 1) {
+                    if (sides[side].dx === 0) { // top or bottom
+                        offsetX = (i - (numOnThisSide - 1) / 2) * (chairSize + 3);
+                    } else { // left or right
+                        offsetY = (i - (numOnThisSide - 1) / 2) * (chairSize + 3);
+                    }
+                }
+                const chairX = cx + sides[side].dx + offsetX - chairSize / 2;
+                const chairY = cy + sides[side].dy + offsetY - chairSize / 2;
+                svg += `<rect x="${chairX}" y="${chairY}" width="${chairSize}" height="${chairSize}" rx="3" fill="${chairColor}" opacity="0.7" stroke="${tableBorder}" stroke-width="1.5"/>`;
+                chairCount++;
+            }
+        }
+        
+        // Mesa cuadrada
+        svg += `<rect x="${cx - tableSize/2}" y="${cy - tableSize/2}" width="${tableSize}" height="${tableSize}" rx="4" fill="${tableColor}" stroke="${tableBorder}" stroke-width="2"/>`;
+        svg += `</svg>`;
+        
+    } else {
+        // Mesa rectangular
+        const numChairsPerSide = Math.ceil(capacity / 2);
+        const tableW = Math.max(50, numChairsPerSide * 24);
+        const tableH = 28;
+        const padding = 30;
+        const svgW = tableW + padding * 2;
+        const svgH = tableH + padding * 2 + 10;
+        const tx = padding;
+        const ty = (svgH - tableH) / 2;
+        const chairSize = 12;
+        
+        svg = `<svg width="${svgW}" height="${svgH}" viewBox="0 0 ${svgW} ${svgH}" fill="none" xmlns="http://www.w3.org/2000/svg">`;
+        
+        // Sillas arriba
+        const topChairs = Math.ceil(capacity / 2);
+        const topSpacing = tableW / (topChairs + 1);
+        for (let i = 0; i < topChairs; i++) {
+            const chairX = tx + topSpacing * (i + 1) - chairSize / 2;
+            const chairY = ty - chairSize - 5;
+            svg += `<rect x="${chairX}" y="${chairY}" width="${chairSize}" height="${chairSize}" rx="3" fill="${chairColor}" opacity="0.7" stroke="${tableBorder}" stroke-width="1.5"/>`;
+        }
+        
+        // Sillas abajo
+        const botChairs = Math.floor(capacity / 2);
+        const botSpacing = tableW / (botChairs + 1);
+        for (let i = 0; i < botChairs; i++) {
+            const chairX = tx + botSpacing * (i + 1) - chairSize / 2;
+            const chairY = ty + tableH + 5;
+            svg += `<rect x="${chairX}" y="${chairY}" width="${chairSize}" height="${chairSize}" rx="3" fill="${chairColor}" opacity="0.7" stroke="${tableBorder}" stroke-width="1.5"/>`;
+        }
+        
+        // Mesa rectangular
+        svg += `<rect x="${tx}" y="${ty}" width="${tableW}" height="${tableH}" rx="6" fill="${tableColor}" stroke="${tableBorder}" stroke-width="2"/>`;
+        svg += `</svg>`;
+    }
+    
+    return svg;
+}
+
 function renderMesas() {
     const mesasGrid = document.getElementById('mesas-grid');
     const llevarGrid = document.getElementById('llevar-grid');
@@ -107,18 +233,18 @@ function renderMesas() {
             const total = items.reduce((s, i) => s + (i.price * i.qty), 0);
             const count = items.reduce((s, i) => s + i.qty, 0);
             const clientName = key.replace('llevar_', '').replace(/_/g, ' ');
-            llevarHTML += `<div class="mesa-card ocupada" onclick="openMesa('${key}')" style="border-color:rgba(245,158,11,0.5);background:rgba(245,158,11,0.05);">
-                <div class="mesa-items-count">${count}</div>
-                <div class="mesa-icon">🛍️</div>
-                <div class="mesa-name">${esc(clientName)}</div>
-                <div class="mesa-status" style="color:#f59e0b;">● Para Llevar</div>
-                <div class="mesa-total">${formatCurrency(total)}</div>
+            llevarHTML += `<div class="mesa-fp-card ocupada" onclick="openMesa('${key}')">
+                <div class="mesa-fp-badge">${count}</div>
+                <div class="mesa-fp-icon">🛍️</div>
+                <div class="mesa-fp-name">${esc(clientName)}</div>
+                <div class="mesa-fp-status ocupada">Para Llevar</div>
+                <div class="mesa-fp-total">${formatCurrency(total)}</div>
             </div>`;
         });
-        llevarHTML += `<div class="mesa-card libre" onclick="newLlevarOrder()" style="border-color:rgba(245,158,11,0.4);border-style:dashed;opacity:0.7;">
-            <div class="mesa-icon" style="font-size:1.8rem;">➕</div>
-            <div class="mesa-name">Nuevo</div>
-            <div class="mesa-status">Para Llevar</div>
+        llevarHTML += `<div class="mesa-fp-card add-new" onclick="newLlevarOrder()">
+            <div class="mesa-fp-icon">➕</div>
+            <div class="mesa-fp-name">Nuevo</div>
+            <div class="mesa-fp-status">Para Llevar</div>
         </div>`;
         llevarGrid.innerHTML = llevarHTML;
         llevarGrid.parentElement.querySelector('.section-title').style.display = 'block';
@@ -127,18 +253,21 @@ function renderMesas() {
         llevarGrid.parentElement.querySelector('.section-title').style.display = 'none';
     }
     
-    // --- MESAS ---
+    // --- MESAS (Floor Plan Visual) ---
     mesasGrid.innerHTML = mesas.map(m => {
         const hasOrder = orders[m.id] && orders[m.id].length > 0;
         const total = hasOrder ? orders[m.id].reduce((s, i) => s + (i.price * i.qty), 0) : 0;
         const itemCount = hasOrder ? orders[m.id].reduce((s, i) => s + i.qty, 0) : 0;
         const statusClass = hasOrder ? 'ocupada' : 'libre';
-        return `<div class="mesa-card ${statusClass}" onclick="openMesa('${m.id}')">
-            ${hasOrder ? `<div class="mesa-items-count">${itemCount}</div>` : ''}
-            <div class="mesa-icon">${hasOrder ? '🍽️' : '🪑'}</div>
-            <div class="mesa-name">${esc(m.name)}</div>
-            <div class="mesa-status">${hasOrder ? '● Ocupada' : '● Libre'}</div>
-            ${hasOrder ? `<div class="mesa-total">${formatCurrency(total)}</div>` : ''}
+        const capacity = m.capacity || 4;
+        const tableSVG = generateTableSVG(capacity, hasOrder, m.shape);
+        
+        return `<div class="mesa-fp-card ${statusClass}" onclick="openMesa('${m.id}')">
+            ${hasOrder ? `<div class="mesa-fp-badge">${itemCount}</div>` : ''}
+            <div class="mesa-fp-visual">${tableSVG}</div>
+            <div class="mesa-fp-name">${esc(m.name)}</div>
+            <div class="mesa-fp-status ${statusClass}">${hasOrder ? 'Ocupada' : 'Libre'}</div>
+            ${hasOrder ? `<div class="mesa-fp-total">${formatCurrency(total)}</div>` : `<div class="mesa-fp-capacity">${capacity} personas</div>`}
         </div>`;
     }).join('');
 }
