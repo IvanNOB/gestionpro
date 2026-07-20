@@ -3408,16 +3408,18 @@ function handleMesaSubmit(e) {
     e.preventDefault();
     const name = document.getElementById('mesa-name').value.trim();
     const capacity = parseInt(document.getElementById('mesa-capacity').value) || 4;
+    const shapeEl = document.getElementById('mesa-shape');
+    const shape = shapeEl ? shapeEl.value : 'auto';
     if (!name) { showToast('Ponle nombre a la mesa', 'error'); return; }
 
     if (editingMesaId) {
         const idx = mesasList.findIndex(m => m.id === editingMesaId);
-        mesasList[idx] = { ...mesasList[idx], name, capacity };
+        mesasList[idx] = { ...mesasList[idx], name, capacity, shape };
         saveMesa(mesasList[idx]);
         showToast('Mesa actualizada', 'success');
         cancelMesaEdit();
     } else {
-        const mesa = { id: generateId(), name, capacity, status: 'libre', createdAt: new Date().toISOString() };
+        const mesa = { id: generateId(), name, capacity, shape, status: 'libre', createdAt: new Date().toISOString() };
         mesasList.push(mesa);
         saveMesa(mesa);
         showToast(`"${name}" agregada`, 'success');
@@ -3432,6 +3434,8 @@ function editMesa(id) {
     editingMesaId = id;
     document.getElementById('mesa-name').value = m.name;
     document.getElementById('mesa-capacity').value = m.capacity || 4;
+    const shapeEl = document.getElementById('mesa-shape');
+    if (shapeEl) shapeEl.value = m.shape || 'auto';
     document.getElementById('btn-mesa-submit').textContent = 'Actualizar Mesa';
     document.getElementById('btn-cancel-mesa').style.display = 'inline-block';
 }
@@ -3465,19 +3469,126 @@ function renderMesasAdmin() {
     if (mesasList.length === 0) { grid.innerHTML = ''; empty.style.display = 'block'; return; }
     empty.style.display = 'none';
 
-    grid.innerHTML = mesasList.map(m => `
-        <div class="mesa-admin-card">
-            <div class="mesa-admin-icon">🪑</div>
-            <div class="mesa-admin-info">
+    grid.innerHTML = mesasList.map(m => {
+        const capacity = m.capacity || 4;
+        const tableSVG = generateTableSVGAdmin(capacity, m.shape);
+        return `<div class="mesa-admin-fp-card">
+            <div class="mesa-admin-fp-visual">${tableSVG}</div>
+            <div class="mesa-admin-fp-info">
                 <strong>${esc(m.name)}</strong>
-                <span>${m.capacity || 4} personas</span>
+                <span>${capacity} personas</span>
             </div>
             <div class="mesa-admin-actions">
                 <button class="action-btn" onclick="editMesa('${m.id}')" title="Editar">✏️</button>
                 <button class="action-btn" onclick="deleteMesa('${m.id}')" title="Eliminar">🗑️</button>
             </div>
-        </div>
-    `).join('');
+        </div>`;
+    }).join('');
+}
+
+/** Generate SVG table for admin panel (light theme compatible) */
+function generateTableSVGAdmin(capacity, shapeOverride) {
+    const shape = (shapeOverride && shapeOverride !== 'auto') ? shapeOverride : (capacity <= 6 ? 'round' : 'rect');
+    const chairColor = '#94a3b8';
+    const tableColor = '#e2e8f0';
+    const tableBorder = '#64748b';
+    
+    let svg = '';
+    
+    if (shape === 'round') {
+        const size = capacity <= 4 ? 80 : 100;
+        const tableR = capacity <= 4 ? 16 : 20;
+        const cx = size / 2;
+        const cy = size / 2;
+        const chairR = 6;
+        const chairDist = tableR + 12;
+        
+        svg = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" fill="none" xmlns="http://www.w3.org/2000/svg">`;
+        
+        for (let i = 0; i < capacity; i++) {
+            const angle = (2 * Math.PI * i) / capacity - Math.PI / 2;
+            const chairX = cx + Math.cos(angle) * chairDist;
+            const chairY = cy + Math.sin(angle) * chairDist;
+            svg += `<rect x="${chairX - chairR}" y="${chairY - chairR}" width="${chairR * 2}" height="${chairR * 2}" rx="2.5" fill="${chairColor}" opacity="0.6" stroke="${tableBorder}" stroke-width="1"/>`;
+        }
+        
+        svg += `<circle cx="${cx}" cy="${cy}" r="${tableR}" fill="${tableColor}" stroke="${tableBorder}" stroke-width="1.5"/>`;
+        svg += `</svg>`;
+        
+    } else if (shape === 'square') {
+        const size = capacity <= 4 ? 80 : 100;
+        const tableSize = capacity <= 4 ? 26 : 32;
+        const cx = size / 2;
+        const cy = size / 2;
+        const chairSize = 11;
+        const dist = tableSize / 2 + chairSize / 2 + 4;
+        
+        svg = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" fill="none" xmlns="http://www.w3.org/2000/svg">`;
+        
+        const sides = [
+            { dx: 0, dy: -dist },
+            { dx: dist, dy: 0 },
+            { dx: 0, dy: dist },
+            { dx: -dist, dy: 0 }
+        ];
+        
+        const chairsPerSide = Math.ceil(capacity / 4);
+        let chairCount = 0;
+        for (let side = 0; side < 4 && chairCount < capacity; side++) {
+            const numOnThisSide = Math.min(chairsPerSide, capacity - chairCount);
+            for (let i = 0; i < numOnThisSide && chairCount < capacity; i++) {
+                let offsetX = 0, offsetY = 0;
+                if (numOnThisSide > 1) {
+                    if (sides[side].dx === 0) {
+                        offsetX = (i - (numOnThisSide - 1) / 2) * (chairSize + 2);
+                    } else {
+                        offsetY = (i - (numOnThisSide - 1) / 2) * (chairSize + 2);
+                    }
+                }
+                const chairX = cx + sides[side].dx + offsetX - chairSize / 2;
+                const chairY = cy + sides[side].dy + offsetY - chairSize / 2;
+                svg += `<rect x="${chairX}" y="${chairY}" width="${chairSize}" height="${chairSize}" rx="2.5" fill="${chairColor}" opacity="0.6" stroke="${tableBorder}" stroke-width="1"/>`;
+                chairCount++;
+            }
+        }
+        
+        svg += `<rect x="${cx - tableSize/2}" y="${cy - tableSize/2}" width="${tableSize}" height="${tableSize}" rx="3" fill="${tableColor}" stroke="${tableBorder}" stroke-width="1.5"/>`;
+        svg += `</svg>`;
+        
+    } else {
+        const numChairsPerSide = Math.ceil(capacity / 2);
+        const tableW = Math.max(44, numChairsPerSide * 20);
+        const tableH = 22;
+        const padding = 24;
+        const svgW = tableW + padding * 2;
+        const svgH = tableH + padding * 2 + 6;
+        const tx = padding;
+        const ty = (svgH - tableH) / 2;
+        const chairSize = 10;
+        
+        svg = `<svg width="${svgW}" height="${svgH}" viewBox="0 0 ${svgW} ${svgH}" fill="none" xmlns="http://www.w3.org/2000/svg">`;
+        
+        const topChairs = Math.ceil(capacity / 2);
+        const topSpacing = tableW / (topChairs + 1);
+        for (let i = 0; i < topChairs; i++) {
+            const chairX = tx + topSpacing * (i + 1) - chairSize / 2;
+            const chairY = ty - chairSize - 4;
+            svg += `<rect x="${chairX}" y="${chairY}" width="${chairSize}" height="${chairSize}" rx="2.5" fill="${chairColor}" opacity="0.6" stroke="${tableBorder}" stroke-width="1"/>`;
+        }
+        
+        const botChairs = Math.floor(capacity / 2);
+        const botSpacing = tableW / (botChairs + 1);
+        for (let i = 0; i < botChairs; i++) {
+            const chairX = tx + botSpacing * (i + 1) - chairSize / 2;
+            const chairY = ty + tableH + 4;
+            svg += `<rect x="${chairX}" y="${chairY}" width="${chairSize}" height="${chairSize}" rx="2.5" fill="${chairColor}" opacity="0.6" stroke="${tableBorder}" stroke-width="1"/>`;
+        }
+        
+        svg += `<rect x="${tx}" y="${ty}" width="${tableW}" height="${tableH}" rx="5" fill="${tableColor}" stroke="${tableBorder}" stroke-width="1.5"/>`;
+        svg += `</svg>`;
+    }
+    
+    return svg;
 }
 
 function copyMeseroLink() {
