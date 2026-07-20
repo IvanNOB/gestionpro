@@ -1,5 +1,5 @@
 // ==========================================
-// SERVICE WORKER - GestiónPro v8
+// SERVICE WORKER - GestiónPro v9
 // Estrategia optimizada:
 //   - JS/HTML/CSS: Network-First (siempre intenta la última versión)
 //   - Imágenes/Iconos: Cache-First (se cargan rápido, cambian poco)
@@ -7,8 +7,8 @@
 //   - Auto-actualización: skipWaiting + clients.claim inmediato
 // ==========================================
 
-const CACHE_NAME = 'gestionpro-v8';
-const ASSETS_CACHE = 'gestionpro-assets-v8';
+const CACHE_NAME = 'gestionpro-v9';
+const ASSETS_CACHE = 'gestionpro-assets-v9';
 
 // Archivos principales de la app (Network-First)
 const APP_FILES = [
