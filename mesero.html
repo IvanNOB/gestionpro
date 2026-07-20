@@ -299,6 +299,18 @@
             z-index: 2;
         }
 
+        /* Floor Plan Mode (when mesas have positions) */
+        .mesas-grid.floor-plan-mode {
+            display: block;
+            position: relative;
+            background-image: radial-gradient(circle, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-lg);
+            min-height: 400px;
+            overflow: auto;
+        }
+
 
         /* ===== ORDER VIEW ===== */
         .order-view {
@@ -625,7 +637,7 @@
 
         .order-actions {
             display: grid;
-            grid-template-columns: auto 1fr 1fr 1fr;
+            grid-template-columns: auto 1fr 1fr 1fr 1fr 1fr;
             gap: 8px;
         }
 
@@ -765,7 +777,7 @@
             }
 
             .order-actions {
-                grid-template-columns: auto 1fr 1fr 1fr;
+                grid-template-columns: auto 1fr 1fr 1fr 1fr 1fr;
             }
 
             .header {
@@ -863,6 +875,7 @@
                 <div class="order-actions">
                     <button class="btn-cancel-order" onclick="clearCurrentOrder()" aria-label="Cancelar">🗑️</button>
                     <button class="btn-send" onclick="sendOrder()">📤 Enviar</button>
+                    <button class="btn-prebill" onclick="transferOrder()" style="background:linear-gradient(135deg,#6366f1,#4f46e5);">🔄 Mesa</button>
                     <button class="btn-prebill" id="btn-prebill" onclick="printPreBill()">🧾 Pre</button>
                     <button class="btn-pay" id="btn-dividir" onclick="splitBill()" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);">➗</button>
                     <button class="btn-pay" id="btn-cobrar" onclick="payOrder()">💰 Cobrar</button>

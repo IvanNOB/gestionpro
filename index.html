@@ -400,7 +400,7 @@
                     </div>
                 </div>
 
-                <div class="card">
+                <div class="card" id="mesa-form-card" style="display:none;">
                     <h3>➕ Agregar Mesa</h3>
                     <form id="mesa-form">
                         <div class="form-grid">
@@ -455,9 +455,19 @@
                 </div>
 
                 <div class="card">
-                    <h3>🪑 Tus Mesas</h3>
-                    <div class="mesas-admin-grid" id="mesas-admin-grid"></div>
-                    <p class="empty-message" id="empty-mesas">No hay mesas. Agrega la primera.</p>
+                    <h3>🗺️ Plano del Local — Arrastra las mesas para posicionarlas</h3>
+                    <p class="card-description">Hacé clic en una mesa y arrastrala donde quieras. El plano se guarda automáticamente. Hacé doble clic para editar forma y capacidad.</p>
+                    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+                        <button class="btn btn-sm btn-primary" id="btn-add-mesa-fp" onclick="addMesaToFloorPlan()">➕ Agregar Mesa</button>
+                        <button class="btn btn-sm btn-outline" onclick="resetFloorPlanLayout()">🔄 Auto-ordenar</button>
+                        <span style="font-size:0.75rem;color:var(--text-muted);display:flex;align-items:center;gap:4px;">💡 Doble clic = editar | Arrastrar = mover</span>
+                    </div>
+                    <div class="floor-plan-container" id="floor-plan-container">
+                        <div class="floor-plan-canvas" id="floor-plan-canvas">
+                            <!-- Mesas se renderizan aquí dinámicamente -->
+                        </div>
+                    </div>
+                    <p class="empty-message" id="empty-mesas" style="display:none;">No hay mesas. Agrega la primera.</p>
                 </div>
             </section>
 

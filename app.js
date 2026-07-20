@@ -3462,28 +3462,203 @@ async function saveMesa(mesa) {
 }
 
 function renderMesasAdmin() {
-    const grid = document.getElementById('mesas-admin-grid');
+    const canvas = document.getElementById('floor-plan-canvas');
     const empty = document.getElementById('empty-mesas');
-    if (!grid) return;
+    if (!canvas) return;
 
-    if (mesasList.length === 0) { grid.innerHTML = ''; empty.style.display = 'block'; return; }
-    empty.style.display = 'none';
+    if (mesasList.length === 0) { canvas.innerHTML = ''; if (empty) empty.style.display = 'block'; return; }
+    if (empty) empty.style.display = 'none';
 
-    grid.innerHTML = mesasList.map(m => {
+    canvas.innerHTML = mesasList.map((m, idx) => {
         const capacity = m.capacity || 4;
         const tableSVG = generateTableSVGAdmin(capacity, m.shape);
-        return `<div class="mesa-admin-fp-card">
-            <div class="mesa-admin-fp-visual">${tableSVG}</div>
-            <div class="mesa-admin-fp-info">
-                <strong>${esc(m.name)}</strong>
-                <span>${capacity} personas</span>
+        // Posición: si tiene posX/posY usar esas, sino auto-distribuir
+        const posX = m.posX != null ? m.posX : (30 + (idx % 5) * 140);
+        const posY = m.posY != null ? m.posY : (30 + Math.floor(idx / 5) * 140);
+        return `<div class="fp-mesa-item" id="fp-mesa-${m.id}" data-mesa-id="${m.id}" 
+                     style="left:${posX}px;top:${posY}px;" 
+                     ondblclick="editMesaFloorPlan('${m.id}')">
+            <div class="fp-mesa-actions">
+                <button onclick="event.stopPropagation();deleteMesa('${m.id}')" title="Eliminar">🗑</button>
             </div>
-            <div class="mesa-admin-actions">
-                <button class="action-btn" onclick="editMesa('${m.id}')" title="Editar">✏️</button>
-                <button class="action-btn" onclick="deleteMesa('${m.id}')" title="Eliminar">🗑️</button>
-            </div>
+            ${tableSVG}
+            <div class="fp-mesa-label">${esc(m.name)}</div>
+            <div class="fp-mesa-cap">${capacity}p</div>
         </div>`;
     }).join('');
+
+    // Inicializar drag-and-drop en cada mesa
+    initFloorPlanDrag();
+}
+
+// ==========================================
+// FLOOR PLAN - DRAG AND DROP
+// ==========================================
+let fpDragState = null;
+
+function initFloorPlanDrag() {
+    const canvas = document.getElementById('floor-plan-canvas');
+    if (!canvas) return;
+
+    const items = canvas.querySelectorAll('.fp-mesa-item');
+    items.forEach(item => {
+        // Mouse events
+        item.addEventListener('mousedown', fpStartDrag);
+        // Touch events
+        item.addEventListener('touchstart', fpStartDrag, { passive: false });
+    });
+
+    document.addEventListener('mousemove', fpMoveDrag);
+    document.addEventListener('mouseup', fpEndDrag);
+    document.addEventListener('touchmove', fpMoveDrag, { passive: false });
+    document.addEventListener('touchend', fpEndDrag);
+}
+
+function fpStartDrag(e) {
+    if (e.target.closest('.fp-mesa-actions')) return; // Ignore clicks on action buttons
+    e.preventDefault();
+    const item = e.currentTarget;
+    const canvas = document.getElementById('floor-plan-canvas');
+    const canvasRect = canvas.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    
+    fpDragState = {
+        item: item,
+        mesaId: item.dataset.mesaId,
+        startX: clientX,
+        startY: clientY,
+        origLeft: parseInt(item.style.left) || 0,
+        origTop: parseInt(item.style.top) || 0,
+        canvasRect: canvasRect
+    };
+    item.classList.add('dragging');
+}
+
+function fpMoveDrag(e) {
+    if (!fpDragState) return;
+    e.preventDefault();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    
+    const dx = clientX - fpDragState.startX;
+    const dy = clientY - fpDragState.startY;
+    
+    let newLeft = fpDragState.origLeft + dx;
+    let newTop = fpDragState.origTop + dy;
+    
+    // Constrain to canvas bounds
+    const canvas = document.getElementById('floor-plan-canvas');
+    const maxX = canvas.clientWidth - 80;
+    const maxY = canvas.clientHeight - 80;
+    newLeft = Math.max(0, Math.min(newLeft, maxX));
+    newTop = Math.max(0, Math.min(newTop, maxY));
+    
+    fpDragState.item.style.left = newLeft + 'px';
+    fpDragState.item.style.top = newTop + 'px';
+}
+
+function fpEndDrag(e) {
+    if (!fpDragState) return;
+    fpDragState.item.classList.remove('dragging');
+    
+    // Save position to mesasList and Firebase
+    const mesaId = fpDragState.mesaId;
+    const newX = parseInt(fpDragState.item.style.left) || 0;
+    const newY = parseInt(fpDragState.item.style.top) || 0;
+    
+    const mesa = mesasList.find(m => m.id === mesaId);
+    if (mesa) {
+        mesa.posX = newX;
+        mesa.posY = newY;
+        saveMesa(mesa); // Auto-save to Firebase
+    }
+    
+    fpDragState = null;
+}
+
+// Agregar mesa desde el floor plan
+async function addMesaToFloorPlan() {
+    const result = await showModal({
+        title: '➕ Nueva Mesa',
+        fields: [
+            { label: 'Nombre', placeholder: 'Ej: Mesa 7, Terraza 1', type: 'text', defaultValue: 'Mesa ' + (mesasList.length + 1) },
+            { label: 'Capacidad (personas)', type: 'number', defaultValue: '4', min: 1 },
+            { label: 'Forma', type: 'select', defaultValue: 'round', options: [
+                { value: 'round', label: '⭕ Redonda' },
+                { value: 'square', label: '⬜ Cuadrada' },
+                { value: 'rect', label: '▬ Rectangular' }
+            ]}
+        ],
+        confirmText: 'Crear Mesa'
+    });
+    
+    if (!result || !result[0]) return;
+    
+    const canvas = document.getElementById('floor-plan-canvas');
+    const canvasW = canvas ? canvas.clientWidth : 600;
+    
+    const mesa = {
+        id: generateId(),
+        name: result[0],
+        capacity: parseInt(result[1]) || 4,
+        shape: result[2] || 'round',
+        status: 'libre',
+        posX: Math.floor(Math.random() * (canvasW - 150)) + 30,
+        posY: Math.floor(Math.random() * 300) + 30,
+        createdAt: new Date().toISOString()
+    };
+    
+    mesasList.push(mesa);
+    await saveMesa(mesa);
+    renderMesasAdmin();
+    showToast(`"${mesa.name}" creada`, 'success');
+}
+
+// Editar mesa con doble clic en el floor plan
+async function editMesaFloorPlan(id) {
+    const m = mesasList.find(x => x.id === id);
+    if (!m) return;
+    
+    const result = await showModal({
+        title: `✏️ Editar: ${m.name}`,
+        fields: [
+            { label: 'Nombre', type: 'text', defaultValue: m.name },
+            { label: 'Capacidad (personas)', type: 'number', defaultValue: String(m.capacity || 4), min: 1 },
+            { label: 'Forma', type: 'select', defaultValue: m.shape || 'round', options: [
+                { value: 'round', label: '⭕ Redonda' },
+                { value: 'square', label: '⬜ Cuadrada' },
+                { value: 'rect', label: '▬ Rectangular' }
+            ]}
+        ],
+        confirmText: 'Guardar'
+    });
+    
+    if (!result) return;
+    
+    m.name = result[0] || m.name;
+    m.capacity = parseInt(result[1]) || m.capacity;
+    m.shape = result[2] || m.shape;
+    await saveMesa(m);
+    renderMesasAdmin();
+    showToast(`"${m.name}" actualizada`, 'success');
+}
+
+// Auto-ordenar mesas en grid
+function resetFloorPlanLayout() {
+    const colGap = 140;
+    const rowGap = 140;
+    const cols = 5;
+    const startX = 30;
+    const startY = 30;
+    
+    mesasList.forEach((m, idx) => {
+        m.posX = startX + (idx % cols) * colGap;
+        m.posY = startY + Math.floor(idx / cols) * rowGap;
+        saveMesa(m);
+    });
+    renderMesasAdmin();
+    showToast('Mesas reordenadas', 'success');
 }
 
 /** Generate SVG table for admin panel (light theme compatible) */

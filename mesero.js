@@ -254,22 +254,56 @@ function renderMesas() {
     }
     
     // --- MESAS (Floor Plan Visual) ---
-    mesasGrid.innerHTML = mesas.map(m => {
-        const hasOrder = orders[m.id] && orders[m.id].length > 0;
-        const total = hasOrder ? orders[m.id].reduce((s, i) => s + (i.price * i.qty), 0) : 0;
-        const itemCount = hasOrder ? orders[m.id].reduce((s, i) => s + i.qty, 0) : 0;
-        const statusClass = hasOrder ? 'ocupada' : 'libre';
-        const capacity = m.capacity || 4;
-        const tableSVG = generateTableSVG(capacity, hasOrder, m.shape);
+    // Check if any mesa has position data — if so, use floor plan mode
+    const hasPositions = mesas.some(m => m.posX != null && m.posY != null);
+    
+    if (hasPositions) {
+        // Floor plan mode - absolute positioning
+        mesasGrid.classList.add('floor-plan-mode');
+        // Calculate max height needed
+        const maxY = Math.max(...mesas.map(m => (m.posY || 0) + 130), 400);
+        mesasGrid.style.minHeight = maxY + 'px';
         
-        return `<div class="mesa-fp-card ${statusClass}" onclick="openMesa('${m.id}')">
-            ${hasOrder ? `<div class="mesa-fp-badge">${itemCount}</div>` : ''}
-            <div class="mesa-fp-visual">${tableSVG}</div>
-            <div class="mesa-fp-name">${esc(m.name)}</div>
-            <div class="mesa-fp-status ${statusClass}">${hasOrder ? 'Ocupada' : 'Libre'}</div>
-            ${hasOrder ? `<div class="mesa-fp-total">${formatCurrency(total)}</div>` : `<div class="mesa-fp-capacity">${capacity} personas</div>`}
-        </div>`;
-    }).join('');
+        mesasGrid.innerHTML = mesas.map(m => {
+            const hasOrder = orders[m.id] && orders[m.id].length > 0;
+            const total = hasOrder ? orders[m.id].reduce((s, i) => s + (i.price * i.qty), 0) : 0;
+            const itemCount = hasOrder ? orders[m.id].reduce((s, i) => s + i.qty, 0) : 0;
+            const statusClass = hasOrder ? 'ocupada' : 'libre';
+            const capacity = m.capacity || 4;
+            const tableSVG = generateTableSVG(capacity, hasOrder, m.shape);
+            const posX = m.posX != null ? m.posX : 0;
+            const posY = m.posY != null ? m.posY : 0;
+            
+            return `<div class="mesa-fp-card ${statusClass}" onclick="openMesa('${m.id}')" style="position:absolute;left:${posX}px;top:${posY}px;width:auto;min-width:100px;">
+                ${hasOrder ? `<div class="mesa-fp-badge">${itemCount}</div>` : ''}
+                <div class="mesa-fp-visual">${tableSVG}</div>
+                <div class="mesa-fp-name">${esc(m.name)}</div>
+                <div class="mesa-fp-status ${statusClass}">${hasOrder ? 'Ocupada' : 'Libre'}</div>
+                ${hasOrder ? `<div class="mesa-fp-total">${formatCurrency(total)}</div>` : `<div class="mesa-fp-capacity">${capacity} personas</div>`}
+            </div>`;
+        }).join('');
+    } else {
+        // Grid mode fallback (no positions saved)
+        mesasGrid.classList.remove('floor-plan-mode');
+        mesasGrid.style.minHeight = '';
+        
+        mesasGrid.innerHTML = mesas.map(m => {
+            const hasOrder = orders[m.id] && orders[m.id].length > 0;
+            const total = hasOrder ? orders[m.id].reduce((s, i) => s + (i.price * i.qty), 0) : 0;
+            const itemCount = hasOrder ? orders[m.id].reduce((s, i) => s + i.qty, 0) : 0;
+            const statusClass = hasOrder ? 'ocupada' : 'libre';
+            const capacity = m.capacity || 4;
+            const tableSVG = generateTableSVG(capacity, hasOrder, m.shape);
+            
+            return `<div class="mesa-fp-card ${statusClass}" onclick="openMesa('${m.id}')">
+                ${hasOrder ? `<div class="mesa-fp-badge">${itemCount}</div>` : ''}
+                <div class="mesa-fp-visual">${tableSVG}</div>
+                <div class="mesa-fp-name">${esc(m.name)}</div>
+                <div class="mesa-fp-status ${statusClass}">${hasOrder ? 'Ocupada' : 'Libre'}</div>
+                ${hasOrder ? `<div class="mesa-fp-total">${formatCurrency(total)}</div>` : `<div class="mesa-fp-capacity">${capacity} personas</div>`}
+            </div>`;
+        }).join('');
+    }
 }
 
 function showMesas() {
@@ -584,6 +618,112 @@ function splitBill() {
         <div style="font-size:0.85rem;color:#8b5cf6;font-weight:600;">➗ Cuenta dividida entre ${people} personas</div>
         <div style="font-size:1.3rem;font-weight:800;color:#8b5cf6;margin-top:4px;">${formatCurrency(perPerson)} c/u</div>
     </div>`;
+}
+
+// ==========================================
+// CAMBIAR DE MESA (Transferir pedido)
+// ==========================================
+function transferOrder() {
+    const items = orders[currentMesaId];
+    if (!items || items.length === 0) { showToast('No hay pedido para transferir', 'error'); return; }
+    
+    // Obtener mesas disponibles (excluir la actual)
+    const availableMesas = mesas.filter(m => m.id !== currentMesaId);
+    if (availableMesas.length === 0) { showToast('No hay otras mesas disponibles', 'error'); return; }
+    
+    // Crear overlay de selección
+    const overlay = document.createElement('div');
+    overlay.id = 'transfer-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+    
+    const mesasHTML = availableMesas.map(m => {
+        const hasOrder = orders[m.id] && orders[m.id].length > 0;
+        const statusLabel = hasOrder ? '⚠️ Ocupada' : '✅ Libre';
+        const statusColor = hasOrder ? 'color:#f59e0b' : 'color:#10b981';
+        return `<div class="transfer-mesa-option" onclick="confirmTransfer('${m.id}')" style="display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--bg-card,#1a2332);border:1px solid var(--border-glass-strong,rgba(255,255,255,0.1));border-radius:12px;cursor:pointer;transition:all 0.2s;">
+            <div style="font-size:1.5rem;">${generateTableSVG(m.capacity || 4, hasOrder, m.shape) ? '🪑' : '🪑'}</div>
+            <div style="flex:1;">
+                <div style="font-weight:700;color:var(--text-primary,#f1f5f9);font-size:0.95rem;">${esc(m.name)}</div>
+                <div style="font-size:0.75rem;${statusColor};font-weight:600;">${statusLabel} • ${m.capacity || 4} personas</div>
+            </div>
+        </div>`;
+    }).join('');
+    
+    const currentMesa = mesas.find(m => m.id === currentMesaId);
+    overlay.innerHTML = `
+        <div style="background:var(--bg-secondary,#131c31);border:1px solid var(--border-glass,rgba(255,255,255,0.06));border-radius:20px;padding:24px;max-width:420px;width:100%;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+                <h3 style="color:var(--text-primary,#f1f5f9);font-size:1.15rem;font-weight:700;">🔄 Cambiar de Mesa</h3>
+                <button onclick="document.getElementById('transfer-overlay').remove()" style="background:none;border:none;color:var(--text-secondary,#94a3b8);font-size:1.5rem;cursor:pointer;">✕</button>
+            </div>
+            <p style="color:var(--text-secondary,#94a3b8);font-size:0.85rem;margin-bottom:16px;">Mover pedido de <strong style="color:var(--text-primary,#f1f5f9);">${esc(currentMesa?.name || 'Mesa')}</strong> a:</p>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+                ${mesasHTML}
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+    
+    // Hover effect
+    overlay.querySelectorAll('.transfer-mesa-option').forEach(opt => {
+        opt.addEventListener('mouseenter', () => { opt.style.borderColor = 'var(--accent-blue,#635bff)'; opt.style.background = 'var(--bg-glass-hover,rgba(35,48,68,0.9))'; });
+        opt.addEventListener('mouseleave', () => { opt.style.borderColor = 'var(--border-glass-strong,rgba(255,255,255,0.1))'; opt.style.background = 'var(--bg-card,#1a2332)'; });
+    });
+}
+
+async function confirmTransfer(targetMesaId) {
+    const items = orders[currentMesaId];
+    if (!items || items.length === 0) return;
+    
+    const targetMesa = mesas.find(m => m.id === targetMesaId);
+    const sourceMesa = mesas.find(m => m.id === currentMesaId);
+    
+    // Si la mesa destino ya tiene pedido, combinar
+    if (orders[targetMesaId] && orders[targetMesaId].length > 0) {
+        // Combinar items
+        items.forEach(item => {
+            const existing = orders[targetMesaId].find(i => i.productId === item.productId);
+            if (existing) {
+                existing.qty += item.qty;
+            } else {
+                orders[targetMesaId].push({ ...item });
+            }
+        });
+    } else {
+        orders[targetMesaId] = [...items];
+    }
+    
+    // Eliminar pedido de la mesa origen
+    delete orders[currentMesaId];
+    
+    // Actualizar en Firebase
+    try {
+        // Guardar pedido en la nueva mesa
+        const orderDoc = {
+            id: 'order_' + targetMesaId,
+            mesaId: targetMesaId,
+            mesaName: targetMesa?.name || 'Mesa',
+            items: orders[targetMesaId],
+            total: orders[targetMesaId].reduce((s, i) => s + (i.price * i.qty), 0),
+            status: 'active',
+            type: 'mesa',
+            updatedAt: new Date().toISOString()
+        };
+        await userCollection('orders').doc(orderDoc.id).set(orderDoc, { merge: true });
+        
+        // Eliminar pedido de la mesa origen
+        await userCollection('orders').doc('order_' + currentMesaId).delete();
+    } catch (e) {
+        console.error('Error al transferir pedido:', e);
+    }
+    
+    // Cerrar overlay y volver a mesas
+    const overlay = document.getElementById('transfer-overlay');
+    if (overlay) overlay.remove();
+    
+    showToast(`✅ Pedido movido a ${targetMesa?.name || 'otra mesa'}`, 'success');
+    if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
+    showMesas();
 }
 
 // ==========================================

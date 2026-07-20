@@ -1168,6 +1168,109 @@ tr:last-child td { border-bottom: none; }
     font-weight: 500;
 }
 
+/* ===== FLOOR PLAN EDITOR (Admin) ===== */
+.floor-plan-container {
+    border: 2px solid var(--border);
+    border-radius: 16px;
+    background: var(--bg-alt);
+    overflow: hidden;
+    position: relative;
+}
+
+.floor-plan-canvas {
+    width: 100%;
+    min-height: 450px;
+    position: relative;
+    background-image: 
+        radial-gradient(circle, rgba(0,0,0,0.04) 1px, transparent 1px);
+    background-size: 30px 30px;
+    cursor: default;
+    touch-action: none;
+}
+
+.fp-mesa-item {
+    position: absolute;
+    cursor: grab;
+    user-select: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 8px;
+    border-radius: 12px;
+    transition: box-shadow 0.2s, transform 0.1s;
+    z-index: 1;
+}
+
+.fp-mesa-item:hover {
+    box-shadow: 0 4px 20px rgba(99, 91, 255, 0.2);
+    z-index: 10;
+}
+
+.fp-mesa-item.dragging {
+    cursor: grabbing;
+    opacity: 0.85;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    z-index: 100;
+    transform: scale(1.08);
+}
+
+.fp-mesa-item.selected {
+    outline: 2px solid var(--primary);
+    outline-offset: 4px;
+    border-radius: 14px;
+}
+
+.fp-mesa-item .fp-mesa-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--text);
+    text-align: center;
+    white-space: nowrap;
+    max-width: 90px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.fp-mesa-item .fp-mesa-cap {
+    font-size: 0.62rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.fp-mesa-item .fp-mesa-actions {
+    display: none;
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    gap: 2px;
+}
+
+.fp-mesa-item:hover .fp-mesa-actions,
+.fp-mesa-item.selected .fp-mesa-actions {
+    display: flex;
+}
+
+.fp-mesa-actions button {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--card-bg);
+    font-size: 0.65rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
+
+.fp-mesa-actions button:hover {
+    background: var(--danger);
+    color: white;
+    border-color: var(--danger);
+}
+
 .mesero-link-box {
     display: flex;
     gap: 8px;
