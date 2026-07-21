@@ -481,63 +481,85 @@
                 </div>
 
                 <!-- Selector de turno -->
-                <div class="card" style="margin-bottom:16px;">
-                    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">
-                        <strong>Turno:</strong>
-                        <button class="btn btn-sm" id="btn-turno-manana" onclick="selectCashShift('manana')" style="background:var(--primary);color:white;">☀️ Turno 1</button>
-                        <button class="btn btn-sm" id="btn-turno-noche" onclick="selectCashShift('noche')" style="background:var(--bg);color:var(--text);border:1px solid var(--border);">🌙 Turno 2</button>
-                        <button class="btn btn-sm" id="btn-turno-todo" onclick="selectCashShift('todo')" style="background:var(--bg);color:var(--text);border:1px solid var(--border);">📊 Todo el día</button>
+                <div class="card cc-turno-card">
+                    <div class="cc-turno-row">
+                        <span class="cc-turno-label">Turno:</span>
+                        <button class="cc-turno-btn active" id="btn-turno-manana" onclick="selectCashShift('manana')">☀️ Turno 1</button>
+                        <button class="cc-turno-btn" id="btn-turno-noche" onclick="selectCashShift('noche')">🌙 Turno 2</button>
+                        <button class="cc-turno-btn" id="btn-turno-todo" onclick="selectCashShift('todo')">📊 Todo el dia</button>
                     </div>
-                    <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;font-size:0.85rem;">
-                        <label style="display:flex;align-items:center;gap:6px;">☀️ Turno 1 desde: <input type="time" id="shift-start-1" value="06:00" onchange="updateShiftTimes()" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);"></label>
-                        <label style="display:flex;align-items:center;gap:6px;">🌙 Turno 2 desde: <input type="time" id="shift-start-2" value="14:00" onchange="updateShiftTimes()" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);"></label>
-                    </div>
-                </div>
-
-                <div class="stats-grid">
-                    <div class="stat-card sales">
-                        <div class="stat-icon">💰</div>
-                        <div class="stat-info">
-                            <span class="stat-value" id="cash-total">$0</span>
-                            <span class="stat-label">Total Vendido</span>
-                        </div>
-                    </div>
-                    <div class="stat-card highlight">
-                        <div class="stat-icon">📈</div>
-                        <div class="stat-info">
-                            <span class="stat-value" id="cash-profit">$0</span>
-                            <span class="stat-label">Ganancia</span>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">🧾</div>
-                        <div class="stat-info">
-                            <span class="stat-value" id="cash-count">0</span>
-                            <span class="stat-label">N° de Ventas</span>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">📦</div>
-                        <div class="stat-info">
-                            <span class="stat-value" id="cash-units">0</span>
-                            <span class="stat-label">Unidades</span>
-                        </div>
+                    <div class="cc-turno-times">
+                        <label>☀️ Turno 1 desde: <input type="time" id="shift-start-1" value="06:00" onchange="updateShiftTimes()"></label>
+                        <label>🌙 Turno 2 desde: <input type="time" id="shift-start-2" value="14:00" onchange="updateShiftTimes()"></label>
                     </div>
                 </div>
 
-                <div class="card">
-                    <h3>💳 Desglose por Método de Pago</h3>
-                    <div class="calc-results" style="display:block;">
-                        <div class="calc-result-item"><span>💵 Efectivo:</span><span id="cash-efectivo">$0</span></div>
-                        <div class="calc-result-item"><span>💳 Tarjeta:</span><span id="cash-tarjeta">$0</span></div>
-                        <div class="calc-result-item"><span>🏦 Transferencia:</span><span id="cash-transferencia">$0</span></div>
+                <!-- KPI Principal: Total Vendido -->
+                <div class="cc-total-card">
+                    <div class="cc-total-left">
+                        <div class="cc-total-label">TOTAL VENDIDO</div>
+                        <div class="cc-total-value" id="cash-total">$0</div>
+                        <div class="cc-total-sub">Ganancia: <span id="cash-profit">$0</span> · <span id="cash-count">0</span> ventas</div>
                     </div>
-                    <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;">
-                        <button class="btn btn-primary" onclick="printCashClose()">🖨️ Imprimir Cierre</button>
-                        <button class="btn btn-success" onclick="saveCashCloseRecord()">💾 Guardar Acta de Cierre</button>
+                    <div class="cc-total-right">
+                        <span class="cc-vs-badge" id="cash-vs-ayer">0% vs ayer</span>
                     </div>
-                    <div id="cash-close-history" style="margin-top:20px;"></div>
                 </div>
+
+                <!-- KPIs secundarios -->
+                <div class="cc-kpi-row">
+                    <div class="cc-kpi-card">
+                        <div class="cc-kpi-icon">💰</div>
+                        <div class="cc-kpi-info">
+                            <span class="cc-kpi-value" id="cash-profit-kpi">$0</span>
+                            <span class="cc-kpi-label">GANANCIA</span>
+                        </div>
+                    </div>
+                    <div class="cc-kpi-card">
+                        <div class="cc-kpi-icon">🧾</div>
+                        <div class="cc-kpi-info">
+                            <span class="cc-kpi-value" id="cash-count-kpi">0</span>
+                            <span class="cc-kpi-label">N° DE VENTAS</span>
+                        </div>
+                    </div>
+                    <div class="cc-kpi-card">
+                        <div class="cc-kpi-icon">📦</div>
+                        <div class="cc-kpi-info">
+                            <span class="cc-kpi-value" id="cash-units">0</span>
+                            <span class="cc-kpi-label">UNIDADES</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Desglose + Top Vendidos -->
+                <div class="cc-details-row">
+                    <div class="card cc-desglose-card">
+                        <h3>💳 Desglose por metodo de pago</h3>
+                        <div class="cc-method-list">
+                            <div class="cc-method-item"><span class="cc-method-dot" style="background:#10b981;"></span><span>Efectivo</span><span class="cc-method-value" id="cash-efectivo">$0</span></div>
+                            <div class="cc-method-item"><span class="cc-method-dot" style="background:#6366f1;"></span><span>Tarjeta</span><span class="cc-method-value" id="cash-tarjeta">$0</span></div>
+                            <div class="cc-method-item"><span class="cc-method-dot" style="background:#f59e0b;"></span><span>Transferencia</span><span class="cc-method-value" id="cash-transferencia">$0</span></div>
+                        </div>
+                    </div>
+                    <div class="card cc-top-card">
+                        <h3>🏆 Mas vendidos hoy</h3>
+                        <div class="cc-top-list" id="cash-top-products">
+                            <div class="cc-top-item"><span class="cc-top-rank">1</span><span class="cc-top-name">—</span><span class="cc-top-qty">0 uds</span></div>
+                            <div class="cc-top-item"><span class="cc-top-rank">2</span><span class="cc-top-name">—</span><span class="cc-top-qty">0 uds</span></div>
+                            <div class="cc-top-item"><span class="cc-top-rank">3</span><span class="cc-top-name">—</span><span class="cc-top-qty">0 uds</span></div>
+                            <div class="cc-top-item"><span class="cc-top-rank">4</span><span class="cc-top-name">—</span><span class="cc-top-qty">0 uds</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Acciones -->
+                <div class="cc-actions">
+                    <button class="btn btn-outline" onclick="printCashClose()">🖨️ Imprimir cierre</button>
+                    <button class="btn btn-success" onclick="saveCashCloseRecord()">✅ Guardar acta de cierre</button>
+                </div>
+
+                <!-- Historial de cierres -->
+                <div class="card" id="cash-close-history" style="margin-top:16px;"></div>
             </section>
 
             <!-- ======================== CLIENTES ======================== -->
