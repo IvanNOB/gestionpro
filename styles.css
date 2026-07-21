@@ -1080,6 +1080,75 @@ tr:last-child td { border-bottom: none; }
 .calc-result-item.highlight span:last-child { color: var(--primary); font-weight: 700; }
 .calc-result-item.success span:last-child { color: var(--success); font-weight: 700; }
 
+/* ===== CIERRE DE CAJA ===== */
+.cc-turno-card { margin-bottom: 16px; }
+.cc-turno-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.cc-turno-label { font-weight: 600; font-size: 0.85rem; color: var(--text); }
+.cc-turno-btn {
+    padding: 8px 16px; border-radius: 20px; border: 1px solid var(--border);
+    background: var(--bg); color: var(--text); font-size: 0.8rem; font-weight: 600;
+    cursor: pointer; transition: all 0.2s;
+}
+.cc-turno-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+.cc-turno-times { display: flex; gap: 16px; flex-wrap: wrap; font-size: 0.82rem; }
+.cc-turno-times label { display: flex; align-items: center; gap: 6px; color: var(--text-light); }
+.cc-turno-times input { padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font-size: 0.82rem; }
+
+.cc-total-card {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 24px 28px; margin-bottom: 16px;
+    background: linear-gradient(135deg, var(--primary), #4338ca);
+    border-radius: var(--radius-md); color: white;
+    box-shadow: 0 4px 20px rgba(99, 91, 255, 0.2);
+}
+.cc-total-left { display: flex; flex-direction: column; gap: 4px; }
+.cc-total-label { font-size: 0.7rem; font-weight: 700; letter-spacing: 1.5px; opacity: 0.8; text-transform: uppercase; }
+.cc-total-value { font-family: 'JetBrains Mono', monospace; font-size: 2.2rem; font-weight: 800; line-height: 1; }
+.cc-total-sub { font-size: 0.78rem; opacity: 0.75; margin-top: 4px; }
+.cc-total-sub span { font-weight: 600; }
+.cc-vs-badge {
+    padding: 6px 12px; border-radius: 20px;
+    background: rgba(255,255,255,0.18); font-size: 0.72rem;
+    font-weight: 700; white-space: nowrap;
+}
+
+.cc-kpi-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
+.cc-kpi-card {
+    display: flex; align-items: center; gap: 12px;
+    padding: 18px 16px; background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+}
+.cc-kpi-icon { font-size: 1.4rem; }
+.cc-kpi-info { display: flex; flex-direction: column; }
+.cc-kpi-value { font-family: 'JetBrains Mono', monospace; font-size: 1.15rem; font-weight: 800; color: var(--text); }
+.cc-kpi-label { font-size: 0.62rem; font-weight: 600; color: var(--text-muted); letter-spacing: 0.8px; text-transform: uppercase; margin-top: 2px; }
+
+.cc-details-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.cc-desglose-card h3, .cc-top-card h3 { font-size: 0.9rem; margin-bottom: 14px; }
+
+.cc-method-list { display: flex; flex-direction: column; gap: 12px; }
+.cc-method-item { display: flex; align-items: center; gap: 10px; font-size: 0.88rem; }
+.cc-method-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+.cc-method-item span:nth-child(2) { flex: 1; color: var(--text); }
+.cc-method-value { font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--text); }
+
+.cc-top-list { display: flex; flex-direction: column; gap: 10px; }
+.cc-top-item { display: flex; align-items: center; gap: 10px; font-size: 0.85rem; padding: 6px 0; border-bottom: 1px solid var(--border-light); }
+.cc-top-item:last-child { border-bottom: none; }
+.cc-top-rank { width: 22px; height: 22px; border-radius: 6px; background: var(--primary-light); color: var(--primary); font-size: 0.7rem; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.cc-top-name { flex: 1; font-weight: 500; color: var(--text); }
+.cc-top-qty { font-size: 0.78rem; color: var(--text-muted); font-weight: 600; white-space: nowrap; }
+
+.cc-actions { display: flex; gap: 12px; justify-content: center; }
+.cc-actions .btn { padding: 14px 28px; font-size: 0.88rem; border-radius: 10px; }
+
+@media (max-width: 768px) {
+    .cc-kpi-row { grid-template-columns: 1fr; }
+    .cc-details-row { grid-template-columns: 1fr; }
+    .cc-total-value { font-size: 1.6rem; }
+    .cc-total-card { padding: 20px; }
+}
+
 /* ===== SETTINGS GRID ===== */
 .settings-grid {
     display: grid;

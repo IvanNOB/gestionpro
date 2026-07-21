@@ -2290,12 +2290,10 @@ function updateShiftTimes() {
 
 function selectCashShift(shift) {
     currentCashShift = shift;
-    document.getElementById('btn-turno-manana').style.background = shift === 'manana' ? 'var(--primary)' : 'var(--bg)';
-    document.getElementById('btn-turno-manana').style.color = shift === 'manana' ? 'white' : 'var(--text)';
-    document.getElementById('btn-turno-noche').style.background = shift === 'noche' ? 'var(--primary)' : 'var(--bg)';
-    document.getElementById('btn-turno-noche').style.color = shift === 'noche' ? 'white' : 'var(--text)';
-    document.getElementById('btn-turno-todo').style.background = shift === 'todo' ? 'var(--primary)' : 'var(--bg)';
-    document.getElementById('btn-turno-todo').style.color = shift === 'todo' ? 'white' : 'var(--text)';
+    document.querySelectorAll('.cc-turno-btn').forEach(btn => btn.classList.remove('active'));
+    const btnMap = { manana: 'btn-turno-manana', noche: 'btn-turno-noche', todo: 'btn-turno-todo' };
+    const activeBtn = document.getElementById(btnMap[shift]);
+    if (activeBtn) activeBtn.classList.add('active');
     renderCashClose();
 }
 
@@ -2335,9 +2333,51 @@ function renderCashClose() {
         units += s.quantity;
     });
 
+    // Calcular vs ayer
+    const yesterday = new Date(selectedDate);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    const yesterdaySales = sales.filter(s => s.date.startsWith(yesterdayStr));
+    const yesterdayTotal = yesterdaySales.reduce((sum, s) => sum + s.total, 0);
+    let vsPct = 0;
+    if (yesterdayTotal > 0) {
+        vsPct = Math.round(((total - yesterdayTotal) / yesterdayTotal) * 100);
+    }
+    const vsEl = document.getElementById('cash-vs-ayer');
+    if (vsEl) {
+        const sign = vsPct >= 0 ? '+' : '';
+        vsEl.textContent = `${sign}${vsPct}% vs ayer`;
+        vsEl.style.background = vsPct >= 0 ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)';
+        vsEl.style.color = vsPct >= 0 ? '#10b981' : '#ef4444';
+    }
+
+    // Calcular top vendidos del dia
+    const productCounts = {};
+    daySales.forEach(s => {
+        const name = s.productName || 'Producto';
+        productCounts[name] = (productCounts[name] || 0) + s.quantity;
+    });
+    const topProducts = Object.entries(productCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 4);
+
+    const topContainer = document.getElementById('cash-top-products');
+    if (topContainer) {
+        if (topProducts.length === 0) {
+            topContainer.innerHTML = '<div class="cc-top-item"><span class="cc-top-rank">—</span><span class="cc-top-name" style="color:var(--text-muted);">Sin ventas aun</span><span class="cc-top-qty"></span></div>';
+        } else {
+            topContainer.innerHTML = topProducts.map((item, idx) => 
+                `<div class="cc-top-item"><span class="cc-top-rank">${idx + 1}</span><span class="cc-top-name">${esc(item[0])}</span><span class="cc-top-qty">${item[1]} uds</span></div>`
+            ).join('');
+        }
+    }
+
+    // Actualizar valores en el DOM
     setText('cash-total', formatCurrency(total));
     setText('cash-profit', formatCurrency(profit));
+    setText('cash-profit-kpi', formatCurrency(profit));
     setText('cash-count', daySales.length);
+    setText('cash-count-kpi', daySales.length);
     setText('cash-units', units);
     setText('cash-efectivo', formatCurrency(methods['Efectivo']));
     setText('cash-tarjeta', formatCurrency(methods['Tarjeta']));
@@ -2390,6 +2430,71 @@ function initCashClose() {
         dateInput.addEventListener('change', renderCashClose);
     }
     loadCashCloseHistory();
+    // Auto-guardar cierre del dia anterior si no existe
+    autoClosePreviousDay();
+}
+
+// ==========================================
+// RESET DIARIO: Auto-guardar cierre del dia anterior
+// Al abrir un nuevo dia, si el dia anterior tuvo ventas pero no se guardo
+// el cierre, se guarda automaticamente para que hoy empiece en cero.
+// ==========================================
+async function autoClosePreviousDay() {
+    if (!currentUser) return;
+    
+    const today = new Date().toISOString().split('T')[0];
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    
+    // Verificar si ya se guardo un cierre para ayer
+    try {
+        const existingCloses = await userCollection('cashCloses')
+            .where('date', '==', yesterdayStr)
+            .limit(1)
+            .get();
+        
+        // Si ya existe un cierre para ayer, no hacer nada
+        if (!existingCloses.empty) return;
+        
+        // Verificar si hubo ventas ayer
+        const yesterdaySales = sales.filter(s => s.date.startsWith(yesterdayStr));
+        if (yesterdaySales.length === 0) return;
+        
+        // Calcular totales de ayer
+        const methods = { 'Efectivo': 0, 'Tarjeta': 0, 'Transferencia': 0 };
+        let total = 0, profit = 0, units = 0;
+        yesterdaySales.forEach(s => {
+            methods[s.method] = (methods[s.method] || 0) + s.total;
+            total += s.total;
+            profit += s.profit;
+            units += s.quantity;
+        });
+        
+        // Guardar cierre automatico del dia anterior
+        const record = {
+            id: generateId(),
+            date: yesterdayStr,
+            shift: 'todo',
+            shiftName: 'Todo el dia (auto-cierre)',
+            total: formatCurrency(total),
+            profit: formatCurrency(profit),
+            salesCount: String(yesterdaySales.length),
+            units: String(units),
+            efectivo: formatCurrency(methods['Efectivo']),
+            tarjeta: formatCurrency(methods['Tarjeta']),
+            transferencia: formatCurrency(methods['Transferencia']),
+            closedBy: 'Sistema (auto-cierre)',
+            closedAt: yesterdayStr + 'T23:59:59.000Z',
+            autoClose: true
+        };
+        
+        await userCollection('cashCloses').doc(record.id).set(record);
+        console.log('Auto-cierre guardado para:', yesterdayStr);
+        loadCashCloseHistory();
+    } catch (e) {
+        console.warn('Error en auto-cierre:', e);
+    }
 }
 
 // Guardar acta de cierre de caja como registro permanente
