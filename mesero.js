@@ -472,6 +472,7 @@ function renderOrderItems() {
                 <button class="qty-btn plus" onclick="changeQty('${i.productId}', 1)">+</button>
             </div>
             <span class="order-item-price">${formatCurrency(subtotal)}</span>
+            <button onclick="payIndividualItem('${i.productId}')" style="background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);border-radius:6px;font-size:0.75rem;cursor:pointer;padding:4px 6px;color:#10b981;font-weight:700;" title="Cobrar este item">💰</button>
             <button onclick="addItemNote('${i.productId}')" style="background:none;border:none;font-size:0.9rem;cursor:pointer;padding:4px;" title="Agregar nota">📝</button>
         </div>`;
     }).join('');
@@ -618,6 +619,100 @@ function splitBill() {
         <div style="font-size:0.85rem;color:#8b5cf6;font-weight:600;">➗ Cuenta dividida entre ${people} personas</div>
         <div style="font-size:1.3rem;font-weight:800;color:#8b5cf6;margin-top:4px;">${formatCurrency(perPerson)} c/u</div>
     </div>`;
+}
+
+// ==========================================
+// COBRO INDIVIDUAL (pagar un item de la mesa)
+// ==========================================
+async function payIndividualItem(productId) {
+    const items = orders[currentMesaId];
+    if (!items) return;
+    const item = items.find(i => i.productId === productId);
+    if (!item) return;
+
+    let qtyToPay = item.qty;
+
+    // Si tiene mas de 1, preguntar cuantas unidades cobrar
+    if (item.qty > 1) {
+        const input = prompt(`"${item.name}" tiene ${item.qty} unidades.\n¿Cuántas cobrar?`, '1');
+        if (!input) return;
+        qtyToPay = parseInt(input);
+        if (isNaN(qtyToPay) || qtyToPay <= 0) { showToast('Cantidad inválida', 'error'); return; }
+        if (qtyToPay > item.qty) qtyToPay = item.qty;
+    }
+
+    const totalItem = item.price * qtyToPay;
+    const payMethod = selectedPayMethod || 'Efectivo';
+    const mesa = mesas.find(m => m.id === currentMesaId);
+
+    try {
+        // Registrar venta individual
+        const sale = {
+            id: generateId(),
+            productId: item.productId,
+            productName: item.name,
+            quantity: qtyToPay,
+            price: item.price,
+            cost: item.cost || 0,
+            discount: 0,
+            discountAmount: 0,
+            total: totalItem,
+            profit: (item.price - (item.cost || 0)) * qtyToPay,
+            client: mesa?.name || '',
+            method: payMethod,
+            notes: 'Cobro individual - ' + (mesa?.name || 'Mesa'),
+            date: new Date().toISOString(),
+            soldBy: sessionStorage.getItem('activeEmployee') || 'Dueño'
+        };
+        await userCollection('sales').doc(sale.id).set(sale);
+
+        // Descontar stock
+        const product = products.find(p => p.id === item.productId);
+        if (product) {
+            product.quantity = Math.max(0, product.quantity - qtyToPay);
+            await userCollection('products').doc(product.id).set(product);
+        }
+
+        // Descontar insumos
+        deductInsumos(item.productId, qtyToPay);
+
+        // Quitar del pedido o reducir cantidad
+        if (qtyToPay >= item.qty) {
+            orders[currentMesaId] = items.filter(i => i.productId !== productId);
+        } else {
+            item.qty -= qtyToPay;
+        }
+
+        // Actualizar pedido en Firebase
+        if (orders[currentMesaId].length === 0) {
+            delete orders[currentMesaId];
+            await userCollection('orders').doc('order_' + currentMesaId).delete();
+        } else {
+            await userCollection('orders').doc('order_' + currentMesaId).set({
+                id: 'order_' + currentMesaId,
+                mesaId: currentMesaId,
+                mesaName: mesa?.name || 'Mesa',
+                items: orders[currentMesaId],
+                total: orders[currentMesaId].reduce((s, i) => s + (i.price * i.qty), 0),
+                status: 'active',
+                type: 'mesa',
+                updatedAt: new Date().toISOString()
+            }, { merge: true });
+        }
+
+        showToast(`💰 Cobrado: ${item.name} x${qtyToPay} = ${formatCurrency(totalItem)} (${payMethod})`, 'success');
+        if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
+
+        // Si ya no quedan items, volver a mesas
+        if (!orders[currentMesaId] || orders[currentMesaId].length === 0) {
+            showMesas();
+        } else {
+            renderOrderItems();
+        }
+    } catch (error) {
+        console.error('Error en cobro individual:', error);
+        showToast('⚠️ Error al cobrar. Intenta de nuevo.', 'error');
+    }
 }
 
 // ==========================================
