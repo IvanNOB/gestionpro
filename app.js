@@ -2277,11 +2277,10 @@ let shiftStart1 = 6;  // Hora inicio turno 1 (default 6am)
 let shiftStart2 = 14; // Hora inicio turno 2 (default 2pm)
 
 function updateShiftTimes() {
-    const t1 = document.getElementById('shift-start-1').value;
-    const t2 = document.getElementById('shift-start-2').value;
-    if (t1) shiftStart1 = parseInt(t1.split(':')[0]);
-    if (t2) shiftStart2 = parseInt(t2.split(':')[0]);
-    // Guardar en settings
+    const t1 = document.getElementById('shift-start-1');
+    const t2 = document.getElementById('shift-start-2');
+    if (t1 && t1.value) shiftStart1 = parseInt(t1.value.split(':')[0]);
+    if (t2 && t2.value) shiftStart2 = parseInt(t2.value.split(':')[0]);
     settings.shiftStart1 = shiftStart1;
     settings.shiftStart2 = shiftStart2;
     saveSettings();
@@ -2297,8 +2296,27 @@ function selectCashShift(shift) {
     renderCashClose();
 }
 
+function getCashSalesForShift(selectedDate, shift) {
+    let daySales = sales.filter(s => s.date && s.date.startsWith(selectedDate));
+
+    if (shift === 'manana') {
+        daySales = daySales.filter(s => {
+            const hour = new Date(s.date).getHours();
+            return hour >= shiftStart1 && hour < shiftStart2;
+        });
+    } else if (shift === 'noche') {
+        daySales = daySales.filter(s => {
+            const hour = new Date(s.date).getHours();
+            return hour >= shiftStart2 || hour < shiftStart1;
+        });
+    }
+    // No filtrar por lastClose aqui - mostramos todas las ventas del dia/turno
+    return daySales;
+}
+
 function renderCashClose() {
     const dateInput = document.getElementById('cash-date');
+    if (!dateInput) return;
     const selectedDate = dateInput.value || new Date().toISOString().split('T')[0];
 
     // Cargar horas guardadas
@@ -2309,49 +2327,25 @@ function renderCashClose() {
     if (s1El) s1El.value = String(shiftStart1).padStart(2, '0') + ':00';
     if (s2El) s2El.value = String(shiftStart2).padStart(2, '0') + ':00';
 
-    // Filtrar ventas por fecha Y por turno
-    let daySales = sales.filter(s => s.date.startsWith(selectedDate));
-
-    if (currentCashShift === 'manana') {
-        daySales = daySales.filter(s => {
-            const hour = new Date(s.date).getHours();
-            return hour >= shiftStart1 && hour < shiftStart2;
-        });
-        // Si el turno ya fue cerrado hoy, solo mostrar ventas DESPUES del cierre
-        if (settings.lastClose && settings.lastClose.manana && selectedDate === new Date().toISOString().split('T')[0]) {
-            const closeTime = new Date(settings.lastClose.manana);
-            if (closeTime.toISOString().split('T')[0] === selectedDate) {
-                daySales = daySales.filter(s => new Date(s.date) > closeTime);
-            }
-        }
-    } else if (currentCashShift === 'noche') {
-        daySales = daySales.filter(s => {
-            const hour = new Date(s.date).getHours();
-            return hour >= shiftStart2 || hour < shiftStart1;
-        });
-        if (settings.lastClose && settings.lastClose.noche && selectedDate === new Date().toISOString().split('T')[0]) {
-            const closeTime = new Date(settings.lastClose.noche);
-            if (closeTime.toISOString().split('T')[0] === selectedDate) {
-                daySales = daySales.filter(s => new Date(s.date) > closeTime);
-            }
-        }
-    }
+    // Obtener ventas del turno
+    const daySales = getCashSalesForShift(selectedDate, currentCashShift);
 
     const methods = { 'Efectivo': 0, 'Tarjeta': 0, 'Transferencia': 0 };
     let total = 0, profit = 0, units = 0;
     daySales.forEach(s => {
-        methods[s.method] = (methods[s.method] || 0) + s.total;
-        total += s.total;
-        profit += s.profit;
-        units += s.quantity;
+        const method = s.method || 'Efectivo';
+        methods[method] = (methods[method] || 0) + (s.total || 0);
+        total += (s.total || 0);
+        profit += (s.profit || 0);
+        units += (s.quantity || 0);
     });
 
     // Calcular vs ayer
-    const yesterday = new Date(selectedDate);
+    const yesterday = new Date(selectedDate + 'T12:00:00');
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayStr = yesterday.toISOString().split('T')[0];
-    const yesterdaySales = sales.filter(s => s.date.startsWith(yesterdayStr));
-    const yesterdayTotal = yesterdaySales.reduce((sum, s) => sum + s.total, 0);
+    const yesterdaySales = sales.filter(s => s.date && s.date.startsWith(yesterdayStr));
+    const yesterdayTotal = yesterdaySales.reduce((sum, s) => sum + (s.total || 0), 0);
     let vsPct = 0;
     if (yesterdayTotal > 0) {
         vsPct = Math.round(((total - yesterdayTotal) / yesterdayTotal) * 100);
@@ -2360,32 +2354,32 @@ function renderCashClose() {
     if (vsEl) {
         const sign = vsPct >= 0 ? '+' : '';
         vsEl.textContent = `${sign}${vsPct}% vs ayer`;
-        vsEl.style.background = vsPct >= 0 ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)';
-        vsEl.style.color = vsPct >= 0 ? '#10b981' : '#ef4444';
+        vsEl.style.background = vsPct >= 0 ? 'rgba(15,169,104,0.15)' : 'rgba(226,61,92,0.15)';
+        vsEl.style.color = vsPct >= 0 ? '#0FA968' : '#E23D5C';
     }
 
-    // Calcular top vendidos del dia
+    // Top vendidos
     const productCounts = {};
     daySales.forEach(s => {
         const name = s.productName || 'Producto';
-        productCounts[name] = (productCounts[name] || 0) + s.quantity;
+        productCounts[name] = (productCounts[name] || 0) + (s.quantity || 0);
     });
     const topProducts = Object.entries(productCounts)
         .sort((a, b) => b[1] - a[1])
-        .slice(0, 4);
+        .slice(0, 5);
 
     const topContainer = document.getElementById('cash-top-products');
     if (topContainer) {
         if (topProducts.length === 0) {
-            topContainer.innerHTML = '<div class="cc-top-item"><span class="cc-top-rank">—</span><span class="cc-top-name" style="color:var(--text-muted);">Sin ventas aun</span><span class="cc-top-qty"></span></div>';
+            topContainer.innerHTML = '<div class="cc-top-item"><span class="cc-top-rank">—</span><span class="cc-top-name" style="color:var(--text-muted);">Sin ventas en este turno</span><span class="cc-top-qty"></span></div>';
         } else {
-            topContainer.innerHTML = topProducts.map((item, idx) => 
+            topContainer.innerHTML = topProducts.map((item, idx) =>
                 `<div class="cc-top-item"><span class="cc-top-rank">${idx + 1}</span><span class="cc-top-name">${esc(item[0])}</span><span class="cc-top-qty">${item[1]} uds</span></div>`
             ).join('');
         }
     }
 
-    // Actualizar valores en el DOM
+    // Actualizar DOM
     setText('cash-total', formatCurrency(total));
     setText('cash-profit', formatCurrency(profit));
     setText('cash-profit-kpi', formatCurrency(profit));
@@ -2396,9 +2390,11 @@ function renderCashClose() {
     setText('cash-tarjeta', formatCurrency(methods['Tarjeta']));
     setText('cash-transferencia', formatCurrency(methods['Transferencia']));
 
-    // Actualizar el efectivo del sistema en el arqueo
+    // Actualizar arqueo
     setText('arqueo-efectivo-sistema', formatCurrency(methods['Efectivo']));
-    updateArqueo();
+    if (typeof updateArqueo === 'function') {
+        try { updateArqueo(); } catch(e) {}
+    }
 }
 
 
@@ -2446,9 +2442,14 @@ function initCashClose() {
         dateInput.value = new Date().toISOString().split('T')[0];
         dateInput.addEventListener('change', renderCashClose);
     }
+    // Marcar turno activo por defecto
+    selectCashShift('todo');
     initArqueo();
     loadCashCloseHistory();
-    autoClosePreviousDay();
+    // Renderizar datos
+    renderCashClose();
+    // Auto-cierre dia anterior (no bloquea UI)
+    setTimeout(() => autoClosePreviousDay(), 2000);
 }
 
 // ==========================================
@@ -2533,42 +2534,37 @@ function resetArqueo() {
 
 // ==========================================
 // RESET DIARIO: Auto-guardar cierre del dia anterior
-// Al abrir un nuevo dia, si el dia anterior tuvo ventas pero no se guardo
-// el cierre, se guarda automaticamente para que hoy empiece en cero.
 // ==========================================
 async function autoClosePreviousDay() {
     if (!currentUser) return;
-    
-    const today = new Date().toISOString().split('T')[0];
+
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayStr = yesterday.toISOString().split('T')[0];
-    
-    // Verificar si ya se guardo un cierre para ayer
+
     try {
-        const existingCloses = await userCollection('cashCloses')
-            .where('date', '==', yesterdayStr)
-            .limit(1)
-            .get();
-        
-        // Si ya existe un cierre para ayer, no hacer nada
-        if (!existingCloses.empty) return;
-        
         // Verificar si hubo ventas ayer
-        const yesterdaySales = sales.filter(s => s.date.startsWith(yesterdayStr));
+        const yesterdaySales = sales.filter(s => s.date && s.date.startsWith(yesterdayStr));
         if (yesterdaySales.length === 0) return;
-        
+
+        // Verificar si ya existe cierre para ayer (buscar en los ultimos 10 cierres)
+        const snap = await userCollection('cashCloses').orderBy('closedAt', 'desc').limit(10).get();
+        const recentCloses = snap.docs.map(doc => doc.data());
+        const hasCloseForYesterday = recentCloses.some(r => r.date === yesterdayStr);
+        if (hasCloseForYesterday) return;
+
         // Calcular totales de ayer
         const methods = { 'Efectivo': 0, 'Tarjeta': 0, 'Transferencia': 0 };
         let total = 0, profit = 0, units = 0;
         yesterdaySales.forEach(s => {
-            methods[s.method] = (methods[s.method] || 0) + s.total;
-            total += s.total;
-            profit += s.profit;
-            units += s.quantity;
+            const method = s.method || 'Efectivo';
+            methods[method] = (methods[method] || 0) + (s.total || 0);
+            total += (s.total || 0);
+            profit += (s.profit || 0);
+            units += (s.quantity || 0);
         });
-        
-        // Guardar cierre automatico del dia anterior
+
+        // Guardar cierre automatico
         const record = {
             id: generateId(),
             date: yesterdayStr,
@@ -2581,16 +2577,16 @@ async function autoClosePreviousDay() {
             efectivo: formatCurrency(methods['Efectivo']),
             tarjeta: formatCurrency(methods['Tarjeta']),
             transferencia: formatCurrency(methods['Transferencia']),
+            diferencia: null,
             closedBy: 'Sistema (auto-cierre)',
             closedAt: yesterdayStr + 'T23:59:59.000Z',
             autoClose: true
         };
-        
+
         await userCollection('cashCloses').doc(record.id).set(record);
-        console.log('Auto-cierre guardado para:', yesterdayStr);
         loadCashCloseHistory();
     } catch (e) {
-        console.warn('Error en auto-cierre:', e);
+        console.warn('Auto-cierre error (no critico):', e.message);
     }
 }
 
