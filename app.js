@@ -2269,12 +2269,36 @@ function calcBreakEven() {
 // ==========================================
 // CIERRE DE CAJA DIARIO
 // ==========================================
-// ==========================================
-// CIERRE DE CAJA POR TURNOS (Configurable)
-// ==========================================
-let currentCashShift = 'todo'; // 'manana', 'noche', 'todo'
-let shiftStart1 = 6;  // Hora inicio turno 1 (default 6am)
-let shiftStart2 = 14; // Hora inicio turno 2 (default 2pm)
+let currentCashShift = 'todo';
+let shiftStart1 = 6;
+let shiftStart2 = 14;
+const DENOMINACIONES_COP = [100000, 50000, 20000, 10000, 5000, 2000, 1000, 500, 200, 100];
+let arqueoCounts = {};
+
+function initCashClose() {
+    const dateInput = document.getElementById('cash-date');
+    if (dateInput) {
+        dateInput.value = new Date().toISOString().split('T')[0];
+        dateInput.addEventListener('change', () => renderCashClose());
+    }
+    // Cargar horas de turnos guardadas
+    if (settings.shiftStart1) shiftStart1 = settings.shiftStart1;
+    if (settings.shiftStart2) shiftStart2 = settings.shiftStart2;
+    // Generar grid de arqueo
+    const grid = document.getElementById('cc-arqueo-grid');
+    if (grid) {
+        grid.innerHTML = DENOMINACIONES_COP.map(d => {
+            const lbl = d >= 1000 ? '$' + (d / 1000) + 'k' : '$' + d;
+            return `<div style="display:flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg-alt);">
+                <span style="font-size:0.78rem;font-weight:600;min-width:50px;">${lbl}</span>
+                <input type="number" min="0" value="0" data-denom="${d}" oninput="updateArqueo()" style="width:55px;padding:5px;border:1px solid var(--border);border-radius:5px;text-align:center;font-size:0.8rem;background:var(--card-bg);color:var(--text);">
+            </div>`;
+        }).join('');
+    }
+    // Renderizar
+    selectCashShift('todo');
+    loadCashCloseHistory();
+}
 
 function updateShiftTimes() {
     const t1 = document.getElementById('shift-start-1');
@@ -2289,29 +2313,21 @@ function updateShiftTimes() {
 
 function selectCashShift(shift) {
     currentCashShift = shift;
-    document.querySelectorAll('.cc-turno-btn').forEach(btn => btn.classList.remove('active'));
-    const btnMap = { manana: 'btn-turno-manana', noche: 'btn-turno-noche', todo: 'btn-turno-todo' };
-    const activeBtn = document.getElementById(btnMap[shift]);
-    if (activeBtn) activeBtn.classList.add('active');
+    // Actualizar botones
+    const btns = { manana: 'btn-turno-manana', noche: 'btn-turno-noche', todo: 'btn-turno-todo' };
+    Object.entries(btns).forEach(([key, id]) => {
+        const btn = document.getElementById(id);
+        if (!btn) return;
+        if (key === shift) {
+            btn.style.background = 'var(--primary)';
+            btn.style.color = 'white';
+        } else {
+            btn.style.background = 'var(--bg)';
+            btn.style.color = 'var(--text)';
+            btn.style.border = '1px solid var(--border)';
+        }
+    });
     renderCashClose();
-}
-
-function getCashSalesForShift(selectedDate, shift) {
-    let daySales = sales.filter(s => s.date && s.date.startsWith(selectedDate));
-
-    if (shift === 'manana') {
-        daySales = daySales.filter(s => {
-            const hour = new Date(s.date).getHours();
-            return hour >= shiftStart1 && hour < shiftStart2;
-        });
-    } else if (shift === 'noche') {
-        daySales = daySales.filter(s => {
-            const hour = new Date(s.date).getHours();
-            return hour >= shiftStart2 || hour < shiftStart1;
-        });
-    }
-    // No filtrar por lastClose aqui - mostramos todas las ventas del dia/turno
-    return daySales;
 }
 
 function renderCashClose() {
@@ -2319,64 +2335,59 @@ function renderCashClose() {
     if (!dateInput) return;
     const selectedDate = dateInput.value || new Date().toISOString().split('T')[0];
 
-    // Cargar horas guardadas
-    if (settings.shiftStart1) shiftStart1 = settings.shiftStart1;
-    if (settings.shiftStart2) shiftStart2 = settings.shiftStart2;
+    // Actualizar inputs de hora
     const s1El = document.getElementById('shift-start-1');
     const s2El = document.getElementById('shift-start-2');
     if (s1El) s1El.value = String(shiftStart1).padStart(2, '0') + ':00';
     if (s2El) s2El.value = String(shiftStart2).padStart(2, '0') + ':00';
 
-    // Obtener ventas del turno
-    const daySales = getCashSalesForShift(selectedDate, currentCashShift);
+    // Filtrar ventas
+    let daySales = (sales || []).filter(s => s && s.date && s.date.startsWith(selectedDate));
 
-    const methods = { 'Efectivo': 0, 'Tarjeta': 0, 'Transferencia': 0 };
+    if (currentCashShift === 'manana') {
+        daySales = daySales.filter(s => {
+            const h = new Date(s.date).getHours();
+            return h >= shiftStart1 && h < shiftStart2;
+        });
+    } else if (currentCashShift === 'noche') {
+        daySales = daySales.filter(s => {
+            const h = new Date(s.date).getHours();
+            return h >= shiftStart2 || h < shiftStart1;
+        });
+    }
+
+    // Calcular totales
     let total = 0, profit = 0, units = 0;
+    const methods = { Efectivo: 0, Tarjeta: 0, Transferencia: 0 };
     daySales.forEach(s => {
-        const method = s.method || 'Efectivo';
-        methods[method] = (methods[method] || 0) + (s.total || 0);
-        total += (s.total || 0);
-        profit += (s.profit || 0);
-        units += (s.quantity || 0);
+        total += s.total || 0;
+        profit += s.profit || 0;
+        units += s.quantity || 0;
+        methods[s.method || 'Efectivo'] = (methods[s.method || 'Efectivo'] || 0) + (s.total || 0);
     });
 
-    // Calcular vs ayer
-    const yesterday = new Date(selectedDate + 'T12:00:00');
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split('T')[0];
-    const yesterdaySales = sales.filter(s => s.date && s.date.startsWith(yesterdayStr));
-    const yesterdayTotal = yesterdaySales.reduce((sum, s) => sum + (s.total || 0), 0);
-    let vsPct = 0;
-    if (yesterdayTotal > 0) {
-        vsPct = Math.round(((total - yesterdayTotal) / yesterdayTotal) * 100);
-    }
+    // vs ayer
+    const ayer = new Date(selectedDate + 'T12:00:00');
+    ayer.setDate(ayer.getDate() - 1);
+    const ayerStr = ayer.toISOString().split('T')[0];
+    const ayerTotal = (sales || []).filter(s => s && s.date && s.date.startsWith(ayerStr)).reduce((sum, s) => sum + (s.total || 0), 0);
+    let vsPct = ayerTotal > 0 ? Math.round(((total - ayerTotal) / ayerTotal) * 100) : 0;
+
     const vsEl = document.getElementById('cash-vs-ayer');
     if (vsEl) {
-        const sign = vsPct >= 0 ? '+' : '';
-        vsEl.textContent = `${sign}${vsPct}% vs ayer`;
-        vsEl.style.background = vsPct >= 0 ? 'rgba(15,169,104,0.15)' : 'rgba(226,61,92,0.15)';
+        vsEl.textContent = (vsPct >= 0 ? '+' : '') + vsPct + '% vs ayer';
         vsEl.style.color = vsPct >= 0 ? '#0FA968' : '#E23D5C';
     }
 
     // Top vendidos
-    const productCounts = {};
-    daySales.forEach(s => {
-        const name = s.productName || 'Producto';
-        productCounts[name] = (productCounts[name] || 0) + (s.quantity || 0);
-    });
-    const topProducts = Object.entries(productCounts)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 5);
-
-    const topContainer = document.getElementById('cash-top-products');
-    if (topContainer) {
-        if (topProducts.length === 0) {
-            topContainer.innerHTML = '<div class="cc-top-item"><span class="cc-top-rank">—</span><span class="cc-top-name" style="color:var(--text-muted);">Sin ventas en este turno</span><span class="cc-top-qty"></span></div>';
-        } else {
-            topContainer.innerHTML = topProducts.map((item, idx) =>
-                `<div class="cc-top-item"><span class="cc-top-rank">${idx + 1}</span><span class="cc-top-name">${esc(item[0])}</span><span class="cc-top-qty">${item[1]} uds</span></div>`
-            ).join('');
-        }
+    const prodMap = {};
+    daySales.forEach(s => { prodMap[s.productName || '?'] = (prodMap[s.productName || '?'] || 0) + (s.quantity || 0); });
+    const top = Object.entries(prodMap).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    const topEl = document.getElementById('cash-top-products');
+    if (topEl) {
+        topEl.innerHTML = top.length === 0
+            ? '<div style="color:var(--text-muted);font-size:0.82rem;">Sin ventas en este turno</div>'
+            : top.map((t, i) => `<div style="display:flex;justify-content:space-between;padding:3px 0;"><span><strong style="color:var(--primary);margin-right:6px;">${i + 1}</strong>${esc(t[0])}</span><span style="color:var(--text-muted);">${t[1]} uds</span></div>`).join('');
     }
 
     // Actualizar DOM
@@ -2386,15 +2397,118 @@ function renderCashClose() {
     setText('cash-count', daySales.length);
     setText('cash-count-kpi', daySales.length);
     setText('cash-units', units);
-    setText('cash-efectivo', formatCurrency(methods['Efectivo']));
-    setText('cash-tarjeta', formatCurrency(methods['Tarjeta']));
-    setText('cash-transferencia', formatCurrency(methods['Transferencia']));
+    setText('cash-efectivo', formatCurrency(methods.Efectivo));
+    setText('cash-tarjeta', formatCurrency(methods.Tarjeta));
+    setText('cash-transferencia', formatCurrency(methods.Transferencia));
+    setText('arqueo-efectivo-sistema', formatCurrency(methods.Efectivo));
+}
 
-    // Actualizar arqueo
-    setText('arqueo-efectivo-sistema', formatCurrency(methods['Efectivo']));
-    if (typeof updateArqueo === 'function') {
-        try { updateArqueo(); } catch(e) {}
+function updateArqueo() {
+    let totalContado = 0;
+    document.querySelectorAll('#cc-arqueo-grid input').forEach(input => {
+        const d = parseInt(input.dataset.denom) || 0;
+        const q = parseInt(input.value) || 0;
+        arqueoCounts[d] = q;
+        totalContado += d * q;
+    });
+    const efectivoSist = getEfectivoSistema();
+    const diff = totalContado - efectivoSist;
+
+    setText('arqueo-total-contado', formatCurrency(totalContado));
+    setText('arqueo-efectivo-sistema', formatCurrency(efectivoSist));
+
+    const diffEl = document.getElementById('arqueo-diferencia');
+    if (diffEl) {
+        diffEl.textContent = formatCurrency(diff);
+        diffEl.style.color = diff === 0 ? '#0FA968' : diff < 0 ? '#E23D5C' : '#D97706';
     }
+}
+
+function getEfectivoSistema() {
+    const dateInput = document.getElementById('cash-date');
+    const d = dateInput ? dateInput.value : new Date().toISOString().split('T')[0];
+    let s = (sales || []).filter(x => x && x.date && x.date.startsWith(d) && x.method === 'Efectivo');
+    if (currentCashShift === 'manana') s = s.filter(x => { const h = new Date(x.date).getHours(); return h >= shiftStart1 && h < shiftStart2; });
+    else if (currentCashShift === 'noche') s = s.filter(x => { const h = new Date(x.date).getHours(); return h >= shiftStart2 || h < shiftStart1; });
+    return s.reduce((sum, x) => sum + (x.total || 0), 0);
+}
+
+async function saveCashCloseRecord() {
+    const date = document.getElementById('cash-date')?.value || new Date().toISOString().split('T')[0];
+    const shiftNames = { manana: 'Turno 1', noche: 'Turno 2', todo: 'Todo el dia' };
+    const efectivoSist = getEfectivoSistema();
+    let totalContado = 0;
+    DENOMINACIONES_COP.forEach(d => { totalContado += (arqueoCounts[d] || 0) * d; });
+
+    const record = {
+        id: generateId(),
+        date: date,
+        shift: currentCashShift,
+        shiftName: shiftNames[currentCashShift] || 'Todo el dia',
+        total: document.getElementById('cash-total')?.textContent || '$0',
+        profit: document.getElementById('cash-profit')?.textContent || '$0',
+        salesCount: document.getElementById('cash-count')?.textContent || '0',
+        units: document.getElementById('cash-units')?.textContent || '0',
+        efectivo: document.getElementById('cash-efectivo')?.textContent || '$0',
+        tarjeta: document.getElementById('cash-tarjeta')?.textContent || '$0',
+        transferencia: document.getElementById('cash-transferencia')?.textContent || '$0',
+        efectivoSistema: efectivoSist,
+        totalContado: totalContado,
+        diferencia: totalContado - efectivoSist,
+        closedBy: sessionStorage.getItem('activeEmployee') || 'Dueño',
+        closedAt: new Date().toISOString()
+    };
+
+    try {
+        await firestoreOperation(() => userCollection('cashCloses').doc(record.id).set(record));
+        // Limpiar arqueo
+        arqueoCounts = {};
+        document.querySelectorAll('#cc-arqueo-grid input').forEach(i => { i.value = '0'; });
+        updateArqueo();
+        showToast('✅ Cierre guardado correctamente', 'success');
+        loadCashCloseHistory();
+    } catch (e) {
+        showToast('Error al guardar cierre: ' + e.message, 'error');
+    }
+}
+
+async function loadCashCloseHistory() {
+    const container = document.getElementById('cash-close-history');
+    if (!container || !currentUser) return;
+    try {
+        const snap = await userCollection('cashCloses').orderBy('closedAt', 'desc').limit(10).get();
+        const records = snap.docs.map(doc => doc.data());
+        if (records.length === 0) { container.innerHTML = '<p style="color:var(--text-muted);font-size:0.85rem;text-align:center;padding:16px;">No hay cierres guardados aun.</p>'; return; }
+        container.innerHTML = '<h4 style="margin-bottom:12px;font-size:0.9rem;">📋 Ultimos cierres</h4>' +
+            records.map(r => {
+                const diff = r.diferencia != null ? r.diferencia : null;
+                const diffTxt = diff != null ? (diff === 0 ? '✅ Cuadra' : diff > 0 ? '⚠️ Sobra ' + formatCurrency(diff) : '❌ Falta ' + formatCurrency(Math.abs(diff))) : '';
+                return `<div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
+                    <div><strong style="font-size:0.85rem;">${r.date}</strong> — ${esc(r.shiftName || 'Todo')}<br><span style="font-size:0.75rem;color:var(--text-light);">Por: ${esc(r.closedBy || '?')}</span>${diffTxt ? `<br><span style="font-size:0.75rem;font-weight:600;">${diffTxt}</span>` : ''}</div>
+                    <div style="text-align:right;"><strong style="color:var(--success);">${r.total || '$0'}</strong><br><span style="font-size:0.75rem;color:var(--text-light);">${r.salesCount || 0} ventas</span></div>
+                </div>`;
+            }).join('');
+    } catch (e) { container.innerHTML = '<p style="color:var(--text-muted);font-size:0.82rem;">Error cargando historial</p>'; }
+}
+
+function printCashClose() {
+    const date = document.getElementById('cash-date')?.value || new Date().toISOString().split('T')[0];
+    const win = window.open('', '_blank', 'width=380,height=500');
+    if (!win) { showToast('Permite ventanas emergentes', 'warning'); return; }
+    win.document.write(`<html><head><title>Cierre</title><style>body{font-family:'Courier New',monospace;padding:16px;font-size:13px;}h2{text-align:center;margin:4px 0;}.c{text-align:center;}hr{border:none;border-top:1px dashed #000;margin:8px 0;}.r{display:flex;justify-content:space-between;margin:4px 0;}.b{font-weight:bold;font-size:15px;}</style></head><body>
+        <h2>${esc(settings.businessName || 'Mi Negocio')}</h2>
+        <div class="c">CIERRE DE CAJA</div>
+        <div class="c">${date}</div><hr>
+        <div class="r"><span>Ventas:</span><span>${document.getElementById('cash-count')?.textContent || 0}</span></div>
+        <div class="r"><span>Unidades:</span><span>${document.getElementById('cash-units')?.textContent || 0}</span></div><hr>
+        <div class="r"><span>Efectivo:</span><span>${document.getElementById('cash-efectivo')?.textContent || '$0'}</span></div>
+        <div class="r"><span>Tarjeta:</span><span>${document.getElementById('cash-tarjeta')?.textContent || '$0'}</span></div>
+        <div class="r"><span>Transferencia:</span><span>${document.getElementById('cash-transferencia')?.textContent || '$0'}</span></div><hr>
+        <div class="r b"><span>TOTAL:</span><span>${document.getElementById('cash-total')?.textContent || '$0'}</span></div>
+        <div class="r"><span>Ganancia:</span><span>${document.getElementById('cash-profit')?.textContent || '$0'}</span></div><hr>
+        <div class="c" style="font-size:11px;">Generado: ${new Date().toLocaleString('es-CO')}</div>
+        <script>window.onload=function(){window.print();}<\/script></body></html>`);
+    win.document.close();
 }
 
 
@@ -2432,287 +2546,6 @@ function renderGoalProgress() {
             : `Te faltan ${formatCurrency(falta)} para tu meta.`;
     }
 }
-
-// ==========================================
-// INIT CIERRE DE CAJA
-// ==========================================
-function initCashClose() {
-    const dateInput = document.getElementById('cash-date');
-    if (dateInput) {
-        dateInput.value = new Date().toISOString().split('T')[0];
-        dateInput.addEventListener('change', renderCashClose);
-    }
-    // Marcar turno activo por defecto
-    selectCashShift('todo');
-    initArqueo();
-    loadCashCloseHistory();
-    // Renderizar datos
-    renderCashClose();
-    // Auto-cierre dia anterior (no bloquea UI)
-    setTimeout(() => autoClosePreviousDay(), 2000);
-}
-
-// ==========================================
-// ARQUEO DE EFECTIVO
-// ==========================================
-const DENOMINACIONES_COP = [100000, 50000, 20000, 10000, 5000, 2000, 1000, 500, 200, 100];
-let arqueoCounts = {};
-
-function initArqueo() {
-    const grid = document.getElementById('cc-arqueo-grid');
-    if (!grid) return;
-    grid.innerHTML = DENOMINACIONES_COP.map(d => {
-        const label = d >= 1000 ? '$' + (d/1000) + 'k' : '$' + d;
-        return `<div class="cc-arqueo-item">
-            <label>${label}</label>
-            <input type="number" min="0" value="0" data-denom="${d}" oninput="updateArqueo()">
-        </div>`;
-    }).join('');
-}
-
-function toggleArqueo() {
-    const body = document.getElementById('cc-arqueo-body');
-    const toggle = document.getElementById('cc-arqueo-toggle');
-    if (!body) return;
-    const isOpen = body.style.display !== 'none';
-    body.style.display = isOpen ? 'none' : 'block';
-    toggle.textContent = isOpen ? '▼' : '▲';
-}
-
-function updateArqueo() {
-    let totalContado = 0;
-    const inputs = document.querySelectorAll('#cc-arqueo-grid input');
-    inputs.forEach(input => {
-        const denom = parseInt(input.dataset.denom);
-        const qty = parseInt(input.value) || 0;
-        arqueoCounts[denom] = qty;
-        totalContado += denom * qty;
-    });
-
-    const efectivoSistema = getEfectivoSistema();
-    const diferencia = totalContado - efectivoSistema;
-
-    setText('arqueo-total-contado', formatCurrency(totalContado));
-    setText('arqueo-efectivo-sistema', formatCurrency(efectivoSistema));
-    setText('arqueo-diferencia', formatCurrency(diferencia));
-
-    // Estado visual
-    const diffRow = document.getElementById('arqueo-diff-row');
-    if (diffRow) {
-        diffRow.classList.remove('ok', 'bad', 'over');
-        if (diferencia === 0 && totalContado > 0) diffRow.classList.add('ok');
-        else if (diferencia < 0) diffRow.classList.add('bad');
-        else if (diferencia > 0) diffRow.classList.add('over');
-    }
-}
-
-function getEfectivoSistema() {
-    const dateInput = document.getElementById('cash-date');
-    const selectedDate = dateInput ? dateInput.value : new Date().toISOString().split('T')[0];
-    let daySales = sales.filter(s => s.date.startsWith(selectedDate) && s.method === 'Efectivo');
-
-    if (currentCashShift === 'manana') {
-        daySales = daySales.filter(s => { const h = new Date(s.date).getHours(); return h >= shiftStart1 && h < shiftStart2; });
-    } else if (currentCashShift === 'noche') {
-        daySales = daySales.filter(s => { const h = new Date(s.date).getHours(); return h >= shiftStart2 || h < shiftStart1; });
-    }
-    return daySales.reduce((sum, s) => sum + s.total, 0);
-}
-
-function getArqueoTotal() {
-    let total = 0;
-    DENOMINACIONES_COP.forEach(d => { total += (arqueoCounts[d] || 0) * d; });
-    return total;
-}
-
-function resetArqueo() {
-    arqueoCounts = {};
-    const inputs = document.querySelectorAll('#cc-arqueo-grid input');
-    inputs.forEach(input => { input.value = '0'; });
-    updateArqueo();
-}
-
-// ==========================================
-// RESET DIARIO: Auto-guardar cierre del dia anterior
-// ==========================================
-async function autoClosePreviousDay() {
-    if (!currentUser) return;
-
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split('T')[0];
-
-    try {
-        // Verificar si hubo ventas ayer
-        const yesterdaySales = sales.filter(s => s.date && s.date.startsWith(yesterdayStr));
-        if (yesterdaySales.length === 0) return;
-
-        // Verificar si ya existe cierre para ayer (buscar en los ultimos 10 cierres)
-        const snap = await userCollection('cashCloses').orderBy('closedAt', 'desc').limit(10).get();
-        const recentCloses = snap.docs.map(doc => doc.data());
-        const hasCloseForYesterday = recentCloses.some(r => r.date === yesterdayStr);
-        if (hasCloseForYesterday) return;
-
-        // Calcular totales de ayer
-        const methods = { 'Efectivo': 0, 'Tarjeta': 0, 'Transferencia': 0 };
-        let total = 0, profit = 0, units = 0;
-        yesterdaySales.forEach(s => {
-            const method = s.method || 'Efectivo';
-            methods[method] = (methods[method] || 0) + (s.total || 0);
-            total += (s.total || 0);
-            profit += (s.profit || 0);
-            units += (s.quantity || 0);
-        });
-
-        // Guardar cierre automatico
-        const record = {
-            id: generateId(),
-            date: yesterdayStr,
-            shift: 'todo',
-            shiftName: 'Todo el dia (auto-cierre)',
-            total: formatCurrency(total),
-            profit: formatCurrency(profit),
-            salesCount: String(yesterdaySales.length),
-            units: String(units),
-            efectivo: formatCurrency(methods['Efectivo']),
-            tarjeta: formatCurrency(methods['Tarjeta']),
-            transferencia: formatCurrency(methods['Transferencia']),
-            diferencia: null,
-            closedBy: 'Sistema (auto-cierre)',
-            closedAt: yesterdayStr + 'T23:59:59.000Z',
-            autoClose: true
-        };
-
-        await userCollection('cashCloses').doc(record.id).set(record);
-        loadCashCloseHistory();
-    } catch (e) {
-        console.warn('Auto-cierre error (no critico):', e.message);
-    }
-}
-
-// Guardar acta de cierre de caja — CON REINICIO DE TURNO
-async function saveCashCloseRecord() {
-    const date = new Date().toISOString().split('T')[0];
-    const shiftNames = { manana: 'Turno 1 (Mañana)', noche: 'Turno 2 (Noche)', todo: 'Todo el día' };
-    const shift = shiftNames[currentCashShift] || 'Todo el día';
-
-    const efectivoSistema = getEfectivoSistema();
-    const totalContado = getArqueoTotal();
-    const diferencia = totalContado - efectivoSistema;
-
-    const record = {
-        id: generateId(),
-        date: date,
-        shift: currentCashShift,
-        shiftName: shift,
-        total: document.getElementById('cash-total').textContent,
-        profit: document.getElementById('cash-profit').textContent,
-        salesCount: document.getElementById('cash-count').textContent,
-        units: document.getElementById('cash-units').textContent,
-        efectivo: document.getElementById('cash-efectivo').textContent,
-        tarjeta: document.getElementById('cash-tarjeta').textContent,
-        transferencia: document.getElementById('cash-transferencia').textContent,
-        // Arqueo
-        efectivoSistema: efectivoSistema,
-        totalContado: totalContado,
-        diferencia: diferencia,
-        arqueoCounts: { ...arqueoCounts },
-        // Meta
-        closedBy: sessionStorage.getItem('activeEmployee') || 'Dueño',
-        closedAt: new Date().toISOString()
-    };
-
-    await firestoreOperation(() => userCollection('cashCloses').doc(record.id).set(record));
-
-    // REINICIO: Marcar ventas del turno como "cerradas" guardando el cierre
-    // El sistema ya filtra por fecha, asi que al dia siguiente empieza en $0
-    // Para reinicio intra-dia (cerrar turno 1 y que turno 2 empiece en 0),
-    // guardamos la hora de cierre para excluir ventas anteriores
-    if (currentCashShift !== 'todo') {
-        settings.lastClose = settings.lastClose || {};
-        settings.lastClose[currentCashShift] = new Date().toISOString();
-        await saveSettings();
-    }
-
-    // Limpiar arqueo
-    resetArqueo();
-
-    showToast('✅ Acta de cierre guardada — Turno reiniciado en $0', 'success');
-    loadCashCloseHistory();
-    renderCashClose();
-}
-
-async function loadCashCloseHistory() {
-    const container = document.getElementById('cash-close-history');
-    if (!container || !currentUser) return;
-
-    try {
-        const snap = await userCollection('cashCloses').orderBy('closedAt', 'desc').limit(10).get();
-        const records = snap.docs.map(doc => doc.data());
-
-        if (records.length === 0) {
-            container.innerHTML = '';
-            return;
-        }
-
-        container.innerHTML = `<h4 style="margin-bottom:12px;">📋 Últimos cierres guardados</h4>` +
-            records.map(r => {
-                const diff = r.diferencia != null ? r.diferencia : null;
-                const diffLabel = diff != null ? (diff === 0 ? '✅ Caja cuadrada' : diff > 0 ? `⚠️ Sobra ${formatCurrency(diff)}` : `❌ Falta ${formatCurrency(Math.abs(diff))}`) : '';
-                const diffColor = diff != null ? (diff === 0 ? '#0FA968' : diff > 0 ? '#D97706' : '#E23D5C') : 'var(--text-light)';
-                return `<div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-                <div>
-                    <strong>${new Date(r.date).toLocaleDateString('es-CO')}</strong> — ${esc(r.shiftName)}
-                    <div style="font-size:0.8rem;color:var(--text-light);">Cerrado por: ${esc(r.closedBy)} a las ${new Date(r.closedAt).toLocaleTimeString('es-CO', {hour:'2-digit',minute:'2-digit'})}</div>
-                    ${diffLabel ? `<div style="font-size:0.75rem;color:${diffColor};font-weight:600;margin-top:2px;">${diffLabel}</div>` : ''}
-                </div>
-                <div style="text-align:right;">
-                    <div style="font-weight:700;color:var(--success);">${r.total}</div>
-                    <div style="font-size:0.8rem;color:var(--text-light);">${r.salesCount} ventas</div>
-                </div>
-            </div>`;
-            }).join('');
-    } catch (e) { container.innerHTML = ''; }
-}
-
-
-function printCashClose() {
-    const date = document.getElementById('cash-date').value || new Date().toISOString().split('T')[0];
-    const shiftNames = { manana: '☀️ TURNO MAÑANA (6am-2pm)', noche: '🌙 TURNO NOCHE (2pm-cierre)', todo: '📊 TODO EL DÍA' };
-    const shiftLabel = shiftNames[currentCashShift] || 'Todo el día';
-    const win = window.open('', '_blank', 'width=400,height=600');
-    if (!win) { showToast('Permite las ventanas emergentes', 'warning'); return; }
-    win.document.write(`
-        <html><head><title>Cierre de Caja</title><style>
-            body { font-family: 'Courier New', monospace; padding: 16px; font-size: 13px; }
-            h2 { text-align: center; margin: 4px 0; }
-            .center { text-align: center; }
-            hr { border: none; border-top: 1px dashed #000; margin: 8px 0; }
-            .row { display: flex; justify-content: space-between; margin: 4px 0; }
-            .total { font-weight: bold; font-size: 15px; }
-        </style></head><body>
-            <h2>${esc(settings.businessName)}</h2>
-            <div class="center">CIERRE DE CAJA</div>
-            <div class="center">${shiftLabel}</div>
-            <div class="center">${new Date(date).toLocaleDateString('es-CO')}</div>
-            <hr>
-            <div class="row"><span>Ventas:</span><span>${document.getElementById('cash-count').textContent}</span></div>
-            <div class="row"><span>Unidades:</span><span>${document.getElementById('cash-units').textContent}</span></div>
-            <hr>
-            <div class="row"><span>Efectivo:</span><span>${document.getElementById('cash-efectivo').textContent}</span></div>
-            <div class="row"><span>Tarjeta:</span><span>${document.getElementById('cash-tarjeta').textContent}</span></div>
-            <div class="row"><span>Transferencia:</span><span>${document.getElementById('cash-transferencia').textContent}</span></div>
-            <hr>
-            <div class="row total"><span>TOTAL:</span><span>${document.getElementById('cash-total').textContent}</span></div>
-            <div class="row"><span>Ganancia:</span><span>${document.getElementById('cash-profit').textContent}</span></div>
-            <hr>
-            <div class="center">Generado: ${new Date().toLocaleString('es-CO')}</div>
-            <script>window.onload=function(){window.print();}<\/script>
-        </body></html>
-    `);
-    win.document.close();
-}
-
 
 // ==========================================
 // MÓDULO DE CLIENTES

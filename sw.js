@@ -7,8 +7,8 @@
 //   - Auto-actualización: skipWaiting + clients.claim inmediato
 // ==========================================
 
-const CACHE_NAME = 'gestionpro-v13';
-const ASSETS_CACHE = 'gestionpro-assets-v13';
+const CACHE_NAME = 'gestionpro-v14';
+const ASSETS_CACHE = 'gestionpro-assets-v14';
 
 // Archivos principales de la app (Network-First)
 const APP_FILES = [
