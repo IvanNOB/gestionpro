@@ -2272,37 +2272,18 @@ function calcBreakEven() {
 let currentCashShift = 'todo';
 let shiftStart1 = 6;
 let shiftStart2 = 14;
-const DENOMINACIONES_COP = [100000, 50000, 20000, 10000, 5000, 2000, 1000, 500, 200, 100];
-let arqueoCounts = {};
+let cashCloseHistoryCache = [];
 
 function initCashClose() {
-    const dateInput = document.getElementById('cash-date');
-    if (dateInput) {
-        dateInput.value = new Date().toISOString().split('T')[0];
-        dateInput.addEventListener('change', () => renderCashClose());
-    }
-    // Cargar horas de turnos guardadas
     if (settings.shiftStart1) shiftStart1 = settings.shiftStart1;
     if (settings.shiftStart2) shiftStart2 = settings.shiftStart2;
-    // Generar grid de arqueo
-    const grid = document.getElementById('cc-arqueo-grid');
-    if (grid) {
-        grid.innerHTML = DENOMINACIONES_COP.map(d => {
-            const lbl = d >= 1000 ? '$' + (d / 1000) + 'k' : '$' + d;
-            return `<div style="display:flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg-alt);">
-                <span style="font-size:0.78rem;font-weight:600;min-width:50px;">${lbl}</span>
-                <input type="number" min="0" value="0" data-denom="${d}" oninput="updateArqueo()" style="width:55px;padding:5px;border:1px solid var(--border);border-radius:5px;text-align:center;font-size:0.8rem;background:var(--card-bg);color:var(--text);">
-            </div>`;
-        }).join('');
-    }
-    // Renderizar
-    selectCashShift('todo');
+    renderCashClose();
     loadCashCloseHistory();
 }
 
 function updateShiftTimes() {
-    const t1 = document.getElementById('shift-start-1');
-    const t2 = document.getElementById('shift-start-2');
+    const t1 = document.getElementById('cc-time-1');
+    const t2 = document.getElementById('cc-time-2');
     if (t1 && t1.value) shiftStart1 = parseInt(t1.value.split(':')[0]);
     if (t2 && t2.value) shiftStart2 = parseInt(t2.value.split(':')[0]);
     settings.shiftStart1 = shiftStart1;
@@ -2311,203 +2292,81 @@ function updateShiftTimes() {
     renderCashClose();
 }
 
-function selectCashShift(shift) {
-    currentCashShift = shift;
-    // Actualizar botones
-    const btns = { manana: 'btn-turno-manana', noche: 'btn-turno-noche', todo: 'btn-turno-todo' };
-    Object.entries(btns).forEach(([key, id]) => {
-        const btn = document.getElementById(id);
-        if (!btn) return;
-        if (key === shift) {
-            btn.style.background = 'var(--primary)';
-            btn.style.color = 'white';
-        } else {
-            btn.style.background = 'var(--bg)';
-            btn.style.color = 'var(--text)';
-            btn.style.border = '1px solid var(--border)';
-        }
-    });
-    renderCashClose();
+function selectCashShift(shift) { currentCashShift = shift; renderCashClose(); }
+
+function getCashData(selectedDate) {
+    let daySales = (sales || []).filter(s => s && s.date && s.date.startsWith(selectedDate));
+    if (currentCashShift === 'manana') daySales = daySales.filter(s => { const h = new Date(s.date).getHours(); return h >= shiftStart1 && h < shiftStart2; });
+    else if (currentCashShift === 'noche') daySales = daySales.filter(s => { const h = new Date(s.date).getHours(); return h >= shiftStart2 || h < shiftStart1; });
+    let total = 0, profit = 0, units = 0;
+    const methods = { Efectivo: 0, Tarjeta: 0, Transferencia: 0 };
+    daySales.forEach(s => { total += s.total || 0; profit += s.profit || 0; units += s.quantity || 0; methods[s.method || 'Efectivo'] = (methods[s.method || 'Efectivo'] || 0) + (s.total || 0); });
+    const prodMap = {};
+    daySales.forEach(s => { const n = s.productName || '?'; prodMap[n] = (prodMap[n] || 0) + (s.quantity || 0); });
+    const top5 = Object.entries(prodMap).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    return { daySales, total, profit, units, methods, top5 };
 }
 
 function renderCashClose() {
-    const dateInput = document.getElementById('cash-date');
-    if (!dateInput) return;
-    const selectedDate = dateInput.value || new Date().toISOString().split('T')[0];
+    const container = document.getElementById('cashclose-container');
+    if (!container) return;
+    const today = new Date().toISOString().split('T')[0];
+    const prevDateEl = document.getElementById('cc-date-picker');
+    const selectedDate = (prevDateEl && prevDateEl.value) ? prevDateEl.value : today;
+    const d = getCashData(selectedDate);
+    const ayer = new Date(selectedDate + 'T12:00:00'); ayer.setDate(ayer.getDate() - 1);
+    const ayerTotal = (sales || []).filter(s => s && s.date && s.date.startsWith(ayer.toISOString().split('T')[0])).reduce((sum, s) => sum + (s.total || 0), 0);
+    const vsPct = ayerTotal > 0 ? Math.round(((d.total - ayerTotal) / ayerTotal) * 100) : 0;
+    const bs = (active) => active ? 'background:#4F46E5;color:white;border:none;' : 'background:var(--card-bg);color:var(--text);border:1px solid var(--border);';
 
-    // Actualizar inputs de hora
-    const s1El = document.getElementById('shift-start-1');
-    const s2El = document.getElementById('shift-start-2');
-    if (s1El) s1El.value = String(shiftStart1).padStart(2, '0') + ':00';
-    if (s2El) s2El.value = String(shiftStart2).padStart(2, '0') + ':00';
-
-    // Filtrar ventas
-    let daySales = (sales || []).filter(s => s && s.date && s.date.startsWith(selectedDate));
-
-    if (currentCashShift === 'manana') {
-        daySales = daySales.filter(s => {
-            const h = new Date(s.date).getHours();
-            return h >= shiftStart1 && h < shiftStart2;
-        });
-    } else if (currentCashShift === 'noche') {
-        daySales = daySales.filter(s => {
-            const h = new Date(s.date).getHours();
-            return h >= shiftStart2 || h < shiftStart1;
-        });
-    }
-
-    // Calcular totales
-    let total = 0, profit = 0, units = 0;
-    const methods = { Efectivo: 0, Tarjeta: 0, Transferencia: 0 };
-    daySales.forEach(s => {
-        total += s.total || 0;
-        profit += s.profit || 0;
-        units += s.quantity || 0;
-        methods[s.method || 'Efectivo'] = (methods[s.method || 'Efectivo'] || 0) + (s.total || 0);
-    });
-
-    // vs ayer
-    const ayer = new Date(selectedDate + 'T12:00:00');
-    ayer.setDate(ayer.getDate() - 1);
-    const ayerStr = ayer.toISOString().split('T')[0];
-    const ayerTotal = (sales || []).filter(s => s && s.date && s.date.startsWith(ayerStr)).reduce((sum, s) => sum + (s.total || 0), 0);
-    let vsPct = ayerTotal > 0 ? Math.round(((total - ayerTotal) / ayerTotal) * 100) : 0;
-
-    const vsEl = document.getElementById('cash-vs-ayer');
-    if (vsEl) {
-        vsEl.textContent = (vsPct >= 0 ? '+' : '') + vsPct + '% vs ayer';
-        vsEl.style.color = vsPct >= 0 ? '#0FA968' : '#E23D5C';
-    }
-
-    // Top vendidos
-    const prodMap = {};
-    daySales.forEach(s => { prodMap[s.productName || '?'] = (prodMap[s.productName || '?'] || 0) + (s.quantity || 0); });
-    const top = Object.entries(prodMap).sort((a, b) => b[1] - a[1]).slice(0, 5);
-    const topEl = document.getElementById('cash-top-products');
-    if (topEl) {
-        topEl.innerHTML = top.length === 0
-            ? '<div style="color:var(--text-muted);font-size:0.82rem;">Sin ventas en este turno</div>'
-            : top.map((t, i) => `<div style="display:flex;justify-content:space-between;padding:3px 0;"><span><strong style="color:var(--primary);margin-right:6px;">${i + 1}</strong>${esc(t[0])}</span><span style="color:var(--text-muted);">${t[1]} uds</span></div>`).join('');
-    }
-
-    // Actualizar DOM
-    setText('cash-total', formatCurrency(total));
-    setText('cash-profit', formatCurrency(profit));
-    setText('cash-profit-kpi', formatCurrency(profit));
-    setText('cash-count', daySales.length);
-    setText('cash-count-kpi', daySales.length);
-    setText('cash-units', units);
-    setText('cash-efectivo', formatCurrency(methods.Efectivo));
-    setText('cash-tarjeta', formatCurrency(methods.Tarjeta));
-    setText('cash-transferencia', formatCurrency(methods.Transferencia));
-    setText('arqueo-efectivo-sistema', formatCurrency(methods.Efectivo));
+    container.innerHTML = `
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;"><h2 style="font-size:1.15rem;font-weight:700;">🧾 Cierre de Caja</h2><input type="date" id="cc-date-picker" value="${selectedDate}" onchange="renderCashClose()" style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--card-bg);color:var(--text);font-size:0.8rem;"></div>
+<div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:12px;"><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;"><button onclick="selectCashShift('manana')" style="padding:6px 12px;border-radius:18px;font-size:0.76rem;font-weight:600;cursor:pointer;${bs(currentCashShift==='manana')}">☀️ Turno 1</button><button onclick="selectCashShift('noche')" style="padding:6px 12px;border-radius:18px;font-size:0.76rem;font-weight:600;cursor:pointer;${bs(currentCashShift==='noche')}">🌙 Turno 2</button><button onclick="selectCashShift('todo')" style="padding:6px 12px;border-radius:18px;font-size:0.76rem;font-weight:600;cursor:pointer;${bs(currentCashShift==='todo')}">📊 Todo</button></div><div style="display:flex;gap:8px;font-size:0.72rem;color:var(--text-muted);"><label>☀️<input type="time" id="cc-time-1" value="${String(shiftStart1).padStart(2,'0')}:00" onchange="updateShiftTimes()" style="padding:2px 5px;border:1px solid var(--border);border-radius:4px;background:var(--card-bg);color:var(--text);font-size:0.72rem;width:68px;margin-left:3px;"></label><label>🌙<input type="time" id="cc-time-2" value="${String(shiftStart2).padStart(2,'0')}:00" onchange="updateShiftTimes()" style="padding:2px 5px;border:1px solid var(--border);border-radius:4px;background:var(--card-bg);color:var(--text);font-size:0.72rem;width:68px;margin-left:3px;"></label></div></div>
+<div style="background:linear-gradient(135deg,#4F46E5,#7C3AED);color:white;border-radius:12px;padding:18px;margin-bottom:12px;"><div style="font-size:0.62rem;font-weight:700;letter-spacing:1px;opacity:0.7;">TOTAL VENDIDO</div><div style="font-family:'JetBrains Mono',monospace;font-size:1.7rem;font-weight:800;margin:2px 0;">${formatCurrency(d.total)}</div><div style="font-size:0.73rem;opacity:0.8;">Ganancia: <b>${formatCurrency(d.profit)}</b> · <b>${d.daySales.length}</b> ventas <span style="margin-left:8px;padding:2px 8px;border-radius:8px;background:rgba(255,255,255,0.2);font-size:0.65rem;">${vsPct>=0?'+':''}${vsPct}%</span></div></div>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;"><div style="background:var(--card-bg);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center;"><div style="font-family:'JetBrains Mono',monospace;font-size:0.95rem;font-weight:800;">${formatCurrency(d.profit)}</div><div style="font-size:0.62rem;color:var(--text-muted);margin-top:2px;">GANANCIA</div></div><div style="background:var(--card-bg);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center;"><div style="font-family:'JetBrains Mono',monospace;font-size:0.95rem;font-weight:800;">${d.daySales.length}</div><div style="font-size:0.62rem;color:var(--text-muted);margin-top:2px;">VENTAS</div></div><div style="background:var(--card-bg);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center;"><div style="font-family:'JetBrains Mono',monospace;font-size:0.95rem;font-weight:800;">${d.units}</div><div style="font-size:0.62rem;color:var(--text-muted);margin-top:2px;">UNIDADES</div></div></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;"><div style="background:var(--card-bg);border:1px solid var(--border);border-radius:8px;padding:12px;"><div style="font-size:0.78rem;font-weight:600;margin-bottom:6px;">💳 Pagos</div><div style="display:flex;justify-content:space-between;font-size:0.76rem;margin-bottom:3px;"><span>💵 Efectivo</span><b style="font-family:'JetBrains Mono',monospace;">${formatCurrency(d.methods.Efectivo)}</b></div><div style="display:flex;justify-content:space-between;font-size:0.76rem;margin-bottom:3px;"><span>💳 Tarjeta</span><b style="font-family:'JetBrains Mono',monospace;">${formatCurrency(d.methods.Tarjeta)}</b></div><div style="display:flex;justify-content:space-between;font-size:0.76rem;"><span>🏦 Transf</span><b style="font-family:'JetBrains Mono',monospace;">${formatCurrency(d.methods.Transferencia)}</b></div></div><div style="background:var(--card-bg);border:1px solid var(--border);border-radius:8px;padding:12px;"><div style="font-size:0.78rem;font-weight:600;margin-bottom:6px;">🏆 Top</div>${d.top5.length===0?'<div style="font-size:0.75rem;color:var(--text-muted);">Sin ventas</div>':d.top5.map((t,i)=>`<div style="display:flex;justify-content:space-between;font-size:0.74rem;margin-bottom:2px;"><span><b style="color:#4F46E5;">${i+1}</b> ${esc(t[0])}</span><span style="color:var(--text-muted);">${t[1]}u</span></div>`).join('')}</div></div>
+<div style="display:flex;gap:8px;justify-content:center;padding:10px 0;"><button class="btn btn-outline" onclick="printCashClose()" style="padding:10px 16px;font-size:0.8rem;">🖨️ Imprimir</button><button class="btn btn-success" onclick="saveCashCloseRecord()" style="padding:10px 20px;font-size:0.8rem;font-weight:700;">✅ Guardar cierre</button></div>
+<div id="cash-close-history"></div>`;
+    if (cashCloseHistoryCache.length > 0) renderCashHistory(cashCloseHistoryCache);
 }
 
-function updateArqueo() {
-    let totalContado = 0;
-    document.querySelectorAll('#cc-arqueo-grid input').forEach(input => {
-        const d = parseInt(input.dataset.denom) || 0;
-        const q = parseInt(input.value) || 0;
-        arqueoCounts[d] = q;
-        totalContado += d * q;
-    });
-    const efectivoSist = getEfectivoSistema();
-    const diff = totalContado - efectivoSist;
-
-    setText('arqueo-total-contado', formatCurrency(totalContado));
-    setText('arqueo-efectivo-sistema', formatCurrency(efectivoSist));
-
-    const diffEl = document.getElementById('arqueo-diferencia');
-    if (diffEl) {
-        diffEl.textContent = formatCurrency(diff);
-        diffEl.style.color = diff === 0 ? '#0FA968' : diff < 0 ? '#E23D5C' : '#D97706';
-    }
-}
-
-function getEfectivoSistema() {
-    const dateInput = document.getElementById('cash-date');
-    const d = dateInput ? dateInput.value : new Date().toISOString().split('T')[0];
-    let s = (sales || []).filter(x => x && x.date && x.date.startsWith(d) && x.method === 'Efectivo');
-    if (currentCashShift === 'manana') s = s.filter(x => { const h = new Date(x.date).getHours(); return h >= shiftStart1 && h < shiftStart2; });
-    else if (currentCashShift === 'noche') s = s.filter(x => { const h = new Date(x.date).getHours(); return h >= shiftStart2 || h < shiftStart1; });
-    return s.reduce((sum, x) => sum + (x.total || 0), 0);
-}
-
-async function saveCashCloseRecord() {
-    const date = document.getElementById('cash-date')?.value || new Date().toISOString().split('T')[0];
-    const shiftNames = { manana: 'Turno 1', noche: 'Turno 2', todo: 'Todo el dia' };
-    const efectivoSist = getEfectivoSistema();
-    let totalContado = 0;
-    DENOMINACIONES_COP.forEach(d => { totalContado += (arqueoCounts[d] || 0) * d; });
-
-    const record = {
-        id: generateId(),
-        date: date,
-        shift: currentCashShift,
-        shiftName: shiftNames[currentCashShift] || 'Todo el dia',
-        total: document.getElementById('cash-total')?.textContent || '$0',
-        profit: document.getElementById('cash-profit')?.textContent || '$0',
-        salesCount: document.getElementById('cash-count')?.textContent || '0',
-        units: document.getElementById('cash-units')?.textContent || '0',
-        efectivo: document.getElementById('cash-efectivo')?.textContent || '$0',
-        tarjeta: document.getElementById('cash-tarjeta')?.textContent || '$0',
-        transferencia: document.getElementById('cash-transferencia')?.textContent || '$0',
-        efectivoSistema: efectivoSist,
-        totalContado: totalContado,
-        diferencia: totalContado - efectivoSist,
-        closedBy: sessionStorage.getItem('activeEmployee') || 'Dueño',
-        closedAt: new Date().toISOString()
-    };
-
-    try {
-        await firestoreOperation(() => userCollection('cashCloses').doc(record.id).set(record));
-        // Limpiar arqueo
-        arqueoCounts = {};
-        document.querySelectorAll('#cc-arqueo-grid input').forEach(i => { i.value = '0'; });
-        updateArqueo();
-        showToast('✅ Cierre guardado correctamente', 'success');
-        loadCashCloseHistory();
-    } catch (e) {
-        showToast('Error al guardar cierre: ' + e.message, 'error');
-    }
+function renderCashHistory(records) {
+    const c = document.getElementById('cash-close-history');
+    if (!c) return;
+    if (!records || records.length === 0) { c.innerHTML = ''; return; }
+    c.innerHTML = '<div style="font-size:0.82rem;font-weight:600;margin-bottom:6px;">📋 Cierres anteriores</div>' +
+        records.map(r => `<div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 10px;margin-bottom:4px;display:flex;justify-content:space-between;font-size:0.75rem;"><div><b>${r.date||'?'}</b> ${esc(r.shiftName||'')}<br><span style="color:var(--text-muted);">${esc(r.closedBy||'?')}</span></div><div style="text-align:right;"><b style="color:var(--success);">${r.total||'$0'}</b><br><span style="color:var(--text-muted);">${r.salesCount||0}v</span></div></div>`).join('');
 }
 
 async function loadCashCloseHistory() {
-    const container = document.getElementById('cash-close-history');
-    if (!container || !currentUser) return;
+    if (!currentUser) return;
     try {
         const snap = await userCollection('cashCloses').orderBy('closedAt', 'desc').limit(10).get();
-        const records = snap.docs.map(doc => doc.data());
-        if (records.length === 0) { container.innerHTML = '<p style="color:var(--text-muted);font-size:0.85rem;text-align:center;padding:16px;">No hay cierres guardados aun.</p>'; return; }
-        container.innerHTML = '<h4 style="margin-bottom:12px;font-size:0.9rem;">📋 Ultimos cierres</h4>' +
-            records.map(r => {
-                const diff = r.diferencia != null ? r.diferencia : null;
-                const diffTxt = diff != null ? (diff === 0 ? '✅ Cuadra' : diff > 0 ? '⚠️ Sobra ' + formatCurrency(diff) : '❌ Falta ' + formatCurrency(Math.abs(diff))) : '';
-                return `<div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
-                    <div><strong style="font-size:0.85rem;">${r.date}</strong> — ${esc(r.shiftName || 'Todo')}<br><span style="font-size:0.75rem;color:var(--text-light);">Por: ${esc(r.closedBy || '?')}</span>${diffTxt ? `<br><span style="font-size:0.75rem;font-weight:600;">${diffTxt}</span>` : ''}</div>
-                    <div style="text-align:right;"><strong style="color:var(--success);">${r.total || '$0'}</strong><br><span style="font-size:0.75rem;color:var(--text-light);">${r.salesCount || 0} ventas</span></div>
-                </div>`;
-            }).join('');
-    } catch (e) { container.innerHTML = '<p style="color:var(--text-muted);font-size:0.82rem;">Error cargando historial</p>'; }
+        cashCloseHistoryCache = snap.docs.map(doc => doc.data());
+        renderCashHistory(cashCloseHistoryCache);
+    } catch (e) { console.warn('Historial error:', e.message); }
+}
+
+async function saveCashCloseRecord() {
+    const dateEl = document.getElementById('cc-date-picker');
+    const date = dateEl ? dateEl.value : new Date().toISOString().split('T')[0];
+    const d = getCashData(date);
+    const shiftNames = { manana: 'Turno 1', noche: 'Turno 2', todo: 'Todo el dia' };
+    const record = { id: generateId(), date, shift: currentCashShift, shiftName: shiftNames[currentCashShift] || 'Todo', total: formatCurrency(d.total), profit: formatCurrency(d.profit), salesCount: String(d.daySales.length), units: String(d.units), efectivo: formatCurrency(d.methods.Efectivo), tarjeta: formatCurrency(d.methods.Tarjeta), transferencia: formatCurrency(d.methods.Transferencia), closedBy: sessionStorage.getItem('activeEmployee') || 'Dueño', closedAt: new Date().toISOString() };
+    try {
+        await firestoreOperation(() => userCollection('cashCloses').doc(record.id).set(record));
+        showToast('✅ Cierre guardado', 'success');
+        loadCashCloseHistory();
+    } catch (e) { showToast('Error: ' + e.message, 'error'); }
 }
 
 function printCashClose() {
-    const date = document.getElementById('cash-date')?.value || new Date().toISOString().split('T')[0];
+    const dateEl = document.getElementById('cc-date-picker');
+    const date = dateEl ? dateEl.value : new Date().toISOString().split('T')[0];
+    const d = getCashData(date);
     const win = window.open('', '_blank', 'width=380,height=500');
     if (!win) { showToast('Permite ventanas emergentes', 'warning'); return; }
-    win.document.write(`<html><head><title>Cierre</title><style>body{font-family:'Courier New',monospace;padding:16px;font-size:13px;}h2{text-align:center;margin:4px 0;}.c{text-align:center;}hr{border:none;border-top:1px dashed #000;margin:8px 0;}.r{display:flex;justify-content:space-between;margin:4px 0;}.b{font-weight:bold;font-size:15px;}</style></head><body>
-        <h2>${esc(settings.businessName || 'Mi Negocio')}</h2>
-        <div class="c">CIERRE DE CAJA</div>
-        <div class="c">${date}</div><hr>
-        <div class="r"><span>Ventas:</span><span>${document.getElementById('cash-count')?.textContent || 0}</span></div>
-        <div class="r"><span>Unidades:</span><span>${document.getElementById('cash-units')?.textContent || 0}</span></div><hr>
-        <div class="r"><span>Efectivo:</span><span>${document.getElementById('cash-efectivo')?.textContent || '$0'}</span></div>
-        <div class="r"><span>Tarjeta:</span><span>${document.getElementById('cash-tarjeta')?.textContent || '$0'}</span></div>
-        <div class="r"><span>Transferencia:</span><span>${document.getElementById('cash-transferencia')?.textContent || '$0'}</span></div><hr>
-        <div class="r b"><span>TOTAL:</span><span>${document.getElementById('cash-total')?.textContent || '$0'}</span></div>
-        <div class="r"><span>Ganancia:</span><span>${document.getElementById('cash-profit')?.textContent || '$0'}</span></div><hr>
-        <div class="c" style="font-size:11px;">Generado: ${new Date().toLocaleString('es-CO')}</div>
-        <script>window.onload=function(){window.print();}<\/script></body></html>`);
+    win.document.write(`<html><head><title>Cierre</title><style>body{font-family:'Courier New',monospace;padding:16px;font-size:13px;}h2{text-align:center;}hr{border:none;border-top:1px dashed #000;margin:8px 0;}.r{display:flex;justify-content:space-between;margin:4px 0;}.b{font-weight:bold;font-size:15px;}</style></head><body><h2>${esc(settings.businessName||'Negocio')}</h2><div style="text-align:center;">CIERRE ${date}</div><hr><div class="r"><span>Ventas:</span><span>${d.daySales.length}</span></div><div class="r"><span>Unidades:</span><span>${d.units}</span></div><hr><div class="r"><span>Efectivo:</span><span>${formatCurrency(d.methods.Efectivo)}</span></div><div class="r"><span>Tarjeta:</span><span>${formatCurrency(d.methods.Tarjeta)}</span></div><div class="r"><span>Transferencia:</span><span>${formatCurrency(d.methods.Transferencia)}</span></div><hr><div class="r b"><span>TOTAL:</span><span>${formatCurrency(d.total)}</span></div><div class="r"><span>Ganancia:</span><span>${formatCurrency(d.profit)}</span></div><hr><div style="text-align:center;font-size:11px;">${new Date().toLocaleString('es-CO')}</div><script>window.onload=function(){window.print();}<\/script></body></html>`);
     win.document.close();
 }
 
