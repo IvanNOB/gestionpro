@@ -481,81 +481,81 @@
                 </div>
 
                 <!-- Turno -->
-                <div class="card" style="margin-bottom:16px;">
-                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
-                        <strong style="font-size:0.85rem;">Turno:</strong>
-                        <button class="btn btn-sm" id="btn-turno-manana" onclick="selectCashShift('manana')" style="border-radius:20px;">☀️ Turno 1</button>
-                        <button class="btn btn-sm" id="btn-turno-noche" onclick="selectCashShift('noche')" style="border-radius:20px;">🌙 Turno 2</button>
-                        <button class="btn btn-sm btn-primary" id="btn-turno-todo" onclick="selectCashShift('todo')" style="border-radius:20px;">📊 Todo el dia</button>
+                <div class="card" style="margin-bottom:14px;padding:16px;">
+                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px;">
+                        <span style="font-size:0.82rem;font-weight:600;color:var(--text-secondary);">Turno:</span>
+                        <button class="btn btn-sm" id="btn-turno-manana" onclick="selectCashShift('manana')" style="border-radius:20px;padding:6px 14px;font-size:0.78rem;">☀️ Turno 1</button>
+                        <button class="btn btn-sm" id="btn-turno-noche" onclick="selectCashShift('noche')" style="border-radius:20px;padding:6px 14px;font-size:0.78rem;">🌙 Turno 2</button>
+                        <button class="btn btn-sm btn-primary" id="btn-turno-todo" onclick="selectCashShift('todo')" style="border-radius:20px;padding:6px 14px;font-size:0.78rem;">📊 Todo el dia</button>
                     </div>
-                    <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:0.82rem;color:var(--text-light);">
-                        <label style="display:flex;align-items:center;gap:5px;">☀️ Desde: <input type="time" id="shift-start-1" value="06:00" onchange="updateShiftTimes()" style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:0.8rem;"></label>
-                        <label style="display:flex;align-items:center;gap:5px;">🌙 Desde: <input type="time" id="shift-start-2" value="14:00" onchange="updateShiftTimes()" style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:0.8rem;"></label>
+                    <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:0.78rem;color:var(--text-muted);">
+                        <label style="display:flex;align-items:center;gap:4px;">☀️ Desde <input type="time" id="shift-start-1" value="06:00" onchange="updateShiftTimes()" style="padding:4px 6px;border:1px solid var(--border);border-radius:6px;background:var(--card-bg);color:var(--text);font-size:0.78rem;width:80px;"></label>
+                        <label style="display:flex;align-items:center;gap:4px;">🌙 Desde <input type="time" id="shift-start-2" value="14:00" onchange="updateShiftTimes()" style="padding:4px 6px;border:1px solid var(--border);border-radius:6px;background:var(--card-bg);color:var(--text);font-size:0.78rem;width:80px;"></label>
                     </div>
                 </div>
 
-                <!-- Total vendido -->
-                <div class="card" style="background:linear-gradient(135deg,#4F46E5,#7C3AED);color:white;margin-bottom:16px;padding:24px;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                <!-- Total vendido (Hero) -->
+                <div style="background:linear-gradient(135deg,#4F46E5 0%,#7C3AED 100%);color:white;border-radius:var(--radius-lg);padding:22px 20px;margin-bottom:14px;box-shadow:0 4px 20px rgba(79,70,229,0.25);">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;">
                         <div>
-                            <div style="font-size:0.7rem;font-weight:700;letter-spacing:1px;opacity:0.8;">TOTAL VENDIDO</div>
-                            <div id="cash-total" style="font-family:'JetBrains Mono',monospace;font-size:2rem;font-weight:800;margin:4px 0;">$0</div>
-                            <div style="font-size:0.8rem;opacity:0.8;">Ganancia: <strong id="cash-profit">$0</strong> · <strong id="cash-count">0</strong> ventas</div>
+                            <div style="font-size:0.68rem;font-weight:700;letter-spacing:1.2px;opacity:0.75;margin-bottom:4px;">TOTAL VENDIDO</div>
+                            <div id="cash-total" style="font-family:'JetBrains Mono',monospace;font-size:1.9rem;font-weight:800;line-height:1.1;">$0</div>
+                            <div style="font-size:0.78rem;opacity:0.8;margin-top:6px;">Ganancia: <strong id="cash-profit">$0</strong> · <strong id="cash-count">0</strong> ventas</div>
                         </div>
-                        <span id="cash-vs-ayer" style="padding:5px 12px;border-radius:16px;font-size:0.72rem;font-weight:700;background:rgba(255,255,255,0.2);">0% vs ayer</span>
+                        <span id="cash-vs-ayer" style="padding:4px 10px;border-radius:12px;font-size:0.68rem;font-weight:700;background:rgba(255,255,255,0.18);white-space:nowrap;">0% vs ayer</span>
                     </div>
                 </div>
 
-                <!-- KPIs -->
-                <div class="stats-grid" style="margin-bottom:16px;">
+                <!-- KPIs en fila -->
+                <div class="stats-grid" style="margin-bottom:14px;">
                     <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-info"><span class="stat-value" id="cash-profit-kpi">$0</span><span class="stat-label">Ganancia</span></div></div>
                     <div class="stat-card"><div class="stat-icon">🧾</div><div class="stat-info"><span class="stat-value" id="cash-count-kpi">0</span><span class="stat-label">N° Ventas</span></div></div>
                     <div class="stat-card"><div class="stat-icon">📦</div><div class="stat-info"><span class="stat-value" id="cash-units">0</span><span class="stat-label">Unidades</span></div></div>
                 </div>
 
-                <!-- Desglose + Top -->
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
-                    <div class="card">
-                        <h3 style="font-size:0.9rem;margin-bottom:12px;">💳 Metodos de pago</h3>
-                        <div style="display:flex;flex-direction:column;gap:10px;">
-                            <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.85rem;"><span>💵 Efectivo</span><strong id="cash-efectivo" style="font-family:'JetBrains Mono',monospace;">$0</strong></div>
-                            <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.85rem;"><span>💳 Tarjeta</span><strong id="cash-tarjeta" style="font-family:'JetBrains Mono',monospace;">$0</strong></div>
-                            <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.85rem;"><span>🏦 Transferencia</span><strong id="cash-transferencia" style="font-family:'JetBrains Mono',monospace;">$0</strong></div>
+                <!-- Desglose + Top (responsive) -->
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;" class="cc-grid-resp">
+                    <div class="card" style="padding:16px;">
+                        <h3 style="font-size:0.85rem;margin-bottom:10px;color:var(--text-secondary);">💳 Metodos de pago</h3>
+                        <div style="display:flex;flex-direction:column;gap:8px;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:0.82rem;color:var(--text);">💵 Efectivo</span><span id="cash-efectivo" style="font-family:'JetBrains Mono',monospace;font-weight:700;font-size:0.85rem;color:var(--text);">$0</span></div>
+                            <div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:0.82rem;color:var(--text);">💳 Tarjeta</span><span id="cash-tarjeta" style="font-family:'JetBrains Mono',monospace;font-weight:700;font-size:0.85rem;color:var(--text);">$0</span></div>
+                            <div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:0.82rem;color:var(--text);">🏦 Transferencia</span><span id="cash-transferencia" style="font-family:'JetBrains Mono',monospace;font-weight:700;font-size:0.85rem;color:var(--text);">$0</span></div>
                         </div>
                     </div>
-                    <div class="card">
-                        <h3 style="font-size:0.9rem;margin-bottom:12px;">🏆 Top vendidos</h3>
-                        <div id="cash-top-products" style="display:flex;flex-direction:column;gap:6px;font-size:0.82rem;">
-                            <div style="color:var(--text-muted);">Sin ventas aun</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Arqueo -->
-                <div class="card" style="margin-bottom:16px;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="document.getElementById('arqueo-panel').style.display=document.getElementById('arqueo-panel').style.display==='none'?'block':'none'">
-                        <h3 style="margin:0;font-size:0.9rem;">🧮 Arqueo de Efectivo</h3>
-                        <span style="font-size:0.8rem;color:var(--text-muted);">▼ Expandir</span>
-                    </div>
-                    <div id="arqueo-panel" style="display:none;margin-top:14px;">
-                        <p style="font-size:0.78rem;color:var(--text-light);margin-bottom:10px;">Ingresa la cantidad de billetes/monedas que hay en caja:</p>
-                        <div id="cc-arqueo-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-bottom:14px;"></div>
-                        <div style="border-top:1px solid var(--border);padding-top:10px;display:flex;flex-direction:column;gap:6px;">
-                            <div style="display:flex;justify-content:space-between;font-size:0.85rem;"><span>Total contado:</span><strong id="arqueo-total-contado" style="font-family:'JetBrains Mono',monospace;">$0</strong></div>
-                            <div style="display:flex;justify-content:space-between;font-size:0.85rem;"><span>Efectivo sistema:</span><strong id="arqueo-efectivo-sistema" style="font-family:'JetBrains Mono',monospace;">$0</strong></div>
-                            <div id="arqueo-diff-row" style="display:flex;justify-content:space-between;font-size:0.95rem;font-weight:700;padding-top:6px;border-top:1px solid var(--border);"><span>Diferencia:</span><span id="arqueo-diferencia">$0</span></div>
+                    <div class="card" style="padding:16px;">
+                        <h3 style="font-size:0.85rem;margin-bottom:10px;color:var(--text-secondary);">🏆 Mas vendidos</h3>
+                        <div id="cash-top-products" style="display:flex;flex-direction:column;gap:5px;font-size:0.8rem;">
+                            <span style="color:var(--text-muted);">Sin ventas aun</span>
                         </div>
                     </div>
                 </div>
 
-                <!-- Botones -->
-                <div style="display:flex;gap:12px;justify-content:center;margin-bottom:16px;">
-                    <button class="btn btn-outline" onclick="printCashClose()">🖨️ Imprimir cierre</button>
-                    <button class="btn btn-success" onclick="saveCashCloseRecord()" style="padding:14px 28px;">✅ Guardar acta de cierre</button>
+                <!-- Arqueo de Efectivo (colapsable) -->
+                <div class="card" style="margin-bottom:14px;padding:16px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="var p=document.getElementById('arqueo-panel');p.style.display=p.style.display==='none'?'block':'none';">
+                        <h3 style="margin:0;font-size:0.85rem;">🧮 Arqueo de Efectivo</h3>
+                        <span style="font-size:0.75rem;color:var(--primary);font-weight:600;">Expandir ▼</span>
+                    </div>
+                    <div id="arqueo-panel" style="display:none;margin-top:12px;">
+                        <p style="font-size:0.75rem;color:var(--text-muted);margin-bottom:8px;">Cuenta billetes y monedas para verificar:</p>
+                        <div id="cc-arqueo-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:6px;margin-bottom:12px;"></div>
+                        <div style="border-top:1px solid var(--border);padding-top:8px;">
+                            <div style="display:flex;justify-content:space-between;font-size:0.82rem;margin-bottom:4px;"><span style="color:var(--text-secondary);">Contado:</span><strong id="arqueo-total-contado" style="font-family:'JetBrains Mono',monospace;">$0</strong></div>
+                            <div style="display:flex;justify-content:space-between;font-size:0.82rem;margin-bottom:4px;"><span style="color:var(--text-secondary);">Sistema:</span><strong id="arqueo-efectivo-sistema" style="font-family:'JetBrains Mono',monospace;">$0</strong></div>
+                            <div id="arqueo-diff-row" style="display:flex;justify-content:space-between;font-size:0.95rem;font-weight:700;padding-top:6px;border-top:1px solid var(--border);"><span>Diferencia:</span><span id="arqueo-diferencia" style="font-family:'JetBrains Mono',monospace;">$0</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Acciones -->
+                <div style="display:flex;gap:10px;justify-content:center;margin-bottom:14px;flex-wrap:wrap;">
+                    <button class="btn btn-outline" onclick="printCashClose()" style="padding:12px 20px;font-size:0.85rem;">🖨️ Imprimir cierre</button>
+                    <button class="btn btn-success" onclick="saveCashCloseRecord()" style="padding:12px 24px;font-size:0.85rem;font-weight:700;">✅ Guardar acta de cierre</button>
                 </div>
 
                 <!-- Historial -->
-                <div class="card" id="cash-close-history"></div>
+                <div class="card" id="cash-close-history" style="padding:16px;"></div>
             </section>
 
             <!-- ======================== CLIENTES ======================== -->

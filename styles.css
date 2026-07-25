@@ -1164,6 +1164,7 @@ tr:last-child td { border-bottom: none; }
 @media (max-width: 768px) {
     .cc-kpi-row { grid-template-columns: 1fr; }
     .cc-details-row { grid-template-columns: 1fr; }
+    .cc-grid-resp { grid-template-columns: 1fr !important; }
     .cc-total-value { font-size: 1.6rem; }
     .cc-total-card { padding: 20px; }
 }
