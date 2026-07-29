@@ -2267,106 +2267,58 @@ function calcBreakEven() {
 }
 
 // ==========================================
-// CIERRE DE CAJA DIARIO
 // ==========================================
-let currentCashShift = 'todo';
-let shiftStart1 = 6;
-let shiftStart2 = 14;
+// CIERRE DE CAJA DIARIO
+// Reglas: solo datos del dia actual, nunca acumula, historial permanente
+// ==========================================
 let cashCloseHistoryCache = [];
 
-function initCashClose() {
-    if (settings.shiftStart1) shiftStart1 = settings.shiftStart1;
-    if (settings.shiftStart2) shiftStart2 = settings.shiftStart2;
-    renderCashClose();
-    loadCashCloseHistory();
-}
+function initCashClose() { renderCashClose(); loadCashCloseHistory(); }
 
-function updateShiftTimes() {
-    const t1 = document.getElementById('cc-time-1');
-    const t2 = document.getElementById('cc-time-2');
-    if (t1 && t1.value) shiftStart1 = parseInt(t1.value.split(':')[0]);
-    if (t2 && t2.value) shiftStart2 = parseInt(t2.value.split(':')[0]);
-    settings.shiftStart1 = shiftStart1;
-    settings.shiftStart2 = shiftStart2;
-    saveSettings();
-    renderCashClose();
-}
-
-function selectCashShift(shift) { currentCashShift = shift; renderCashClose(); }
-
-function getCashData(selectedDate) {
-    let daySales = (sales || []).filter(s => s && s.date && s.date.startsWith(selectedDate));
-    if (currentCashShift === 'manana') daySales = daySales.filter(s => { const h = new Date(s.date).getHours(); return h >= shiftStart1 && h < shiftStart2; });
-    else if (currentCashShift === 'noche') daySales = daySales.filter(s => { const h = new Date(s.date).getHours(); return h >= shiftStart2 || h < shiftStart1; });
-    let total = 0, profit = 0, units = 0;
-    const methods = { Efectivo: 0, Tarjeta: 0, Transferencia: 0 };
-    daySales.forEach(s => { total += s.total || 0; profit += s.profit || 0; units += s.quantity || 0; methods[s.method || 'Efectivo'] = (methods[s.method || 'Efectivo'] || 0) + (s.total || 0); });
-    const prodMap = {};
-    daySales.forEach(s => { const n = s.productName || '?'; prodMap[n] = (prodMap[n] || 0) + (s.quantity || 0); });
-    const top5 = Object.entries(prodMap).sort((a, b) => b[1] - a[1]).slice(0, 5);
-    return { daySales, total, profit, units, methods, top5 };
+function getDailyData(dateStr) {
+    const daySales = (sales || []).filter(s => s && s.date && s.date.substring(0, 10) === dateStr);
+    let totalVentas = 0, totalGanancia = 0, totalUnidades = 0;
+    const metodos = { Efectivo: 0, Tarjeta: 0, Transferencia: 0 };
+    daySales.forEach(s => { totalVentas += (s.total||0); totalGanancia += (s.profit||0); totalUnidades += (s.quantity||0); metodos[s.method||'Efectivo'] = (metodos[s.method||'Efectivo']||0) + (s.total||0); });
+    const dayExp = (typeof expenses !== 'undefined' ? expenses : []).filter(e => e && e.date && e.date.substring(0, 10) === dateStr);
+    const totalGastos = dayExp.reduce((sum, e) => sum + (e.amount||0), 0);
+    const pm = {}; daySales.forEach(s => { const n = s.productName||'?'; pm[n] = (pm[n]||0) + (s.quantity||0); });
+    const top5 = Object.entries(pm).sort((a,b) => b[1]-a[1]).slice(0,5);
+    return { ventas: daySales.length, totalVentas, totalGanancia, totalUnidades, metodos, totalGastos, top5 };
 }
 
 function renderCashClose() {
     const container = document.getElementById('cashclose-container');
     if (!container) return;
-    const today = new Date().toISOString().split('T')[0];
-    const prevDateEl = document.getElementById('cc-date-picker');
-    const selectedDate = (prevDateEl && prevDateEl.value) ? prevDateEl.value : today;
-    const d = getCashData(selectedDate);
-    const ayer = new Date(selectedDate + 'T12:00:00'); ayer.setDate(ayer.getDate() - 1);
-    const ayerTotal = (sales || []).filter(s => s && s.date && s.date.startsWith(ayer.toISOString().split('T')[0])).reduce((sum, s) => sum + (s.total || 0), 0);
-    const vsPct = ayerTotal > 0 ? Math.round(((d.total - ayerTotal) / ayerTotal) * 100) : 0;
-    const bs = (active) => active ? 'background:#4F46E5;color:white;border:none;' : 'background:var(--card-bg);color:var(--text);border:1px solid var(--border);';
-
-    container.innerHTML = `
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;"><h2 style="font-size:1.15rem;font-weight:700;">🧾 Cierre de Caja</h2><input type="date" id="cc-date-picker" value="${selectedDate}" onchange="renderCashClose()" style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--card-bg);color:var(--text);font-size:0.8rem;"></div>
-<div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:12px;"><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;"><button onclick="selectCashShift('manana')" style="padding:6px 12px;border-radius:18px;font-size:0.76rem;font-weight:600;cursor:pointer;${bs(currentCashShift==='manana')}">☀️ Turno 1</button><button onclick="selectCashShift('noche')" style="padding:6px 12px;border-radius:18px;font-size:0.76rem;font-weight:600;cursor:pointer;${bs(currentCashShift==='noche')}">🌙 Turno 2</button><button onclick="selectCashShift('todo')" style="padding:6px 12px;border-radius:18px;font-size:0.76rem;font-weight:600;cursor:pointer;${bs(currentCashShift==='todo')}">📊 Todo</button></div><div style="display:flex;gap:8px;font-size:0.72rem;color:var(--text-muted);"><label>☀️<input type="time" id="cc-time-1" value="${String(shiftStart1).padStart(2,'0')}:00" onchange="updateShiftTimes()" style="padding:2px 5px;border:1px solid var(--border);border-radius:4px;background:var(--card-bg);color:var(--text);font-size:0.72rem;width:68px;margin-left:3px;"></label><label>🌙<input type="time" id="cc-time-2" value="${String(shiftStart2).padStart(2,'0')}:00" onchange="updateShiftTimes()" style="padding:2px 5px;border:1px solid var(--border);border-radius:4px;background:var(--card-bg);color:var(--text);font-size:0.72rem;width:68px;margin-left:3px;"></label></div></div>
-<div style="background:linear-gradient(135deg,#4F46E5,#7C3AED);color:white;border-radius:12px;padding:18px;margin-bottom:12px;"><div style="font-size:0.62rem;font-weight:700;letter-spacing:1px;opacity:0.7;">TOTAL VENDIDO</div><div style="font-family:'JetBrains Mono',monospace;font-size:1.7rem;font-weight:800;margin:2px 0;">${formatCurrency(d.total)}</div><div style="font-size:0.73rem;opacity:0.8;">Ganancia: <b>${formatCurrency(d.profit)}</b> · <b>${d.daySales.length}</b> ventas <span style="margin-left:8px;padding:2px 8px;border-radius:8px;background:rgba(255,255,255,0.2);font-size:0.65rem;">${vsPct>=0?'+':''}${vsPct}%</span></div></div>
-<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;"><div style="background:var(--card-bg);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center;"><div style="font-family:'JetBrains Mono',monospace;font-size:0.95rem;font-weight:800;">${formatCurrency(d.profit)}</div><div style="font-size:0.62rem;color:var(--text-muted);margin-top:2px;">GANANCIA</div></div><div style="background:var(--card-bg);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center;"><div style="font-family:'JetBrains Mono',monospace;font-size:0.95rem;font-weight:800;">${d.daySales.length}</div><div style="font-size:0.62rem;color:var(--text-muted);margin-top:2px;">VENTAS</div></div><div style="background:var(--card-bg);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center;"><div style="font-family:'JetBrains Mono',monospace;font-size:0.95rem;font-weight:800;">${d.units}</div><div style="font-size:0.62rem;color:var(--text-muted);margin-top:2px;">UNIDADES</div></div></div>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;"><div style="background:var(--card-bg);border:1px solid var(--border);border-radius:8px;padding:12px;"><div style="font-size:0.78rem;font-weight:600;margin-bottom:6px;">💳 Pagos</div><div style="display:flex;justify-content:space-between;font-size:0.76rem;margin-bottom:3px;"><span>💵 Efectivo</span><b style="font-family:'JetBrains Mono',monospace;">${formatCurrency(d.methods.Efectivo)}</b></div><div style="display:flex;justify-content:space-between;font-size:0.76rem;margin-bottom:3px;"><span>💳 Tarjeta</span><b style="font-family:'JetBrains Mono',monospace;">${formatCurrency(d.methods.Tarjeta)}</b></div><div style="display:flex;justify-content:space-between;font-size:0.76rem;"><span>🏦 Transf</span><b style="font-family:'JetBrains Mono',monospace;">${formatCurrency(d.methods.Transferencia)}</b></div></div><div style="background:var(--card-bg);border:1px solid var(--border);border-radius:8px;padding:12px;"><div style="font-size:0.78rem;font-weight:600;margin-bottom:6px;">🏆 Top</div>${d.top5.length===0?'<div style="font-size:0.75rem;color:var(--text-muted);">Sin ventas</div>':d.top5.map((t,i)=>`<div style="display:flex;justify-content:space-between;font-size:0.74rem;margin-bottom:2px;"><span><b style="color:#4F46E5;">${i+1}</b> ${esc(t[0])}</span><span style="color:var(--text-muted);">${t[1]}u</span></div>`).join('')}</div></div>
-<div style="display:flex;gap:8px;justify-content:center;padding:10px 0;"><button class="btn btn-outline" onclick="printCashClose()" style="padding:10px 16px;font-size:0.8rem;">🖨️ Imprimir</button><button class="btn btn-success" onclick="saveCashCloseRecord()" style="padding:10px 20px;font-size:0.8rem;font-weight:700;">✅ Guardar cierre</button></div>
-<div id="cash-close-history"></div>`;
+    const hoy = new Date().toISOString().split('T')[0];
+    const d = getDailyData(hoy);
+    const fecha = new Date(hoy+'T12:00:00').toLocaleDateString('es-CO',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+    container.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;"><h2 style="font-size:1.1rem;font-weight:700;">🧾 Cierre de Caja</h2><span style="font-size:0.78rem;color:var(--text-secondary);background:var(--card-bg);border:1px solid var(--border);padding:5px 10px;border-radius:8px;">📅 ${fecha}</span></div><div style="background:linear-gradient(135deg,#4F46E5,#7C3AED);color:white;border-radius:14px;padding:20px;margin-bottom:14px;"><div style="font-size:0.6rem;font-weight:700;letter-spacing:1px;opacity:0.7;">TOTAL VENDIDO HOY</div><div style="font-family:'JetBrains Mono',monospace;font-size:1.9rem;font-weight:800;margin:3px 0;">${formatCurrency(d.totalVentas)}</div><div style="font-size:0.76rem;opacity:0.85;">${d.ventas} pedidos · ${d.totalUnidades} unidades</div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;"><div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:13px;"><div style="font-size:0.68rem;color:var(--text-muted);font-weight:600;">💰 GANANCIA</div><div style="font-family:'JetBrains Mono',monospace;font-size:1.05rem;font-weight:800;color:var(--success);margin-top:3px;">${formatCurrency(d.totalGanancia)}</div></div><div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:13px;"><div style="font-size:0.68rem;color:var(--text-muted);font-weight:600;">💸 GASTOS</div><div style="font-family:'JetBrains Mono',monospace;font-size:1.05rem;font-weight:800;color:var(--danger);margin-top:3px;">${formatCurrency(d.totalGastos)}</div></div></div><div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px;"><div style="font-size:0.8rem;font-weight:600;margin-bottom:8px;">💳 Metodos de pago</div><div style="display:flex;justify-content:space-between;font-size:0.84rem;margin-bottom:5px;"><span>💵 Efectivo</span><b style="font-family:'JetBrains Mono',monospace;">${formatCurrency(d.metodos.Efectivo)}</b></div><div style="display:flex;justify-content:space-between;font-size:0.84rem;margin-bottom:5px;"><span>💳 Tarjeta</span><b style="font-family:'JetBrains Mono',monospace;">${formatCurrency(d.metodos.Tarjeta)}</b></div><div style="display:flex;justify-content:space-between;font-size:0.84rem;"><span>🏦 Transferencia</span><b style="font-family:'JetBrains Mono',monospace;">${formatCurrency(d.metodos.Transferencia)}</b></div></div><div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px;"><div style="font-size:0.8rem;font-weight:600;margin-bottom:8px;">🏆 Mas vendidos hoy</div>${d.top5.length===0?'<div style="color:var(--text-muted);font-size:0.8rem;">Sin ventas hoy</div>':d.top5.map((p,i)=>`<div style="display:flex;justify-content:space-between;font-size:0.82rem;padding:3px 0;"><span><b style="color:#4F46E5;">${i+1}</b> ${esc(p[0])}</span><span style="color:var(--text-muted);">${p[1]} uds</span></div>`).join('')}</div><div style="text-align:center;padding:12px 0;"><button class="btn btn-success" onclick="realizarCierreDeCaja()" style="padding:14px 28px;font-size:0.88rem;font-weight:700;border-radius:10px;">✅ Realizar Cierre de Caja</button><br><button class="btn btn-outline" onclick="printCashClose()" style="margin-top:8px;padding:8px 16px;font-size:0.78rem;">🖨️ Imprimir</button></div><div id="cash-close-history" style="margin-top:12px;"></div>`;
     if (cashCloseHistoryCache.length > 0) renderCashHistory(cashCloseHistoryCache);
 }
 
 function renderCashHistory(records) {
-    const c = document.getElementById('cash-close-history');
-    if (!c) return;
-    if (!records || records.length === 0) { c.innerHTML = ''; return; }
-    c.innerHTML = '<div style="font-size:0.82rem;font-weight:600;margin-bottom:6px;">📋 Cierres anteriores</div>' +
-        records.map(r => `<div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 10px;margin-bottom:4px;display:flex;justify-content:space-between;font-size:0.75rem;"><div><b>${r.date||'?'}</b> ${esc(r.shiftName||'')}<br><span style="color:var(--text-muted);">${esc(r.closedBy||'?')}</span></div><div style="text-align:right;"><b style="color:var(--success);">${r.total||'$0'}</b><br><span style="color:var(--text-muted);">${r.salesCount||0}v</span></div></div>`).join('');
+    const c = document.getElementById('cash-close-history'); if (!c) return;
+    if (!records || records.length === 0) { c.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text-muted);font-size:0.8rem;">No hay cierres anteriores</div>'; return; }
+    c.innerHTML = '<div style="font-size:0.85rem;font-weight:700;margin-bottom:8px;">📋 Historial de Cierres</div>' + records.map(r => `<div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;"><div><b style="font-size:0.83rem;">${r.date||'?'}</b><br><span style="font-size:0.7rem;color:var(--text-muted);">${r.salesCount||0} pedidos · Por: ${esc(r.closedBy||'?')}</span></div><div style="text-align:right;"><b style="font-family:'JetBrains Mono',monospace;color:var(--success);font-size:0.88rem;">${r.total||'$0'}</b></div></div>`).join('');
 }
 
 async function loadCashCloseHistory() {
     if (!currentUser) return;
-    try {
-        const snap = await userCollection('cashCloses').orderBy('closedAt', 'desc').limit(10).get();
-        cashCloseHistoryCache = snap.docs.map(doc => doc.data());
-        renderCashHistory(cashCloseHistoryCache);
-    } catch (e) { console.warn('Historial error:', e.message); }
+    try { const snap = await userCollection('cashCloses').orderBy('closedAt','desc').limit(20).get(); cashCloseHistoryCache = snap.docs.map(doc => doc.data()); renderCashHistory(cashCloseHistoryCache); } catch(e) { console.warn('Historial:', e.message); }
 }
 
-async function saveCashCloseRecord() {
-    const dateEl = document.getElementById('cc-date-picker');
-    const date = dateEl ? dateEl.value : new Date().toISOString().split('T')[0];
-    const d = getCashData(date);
-    const shiftNames = { manana: 'Turno 1', noche: 'Turno 2', todo: 'Todo el dia' };
-    const record = { id: generateId(), date, shift: currentCashShift, shiftName: shiftNames[currentCashShift] || 'Todo', total: formatCurrency(d.total), profit: formatCurrency(d.profit), salesCount: String(d.daySales.length), units: String(d.units), efectivo: formatCurrency(d.methods.Efectivo), tarjeta: formatCurrency(d.methods.Tarjeta), transferencia: formatCurrency(d.methods.Transferencia), closedBy: sessionStorage.getItem('activeEmployee') || 'Dueño', closedAt: new Date().toISOString() };
-    try {
-        await firestoreOperation(() => userCollection('cashCloses').doc(record.id).set(record));
-        showToast('✅ Cierre guardado', 'success');
-        loadCashCloseHistory();
-    } catch (e) { showToast('Error: ' + e.message, 'error'); }
+async function realizarCierreDeCaja() {
+    const hoy = new Date().toISOString().split('T')[0];
+    const d = getDailyData(hoy);
+    const registro = { id: generateId(), date: hoy, closedAt: new Date().toISOString(), closedBy: sessionStorage.getItem('activeEmployee')||'Dueño', total: formatCurrency(d.totalVentas), totalNum: d.totalVentas, profit: formatCurrency(d.totalGanancia), profitNum: d.totalGanancia, salesCount: String(d.ventas), units: String(d.totalUnidades), efectivo: formatCurrency(d.metodos.Efectivo), tarjeta: formatCurrency(d.metodos.Tarjeta), transferencia: formatCurrency(d.metodos.Transferencia), gastos: formatCurrency(d.totalGastos), shiftName: 'Cierre del dia' };
+    try { await firestoreOperation(() => userCollection('cashCloses').doc(registro.id).set(registro)); showToast('✅ Cierre guardado correctamente','success'); await loadCashCloseHistory(); renderCashClose(); } catch(e) { showToast('Error: '+(e.message||'Intenta de nuevo'),'error'); }
 }
 
 function printCashClose() {
-    const dateEl = document.getElementById('cc-date-picker');
-    const date = dateEl ? dateEl.value : new Date().toISOString().split('T')[0];
-    const d = getCashData(date);
-    const win = window.open('', '_blank', 'width=380,height=500');
-    if (!win) { showToast('Permite ventanas emergentes', 'warning'); return; }
-    win.document.write(`<html><head><title>Cierre</title><style>body{font-family:'Courier New',monospace;padding:16px;font-size:13px;}h2{text-align:center;}hr{border:none;border-top:1px dashed #000;margin:8px 0;}.r{display:flex;justify-content:space-between;margin:4px 0;}.b{font-weight:bold;font-size:15px;}</style></head><body><h2>${esc(settings.businessName||'Negocio')}</h2><div style="text-align:center;">CIERRE ${date}</div><hr><div class="r"><span>Ventas:</span><span>${d.daySales.length}</span></div><div class="r"><span>Unidades:</span><span>${d.units}</span></div><hr><div class="r"><span>Efectivo:</span><span>${formatCurrency(d.methods.Efectivo)}</span></div><div class="r"><span>Tarjeta:</span><span>${formatCurrency(d.methods.Tarjeta)}</span></div><div class="r"><span>Transferencia:</span><span>${formatCurrency(d.methods.Transferencia)}</span></div><hr><div class="r b"><span>TOTAL:</span><span>${formatCurrency(d.total)}</span></div><div class="r"><span>Ganancia:</span><span>${formatCurrency(d.profit)}</span></div><hr><div style="text-align:center;font-size:11px;">${new Date().toLocaleString('es-CO')}</div><script>window.onload=function(){window.print();}<\/script></body></html>`);
+    const hoy = new Date().toISOString().split('T')[0]; const d = getDailyData(hoy);
+    const win = window.open('','_blank','width=380,height=500'); if(!win){showToast('Permite ventanas emergentes','warning');return;}
+    win.document.write(`<html><head><title>Cierre</title><style>body{font-family:'Courier New',monospace;padding:16px;font-size:13px;}h2{text-align:center;}hr{border:none;border-top:1px dashed #000;margin:8px 0;}.r{display:flex;justify-content:space-between;margin:4px 0;}.b{font-weight:bold;font-size:15px;}</style></head><body><h2>${esc(settings.businessName||'Negocio')}</h2><div style="text-align:center;">CIERRE DE CAJA - ${hoy}</div><hr><div class="r"><span>Pedidos:</span><span>${d.ventas}</span></div><div class="r"><span>Unidades:</span><span>${d.totalUnidades}</span></div><hr><div class="r"><span>Efectivo:</span><span>${formatCurrency(d.metodos.Efectivo)}</span></div><div class="r"><span>Tarjeta:</span><span>${formatCurrency(d.metodos.Tarjeta)}</span></div><div class="r"><span>Transferencia:</span><span>${formatCurrency(d.metodos.Transferencia)}</span></div><hr><div class="r b"><span>TOTAL:</span><span>${formatCurrency(d.totalVentas)}</span></div><div class="r"><span>Ganancia:</span><span>${formatCurrency(d.totalGanancia)}</span></div><div class="r"><span>Gastos:</span><span>${formatCurrency(d.totalGastos)}</span></div><hr><div style="text-align:center;font-size:11px;">Cerrado: ${new Date().toLocaleString('es-CO')}</div><script>window.onload=function(){window.print();}<\/script></body></html>`);
     win.document.close();
 }
 
