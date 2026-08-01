@@ -54,14 +54,22 @@ auth.onAuthStateChanged(async (user) => {
 
 // ==========================================
 // ESCUCHAR PEDIDOS EN TIEMPO REAL
+// Solo muestra pedidos del DIA ACTUAL
 // ==========================================
 function listenOrders() {
+    const hoy = new Date().toISOString().split('T')[0];
+
     userCollection('orders').onSnapshot((snapshot) => {
         const prevNewCount = orders.filter(o => o.status === 'active').length;
 
         orders = snapshot.docs
             .map(doc => ({ id: doc.id, ...doc.data() }))
-            .filter(o => o.status !== 'completed');
+            .filter(o => o.status !== 'completed')
+            .filter(o => {
+                // Solo pedidos del dia actual
+                if (!o.createdAt) return true; // si no tiene fecha, mostrarlo
+                return o.createdAt.substring(0, 10) === hoy;
+            });
 
         orders.sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''));
 
@@ -74,7 +82,21 @@ function listenOrders() {
         if (newCount > prevNewCount && soundEnabled) {
             playNotification();
         }
+
+        // Limpiar pedidos de dias anteriores (en background)
+        cleanOldOrders(snapshot.docs, hoy);
     });
+}
+
+// Eliminar automaticamente pedidos de dias anteriores
+async function cleanOldOrders(docs, hoy) {
+    for (const doc of docs) {
+        const data = doc.data();
+        if (data.createdAt && data.createdAt.substring(0, 10) !== hoy) {
+            try { await userCollection('orders').doc(doc.id).delete(); }
+            catch (e) { /* silencioso */ }
+        }
+    }
 }
 
 // ==========================================

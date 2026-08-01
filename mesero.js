@@ -71,10 +71,17 @@ async function loadData() {
         settings = { ...settings, ...userDocSnap.data().settings };
     }
     
-    // Cargar pedidos activos (cualquier estado excepto completed)
+    // Cargar pedidos activos del DIA ACTUAL (no arrastrar de dias anteriores)
+    const hoy = new Date().toISOString().split('T')[0];
     ordersSnap.docs.forEach(doc => {
         const data = doc.data();
         if (data.status && data.status !== 'completed') {
+            // Solo cargar pedidos de hoy
+            if (data.createdAt && data.createdAt.substring(0, 10) !== hoy) {
+                // Pedido de otro dia — eliminarlo automaticamente
+                userCollection('orders').doc(doc.id).delete().catch(() => {});
+                return;
+            }
             orders[data.mesaId] = data.items || [];
         }
     });
