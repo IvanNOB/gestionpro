@@ -86,7 +86,7 @@ async function loadUserData() {
 
         const [prodSnap, salesSnap, empSnap, mesasSnap, expSnap] = await Promise.all([
             db.collection('users').doc(targetUid).collection('products').get(),
-            db.collection('users').doc(targetUid).collection('sales').orderBy('date', 'desc').get(),
+            db.collection('users').doc(targetUid).collection('sales').get(),
             db.collection('users').doc(targetUid).collection('employees').get(),
             db.collection('users').doc(targetUid).collection('mesas').get(),
             db.collection('users').doc(targetUid).collection('expenses').get()
@@ -94,6 +94,7 @@ async function loadUserData() {
 
         products = prodSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         sales = salesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        sales.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
         employees = empSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         mesas = mesasSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         expenses = expSnap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -148,9 +149,9 @@ function showTab(tab) {
             </tr>`).join('')}</tbody></table></div>`;
     } else if (tab === 'sales') {
         const today = new Date().toISOString().split('T')[0];
-        content.innerHTML = `<div class="card"><h3>💰 Ventas</h3>
+        content.innerHTML = `<div class="card"><h3>💰 Ventas (${sales.length} total)</h3>
             <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
-                <input type="date" id="admin-sales-date" value="${today}" onchange="filterAdminSales()" style="padding:8px 12px;border:1px solid #334155;border-radius:8px;background:#0a0e1a;color:#e2e8f0;font-size:0.85rem;">
+                <input type="date" id="admin-sales-date" value="" onchange="filterAdminSales()" style="padding:8px 12px;border:1px solid #334155;border-radius:8px;background:#0a0e1a;color:#e2e8f0;font-size:0.85rem;">
                 <button onclick="document.getElementById('admin-sales-date').value='';filterAdminSales()" class="btn-action btn-edit">Ver todas</button>
                 <span id="admin-sales-count" style="color:#94a3b8;font-size:0.85rem;"></span>
             </div>
