@@ -4,16 +4,72 @@
 
 // Error handler para mesero
 window.onerror = function(message, source, lineno, colno, error) {
-    console.error('Error:', { message, source, lineno, error });
-    showToast('Error inesperado. Intenta de nuevo.', 'error');
+    // Ignorar errores que NO vienen del código propio de la app
+    // (extensiones del navegador, scripts externos, iframes, etc.)
+    if (source && (
+        source.includes('extension') ||
+        source.includes('chrome-extension') ||
+        source.includes('moz-extension') ||
+        source.includes('safari-extension') ||
+        source.includes('gstatic.com') ||
+        source.includes('googleapis.com') ||
+        source === '' ||
+        source === 'undefined'
+    )) {
+        return false; // dejar que el navegador lo maneje normalmente
+    }
+
+    // Ignorar mensajes de error genéricos de scripts externos
+    if (message === 'Script error.' || message === 'Script error') {
+        return false;
+    }
+
+    console.error('Error en app:', { message, source, lineno, error });
+    // Solo mostrar toast si el error es de un archivo del proyecto
+    const isOwnCode = source && (
+        source.includes('mesero.js') ||
+        source.includes('tickets.js') ||
+        source.includes('firebase-config.js') ||
+        source.includes('app.js')
+    );
+    if (isOwnCode) {
+        showToast('Error inesperado. Intenta de nuevo.', 'error');
+    }
     return true;
 };
 
 window.addEventListener('unhandledrejection', function(event) {
-    console.error('Error async:', event.reason);
-    if (event.reason?.code !== 'unavailable') {
-        showToast('Error de conexión. Se guardará al reconectar.', 'warning');
+    const reason = event.reason;
+    console.error('Error async:', reason);
+
+    // Errores de Firebase que indican sin conexión — no son errores reales
+    const offlineCodes = ['unavailable', 'failed-precondition', 'cancelled'];
+    if (reason?.code && offlineCodes.includes(reason.code)) {
+        // Solo mostrar aviso de offline, no "error inesperado"
+        return;
     }
+
+    // Errores de permisos de Firebase (ej. reglas de seguridad)
+    if (reason?.code === 'permission-denied') {
+        showToast('Sin permiso. Verifica tu sesión.', 'error');
+        event.preventDefault();
+        return;
+    }
+
+    // Errores de red transitorios
+    if (reason?.message && (
+        reason.message.includes('network') ||
+        reason.message.includes('fetch') ||
+        reason.message.includes('NetworkError')
+    )) {
+        showToast('Sin conexión. Se guardará al reconectar.', 'warning');
+        event.preventDefault();
+        return;
+    }
+
+    // Para el resto, solo loguear — no mostrar toast genérico al usuario
+    // (evita asustar al mesero con errores que no requieren acción)
+    event.preventDefault();
 });
 
 let currentUser = null;
@@ -493,12 +549,15 @@ function renderOrderItems() {
 async function sendOrder() {
     const items = orders[currentMesaId];
     if (!items || items.length === 0) { showToast('El pedido está vacío', 'error'); return; }
-    
+
+    const btnSend = document.querySelector('.btn-send');
+    if (btnSend) { btnSend.disabled = true; btnSend.textContent = '⏳ Enviando...'; }
+
     const mesa = mesas.find(m => m.id === currentMesaId);
     let mesaName = mesa?.name || 'Mesa';
     if (currentMesaId === 'delivery_1') mesaName = '🏍️ Delivery';
     if (currentMesaId === 'llevar_1') mesaName = '🛍️ Para Llevar';
-    
+
     try {
         // Guardar pedido en Firestore
         const orderDoc = {
@@ -512,31 +571,43 @@ async function sendOrder() {
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
         };
-        
+
         await userCollection('orders').doc(orderDoc.id).set(orderDoc);
-        
+
         // Imprimir ticket de cocina automáticamente
         printKitchenTicket(mesaName, items);
-        
+
         showToast('✅ Pedido enviado a cocina', 'success');
         showMesas();
     } catch (error) {
         console.error('Error enviando pedido:', error);
-        showToast('⚠️ Error enviando pedido. Se guardará al reconectar.', 'warning');
+        if (error?.code === 'unavailable' || error?.code === 'failed-precondition') {
+            showToast('📡 Sin conexión. El pedido se enviará al reconectar.', 'warning');
+            showMesas(); // Igual navegar — el pedido está en memoria
+        } else if (error?.code === 'permission-denied') {
+            showToast('❌ Sin permisos. Verifica tu sesión.', 'error');
+        } else {
+            showToast('⚠️ Error enviando pedido. Intenta de nuevo.', 'warning');
+        }
+    } finally {
+        if (btnSend) { btnSend.disabled = false; btnSend.innerHTML = '📤 Enviar a cocina'; }
     }
 }
 
 async function payOrder() {
     const items = orders[currentMesaId];
     if (!items || items.length === 0) { showToast('No hay pedido para cobrar', 'error'); return; }
-    
+
     const total = items.reduce((s, i) => s + (i.price * i.qty), 0);
     const mesa = mesas.find(m => m.id === currentMesaId);
     const payMethod = selectedPayMethod || 'Efectivo';
-    
-    // Mostrar indicador de procesando
+
+    // Deshabilitar botón para evitar doble cobro
+    const btnPay = document.getElementById('btn-cobrar');
+    if (btnPay) { btnPay.disabled = true; btnPay.textContent = '⏳ Cobrando...'; }
+
     showToast('💳 Procesando cobro...', 'info');
-    
+
     try {
         // Registrar cada item como venta
         for (const item of items) {
@@ -558,33 +629,41 @@ async function payOrder() {
                 soldBy: sessionStorage.getItem('activeEmployee') || 'Dueño'
             };
             await userCollection('sales').doc(sale.id).set(sale);
-            
+
             // Descontar stock del producto
             const product = products.find(p => p.id === item.productId);
             if (product) {
                 product.quantity = Math.max(0, product.quantity - item.qty);
                 await userCollection('products').doc(product.id).set(product);
             }
-            
+
             // Descontar insumos
             deductInsumos(item.productId, item.qty);
         }
-        
+
         // Imprimir ticket de venta
         printTableBillTicket(mesa?.name || 'Mesa', items, total, payMethod);
-        
+
         // Limpiar pedido (solo si todo lo anterior fue exitoso)
         delete orders[currentMesaId];
         await userCollection('orders').doc('order_' + currentMesaId).delete();
-        
+
         showToast(`💰 Cobrado ${formatCurrency(total)}`, 'success');
         if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
         showMesas();
         renderProducts();
     } catch (error) {
         console.error('Error al cobrar:', error);
-        showToast('⚠️ Error al cobrar. Verifica la conexión e intenta de nuevo.', 'error');
+        if (error?.code === 'unavailable' || error?.code === 'failed-precondition') {
+            showToast('📡 Sin conexión. Verifica la red e intenta de nuevo.', 'warning');
+        } else if (error?.code === 'permission-denied') {
+            showToast('❌ Sin permisos para cobrar. Verifica tu sesión.', 'error');
+        } else {
+            showToast('⚠️ Error al cobrar. Intenta de nuevo.', 'error');
+        }
         // No limpiar el pedido si falló — para que pueda reintentar
+    } finally {
+        if (btnPay) { btnPay.disabled = false; btnPay.innerHTML = '💰 Cobrar'; }
     }
 }
 
