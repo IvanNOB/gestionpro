@@ -679,6 +679,62 @@ function deductInsumos(productId, qty) {
     });
 }
 
+// ==========================================
+// VISOR DE RECETAS (solo lectura, desde la pantalla de Pedidos)
+// ==========================================
+function openRecipeViewer() {
+    const existing = document.getElementById('recipe-viewer-overlay');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'recipe-viewer-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);';
+    overlay.innerHTML = `
+        <div style="background:var(--bg-card);border:1px solid var(--border-glass-strong);border-radius:var(--radius-lg);padding:20px;max-width:440px;width:100%;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                <h3 style="margin:0;font-size:1.02rem;color:var(--text-primary);">📝 Recetas</h3>
+                <button onclick="closeRecipeViewer()" style="border:none;background:var(--bg-glass);color:var(--text-secondary);width:30px;height:30px;border-radius:50%;font-size:1rem;cursor:pointer;">✕</button>
+            </div>
+            <input type="text" id="recipe-viewer-search" placeholder="🔍 Buscar producto..." style="width:100%;padding:10px 13px;border:1px solid var(--border-glass-strong);border-radius:var(--radius-sm);font-size:0.88rem;background:var(--bg-glass);color:var(--text-primary);outline:none;margin-bottom:12px;box-sizing:border-box;" oninput="renderRecipeViewerList(this.value)">
+            <div id="recipe-viewer-list" style="overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:8px;"></div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeRecipeViewer(); });
+    renderRecipeViewerList('');
+    setTimeout(() => document.getElementById('recipe-viewer-search')?.focus(), 50);
+}
+
+function closeRecipeViewer() {
+    document.getElementById('recipe-viewer-overlay')?.remove();
+}
+
+function renderRecipeViewerList(query) {
+    const container = document.getElementById('recipe-viewer-list');
+    if (!container) return;
+    const q = (query || '').trim().toLowerCase();
+
+    const matches = recipes
+        .filter(r => !q || r.productName.toLowerCase().includes(q))
+        .sort((a, b) => a.productName.localeCompare(b.productName));
+
+    if (matches.length === 0) {
+        container.innerHTML = `<p style="color:var(--text-muted);text-align:center;padding:20px 0;font-size:0.85rem;">${recipes.length === 0 ? 'Aún no hay recetas registradas.' : 'No se encontró ninguna receta con ese nombre.'}</p>`;
+        return;
+    }
+
+    container.innerHTML = matches.map(r => {
+        const ingredientsHtml = r.ingredients.length
+            ? r.ingredients.map(i => `<li>${i.quantity} ${esc(i.unit)} — ${esc(i.insumoName)}</li>`).join('')
+            : '<li style="color:var(--text-muted);">Sin ingredientes definidos</li>';
+        return `
+            <details style="border:1px solid var(--border-glass-strong);border-radius:var(--radius-sm);padding:10px 14px;background:var(--bg-glass);">
+                <summary style="cursor:pointer;font-weight:600;color:var(--text-primary);font-size:0.9rem;">${esc(r.productName)}</summary>
+                <ul style="margin:10px 0 0;padding-left:18px;color:var(--text-secondary);font-size:0.84rem;line-height:1.6;">${ingredientsHtml}</ul>
+            </details>`;
+    }).join('');
+}
+
 function clearCurrentOrder() {
     if (!orders[currentMesaId] || orders[currentMesaId].length === 0) return;
     delete orders[currentMesaId];
