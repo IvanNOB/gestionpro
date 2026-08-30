@@ -6,33 +6,101 @@
 <title>GestiónPro - Admin Remote</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: -apple-system, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
-.admin-bar { background: #dc2626; color: white; padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 9999; }
-.admin-bar h3 { font-size: 0.9rem; }
-.admin-bar button { background: white; color: #dc2626; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.85rem; }
-.section { padding: 20px; max-width: 1000px; margin: 0 auto; }
-.card { background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 20px; margin-bottom: 16px; }
-.card h3 { color: #f1f5f9; margin-bottom: 12px; font-size: 1.1rem; }
-.stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px; }
-.stat { background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 14px; text-align: center; }
-.stat .value { font-size: 1.3rem; font-weight: 800; color: #f1f5f9; }
-.stat .label { font-size: 0.75rem; color: #64748b; margin-top: 4px; }
+:root {
+    --bg-page: #0a0e1a;
+    --bg-card: #131829;
+    --bg-card-soft: #0f1424;
+    --border: #232a3f;
+    --border-soft: #1a2035;
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --accent-blue: #3b82f6;
+    --accent-purple: #a855f7;
+    --accent-pink: #ec4899;
+    --accent-cyan: #06b6d4;
+    --accent-green: #10b981;
+    --accent-emerald: #14b8a6;
+    --accent-red: #ef4444;
+    --accent-amber: #f59e0b;
+}
+body { font-family: -apple-system, 'Segoe UI', sans-serif; background: var(--bg-page); color: var(--text-primary); min-height: 100vh; }
+
+.admin-bar {
+    background: linear-gradient(135deg, #7f1d1d, #991b1b);
+    border-bottom: 2px solid var(--accent-red);
+    color: white; padding: 12px 20px;
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+    position: sticky; top: 0; z-index: 9999;
+}
+.admin-bar-title { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.admin-bar-title h3 { font-size: 0.9rem; font-weight: 700; }
+.admin-bar-title .plan-chip { font-size: 0.65rem; font-weight: 800; text-transform: uppercase; padding: 3px 9px; border-radius: 20px; letter-spacing: 0.4px; }
+.plan-chip.premium { background: linear-gradient(135deg,#f59e0b,#d97706); color: #1a1200; }
+.plan-chip.restaurant { background: linear-gradient(135deg,#3b82f6,#2563eb); color: white; }
+.plan-chip.free { background: rgba(255,255,255,0.15); color: white; }
+.admin-bar-actions { display: flex; gap: 8px; align-items: center; }
+.admin-bar-actions button { background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.25); padding: 7px 14px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.78rem; display: flex; align-items: center; gap: 5px; transition: background 0.15s; }
+.admin-bar-actions button:hover { background: rgba(255,255,255,0.28); }
+.admin-bar-actions button.btn-close-remote { background: white; color: #991b1b; }
+
+.section { padding: 24px 20px; max-width: 1080px; margin: 0 auto; }
+
+.card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-bottom: 16px; }
+.card h3 { color: var(--text-primary); margin-bottom: 14px; font-size: 1rem; display: flex; align-items: center; gap: 8px; }
+
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.stat { background: var(--bg-card-soft); border: 1px solid var(--border-soft); border-left: 3px solid var(--stat-color, var(--accent-blue)); border-radius: 12px; padding: 14px 16px; }
+.stat .stat-icon { font-size: 0.95rem; margin-bottom: 6px; opacity: 0.9; }
+.stat .value { font-size: 1.35rem; font-weight: 800; color: var(--text-primary); font-family: 'JetBrains Mono', monospace; }
+.stat .label { font-size: 0.72rem; color: var(--text-muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.3px; }
+
+.insight-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.insight-card { background: var(--bg-card-soft); border: 1px solid var(--border-soft); border-radius: 12px; padding: 14px 16px; }
+.insight-card .insight-title { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 6px; }
+.insight-card .insight-value { font-size: 1.1rem; font-weight: 800; }
+.insight-card .insight-sub { font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px; }
+.insight-card.warn { border-color: rgba(245,158,11,0.35); background: rgba(245,158,11,0.06); }
+.insight-card.warn .insight-value { color: var(--accent-amber); }
+.insight-card.ok { border-color: rgba(16,185,129,0.3); background: rgba(16,185,129,0.06); }
+.insight-card.ok .insight-value { color: var(--accent-green); }
+
 table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #334155; }
-th { color: #94a3b8; font-weight: 600; font-size: 0.75rem; text-transform: uppercase; }
-.loading { text-align: center; padding: 60px; color: #64748b; }
-.tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
-.tab { padding: 8px 16px; background: #1e293b; border: 1px solid #334155; border-radius: 8px; cursor: pointer; font-size: 0.85rem; color: #94a3b8; }
-.tab.active { background: #2563eb; color: white; border-color: #2563eb; }
+th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border-soft); }
+th { color: var(--text-secondary); font-weight: 700; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.3px; }
+tr.low-stock td { background: rgba(245,158,11,0.07); }
+tr.low-stock td:first-child { border-left: 2px solid var(--accent-amber); }
+
+.loading { text-align: center; padding: 60px; color: var(--text-muted); }
+.tabs { display: flex; gap: 6px; margin-bottom: 20px; flex-wrap: wrap; }
+.tab { padding: 9px 16px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); transition: all 0.15s; }
+.tab:hover { border-color: var(--accent-blue); color: var(--text-primary); }
+.tab.active { background: var(--accent-blue); color: white; border-color: var(--accent-blue); }
+.tab.demo-tab.active { background: linear-gradient(135deg,#7c3aed,#6d28d9); border-color: transparent; }
+
 .btn-action { padding: 8px 14px; border: none; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer; margin-right: 8px; }
-.btn-edit { background: rgba(99,91,255,0.15); color: #93c5fd; border: 1px solid rgba(99,91,255,0.3); }
-.btn-delete { background: rgba(220,38,38,0.15); color: #fca5a5; border: 1px solid rgba(220,38,38,0.3); }
+.btn-edit { background: rgba(59,130,246,0.15); color: #93c5fd; border: 1px solid rgba(59,130,246,0.3); }
+.btn-delete { background: rgba(239,68,68,0.15); color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); }
+
+.info-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border-soft); font-size: 0.85rem; }
+.info-row:last-child { border-bottom: none; }
+.info-row .info-label { color: var(--text-muted); }
+.info-row .info-value { color: var(--text-primary); font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.copy-btn { background: var(--bg-card); border: 1px solid var(--border); color: var(--text-secondary); border-radius: 6px; padding: 3px 8px; font-size: 0.7rem; cursor: pointer; }
+.copy-btn:hover { color: var(--text-primary); border-color: var(--accent-blue); }
 </style>
 </head>
 <body>
 <div class="admin-bar">
-    <h3>🛡️ ADMIN REMOTO — <span id="remote-user-name">Cargando...</span></h3>
-    <button onclick="window.close()">✕ Cerrar</button>
+    <div class="admin-bar-title">
+        <h3>🛡️ ADMIN REMOTO — <span id="remote-user-name">Cargando...</span></h3>
+        <span id="remote-plan-chip" class="plan-chip free" style="display:none;"></span>
+    </div>
+    <div class="admin-bar-actions">
+        <button onclick="loadUserData()" title="Volver a cargar los datos">🔄 Actualizar</button>
+        <button onclick="copyUid()" title="Copiar UID">📋 Copiar UID</button>
+        <button class="btn-close-remote" onclick="window.close()">✕ Cerrar</button>
+    </div>
 </div>
 
 <div class="section">
@@ -42,7 +110,7 @@ th { color: #94a3b8; font-weight: 600; font-size: 0.75rem; text-transform: upper
         <div class="tab" onclick="showTab('sales')">💰 Ventas</div>
         <div class="tab" onclick="showTab('employees')">👥 Empleados</div>
         <div class="tab" onclick="showTab('settings')">⚙️ Config</div>
-        <div class="tab" onclick="showTab('demo')" style="background:rgba(99,91,255,0.15);color:#818cf8;border-color:rgba(99,91,255,0.3);">🧪 Demo</div>
+        <div class="tab demo-tab" onclick="showTab('demo')">🧪 Demo</div>
     </div>
 
     <div id="content">
@@ -84,6 +152,12 @@ async function loadUserData() {
         userData = userDoc.exists ? userDoc.data() : {};
         document.getElementById('remote-user-name').textContent = userData.settings?.businessName || userData.businessName || userData.email || targetUid;
 
+        const planValue = (userData.plan || userData.settings?.plan || 'free').toLowerCase();
+        const planChip = document.getElementById('remote-plan-chip');
+        planChip.textContent = planValue;
+        planChip.className = 'plan-chip ' + (['premium','restaurant'].includes(planValue) ? planValue : 'free');
+        planChip.style.display = 'inline-block';
+
         const [prodSnap, salesSnap, empSnap, mesasSnap, expSnap] = await Promise.all([
             db.collection('users').doc(targetUid).collection('products').get(),
             db.collection('users').doc(targetUid).collection('sales').get(),
@@ -116,22 +190,49 @@ function showTab(tab) {
         const totalSales = sales.reduce((s, v) => s + (v.total || 0), 0);
         const totalProfit = sales.reduce((s, v) => s + (v.profit || 0), 0);
         const totalExpenses = expenses.reduce((s, e) => s + (e.amount || 0), 0);
+        const planValue = (userData.plan || userData.settings?.plan || 'free');
+
+        const todayStr = new Date().toISOString().split('T')[0];
+        const salesToday = sales.filter(s => (s.date || '').startsWith(todayStr));
+        const totalToday = salesToday.reduce((s, v) => s + (v.total || 0), 0);
+        const avgTicket = sales.length ? totalSales / sales.length : 0;
+        const lowStockProducts = products.filter(p => (p.quantity ?? 0) <= (p.minStock ?? 0));
+
         content.innerHTML = `
             <div class="stat-grid">
-                <div class="stat"><div class="value">${products.length}</div><div class="label">Productos</div></div>
-                <div class="stat"><div class="value">${sales.length}</div><div class="label">Ventas (total)</div></div>
-                <div class="stat"><div class="value">${employees.length}</div><div class="label">Empleados</div></div>
-                <div class="stat"><div class="value">${mesas.length}</div><div class="label">Mesas</div></div>
-                <div class="stat"><div class="value">$${Math.round(totalSales).toLocaleString('es-CO')}</div><div class="label">Ingresos</div></div>
-                <div class="stat"><div class="value">$${Math.round(totalProfit).toLocaleString('es-CO')}</div><div class="label">Ganancia</div></div>
-                <div class="stat"><div class="value">$${Math.round(totalExpenses).toLocaleString('es-CO')}</div><div class="label">Gastos</div></div>
-                <div class="stat"><div class="value">${userData.plan || 'free'}</div><div class="label">Plan</div></div>
+                <div class="stat" style="--stat-color:${'var(--accent-blue)'}"><div class="stat-icon">📦</div><div class="value">${products.length}</div><div class="label">Productos</div></div>
+                <div class="stat" style="--stat-color:${'var(--accent-purple)'}"><div class="stat-icon">💰</div><div class="value">${sales.length}</div><div class="label">Ventas (total)</div></div>
+                <div class="stat" style="--stat-color:${'var(--accent-pink)'}"><div class="stat-icon">👥</div><div class="value">${employees.length}</div><div class="label">Empleados</div></div>
+                <div class="stat" style="--stat-color:${'var(--accent-cyan)'}"><div class="stat-icon">🪑</div><div class="value">${mesas.length}</div><div class="label">Mesas</div></div>
+                <div class="stat" style="--stat-color:${'var(--accent-green)'}"><div class="stat-icon">📈</div><div class="value">$${Math.round(totalSales).toLocaleString('es-CO')}</div><div class="label">Ingresos</div></div>
+                <div class="stat" style="--stat-color:${'var(--accent-emerald)'}"><div class="stat-icon">✅</div><div class="value">$${Math.round(totalProfit).toLocaleString('es-CO')}</div><div class="label">Ganancia</div></div>
+                <div class="stat" style="--stat-color:${'var(--accent-red)'}"><div class="stat-icon">💸</div><div class="value">$${Math.round(totalExpenses).toLocaleString('es-CO')}</div><div class="label">Gastos</div></div>
+                <div class="stat" style="--stat-color:${'var(--accent-amber)'}"><div class="stat-icon">⭐</div><div class="value" style="text-transform:capitalize;">${esc(planValue)}</div><div class="label">Plan</div></div>
             </div>
-            <div class="card"><h3>📋 Info</h3>
-                <p>Email: ${esc(userData.email || '-')}</p>
-                <p>Negocio: ${esc(userData.settings?.businessName || '-')}</p>
-                <p>Moneda: ${esc(userData.settings?.currency || 'COP')}</p>
-                <p>UID: <code style="font-size:0.75rem;color:#64748b;">${targetUid}</code></p>
+
+            <div class="insight-grid">
+                <div class="insight-card ok">
+                    <div class="insight-title">📅 Ventas de hoy</div>
+                    <div class="insight-value">$${Math.round(totalToday).toLocaleString('es-CO')}</div>
+                    <div class="insight-sub">${salesToday.length} venta${salesToday.length === 1 ? '' : 's'} registrada${salesToday.length === 1 ? '' : 's'} hoy</div>
+                </div>
+                <div class="insight-card">
+                    <div class="insight-title">🎟️ Ticket promedio</div>
+                    <div class="insight-value">$${Math.round(avgTicket).toLocaleString('es-CO')}</div>
+                    <div class="insight-sub">Sobre ${sales.length} venta${sales.length === 1 ? '' : 's'} en total</div>
+                </div>
+                <div class="insight-card ${lowStockProducts.length ? 'warn' : 'ok'}">
+                    <div class="insight-title">⚠️ Stock bajo</div>
+                    <div class="insight-value">${lowStockProducts.length}</div>
+                    <div class="insight-sub">${lowStockProducts.length ? esc(lowStockProducts.slice(0,3).map(p=>p.name).join(', ')) + (lowStockProducts.length > 3 ? '…' : '') : 'Todo el inventario en orden'}</div>
+                </div>
+            </div>
+
+            <div class="card"><h3>📋 Info del negocio</h3>
+                <div class="info-row"><span class="info-label">Email</span><span class="info-value">${esc(userData.email || '-')}</span></div>
+                <div class="info-row"><span class="info-label">Negocio</span><span class="info-value">${esc(userData.settings?.businessName || '-')}</span></div>
+                <div class="info-row"><span class="info-label">Moneda</span><span class="info-value">${esc(userData.settings?.currency || 'COP')}</span></div>
+                <div class="info-row"><span class="info-label">UID</span><span class="info-value"><code style="font-size:0.75rem;color:var(--text-muted);">${targetUid}</code><button class="copy-btn" onclick="copyUid()">📋 Copiar</button></span></div>
             </div>`;
     } else if (tab === 'products') {
         content.innerHTML = `<div class="card"><h3>📦 Productos (${products.length})</h3>
@@ -141,8 +242,8 @@ function showTab(tab) {
                 <button class="btn-action btn-edit" onclick="printCarta()">🖨️ Imprimir Carta</button>
             </div>
             <table><thead><tr><th>Nombre</th><th>Categoría</th><th>Stock</th><th>Costo</th><th>Precio</th><th>Acción</th></tr></thead>
-            <tbody>${products.map(p => `<tr>
-                <td>${esc(p.name)}</td><td>${esc(p.category || '-')}</td><td>${p.quantity}</td>
+            <tbody>${products.map(p => `<tr class="${(p.quantity ?? 0) <= (p.minStock ?? 0) ? 'low-stock' : ''}">
+                <td>${esc(p.name)}</td><td>${esc(p.category || '-')}</td><td>${p.quantity}${(p.quantity ?? 0) <= (p.minStock ?? 0) ? ' ⚠️' : ''}</td>
                 <td>$${Math.round(p.cost || 0).toLocaleString('es-CO')}</td>
                 <td>$${Math.round(p.price || 0).toLocaleString('es-CO')}</td>
                 <td><button class="btn-action btn-delete" onclick="deleteRemoteDoc('products','${p.id}','${esc(p.name)}')">🗑️</button></td>
@@ -375,6 +476,13 @@ function printCarta() {
     const win = window.open('', '_blank', 'width=900,height=700');
     if (win) { win.document.write(html); win.document.close(); }
     else { showNotice('Permite ventanas emergentes'); }
+}
+
+function copyUid() {
+    if (!targetUid) return;
+    navigator.clipboard.writeText(targetUid).then(() => {
+        showNotice('📋 UID copiado al portapapeles');
+    }).catch(() => showNotice('No se pudo copiar el UID'));
 }
 
 function showNotice(msg) {
