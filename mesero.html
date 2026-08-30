@@ -67,19 +67,24 @@
             border-bottom: 1px solid var(--border-glass-strong);
         }
         .header h1 { font-size: 1.05rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
-        .header-btns { display: flex; gap: 4px; }
+        .header-btns { display: flex; align-items: center; gap: 10px; }
+        .header-btn-group { display: flex; gap: 6px; }
+        .header-divider { width: 1px; height: 34px; background: var(--border-glass-strong); align-self: center; }
         .header-btns button {
             background: var(--bg-glass);
             border: 1px solid var(--border-glass);
             color: var(--text-secondary);
-            width: 36px; height: 36px;
-            border-radius: 8px;
-            font-size: 1rem;
+            min-width: 48px; height: 48px;
+            padding: 5px 4px 6px;
+            border-radius: 10px;
             cursor: pointer;
-            display: flex; align-items: center; justify-content: center;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 2px;
             transition: all var(--transition-fast);
         }
-        .header-btns button:active { transform: scale(0.9); background: var(--bg-glass-hover); }
+        .header-btns button .btn-icon { font-size: 1.15rem; line-height: 1; }
+        .header-btns button .btn-label { font-size: 0.55rem; font-weight: 600; line-height: 1; letter-spacing: 0.2px; color: var(--text-muted); }
+        .header-btns button:active { transform: scale(0.92); background: var(--bg-glass-hover); }
 
         /* ===== MESAS VIEW ===== */
         .section-title {
@@ -324,13 +329,18 @@
     <header class="header">
         <h1>📋 Pedidos</h1>
         <div class="header-btns">
-            <button onclick="window.open('fichas-mesero.html','_blank')" title="Fichas">📖</button>
-            <button onclick="openRecipeViewer()" title="Recetas">📝</button>
-            <button id="btn-cocina-mesero" onclick="window.open('cocina.html','_blank')" title="Cocina" style="display:none;">🍳</button>
-            <button id="btn-delivery-mesero" onclick="openDeliveryPanel()" title="Delivery" style="display:none;">🏍️</button>
-            <button id="btn-home-mesero" onclick="window.location.href='index.html'" title="Inicio" style="display:none;">🏠</button>
-            <button onclick="location.reload()" title="Recargar">🔄</button>
-            <button onclick="auth.signOut().then(()=>window.location.href='login.html')" title="Salir">🚪</button>
+            <div class="header-btn-group">
+                <button onclick="window.open('fichas-mesero.html','_blank')" title="Fichas"><span class="btn-icon">📖</span><span class="btn-label">Fichas</span></button>
+                <button onclick="openRecipeViewer()" title="Recetas"><span class="btn-icon">📝</span><span class="btn-label">Recetas</span></button>
+                <button id="btn-cocina-mesero" onclick="window.open('cocina.html','_blank')" title="Cocina" style="display:none;"><span class="btn-icon">🍳</span><span class="btn-label">Cocina</span></button>
+                <button id="btn-delivery-mesero" onclick="openDeliveryPanel()" title="Delivery" style="display:none;"><span class="btn-icon">🏍️</span><span class="btn-label">Delivery</span></button>
+                <button id="btn-home-mesero" onclick="window.location.href='index.html'" title="Inicio" style="display:none;"><span class="btn-icon">🏠</span><span class="btn-label">Inicio</span></button>
+            </div>
+            <div class="header-divider"></div>
+            <div class="header-btn-group">
+                <button onclick="location.reload()" title="Recargar"><span class="btn-icon">🔄</span><span class="btn-label">Recargar</span></button>
+                <button onclick="auth.signOut().then(()=>window.location.href='login.html')" title="Salir"><span class="btn-icon">🚪</span><span class="btn-label">Salir</span></button>
+            </div>
         </div>
     </header>
 
