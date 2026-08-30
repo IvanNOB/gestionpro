@@ -525,18 +525,22 @@ function renderOrderItems() {
         const subtotal = i.price * i.qty;
         total += subtotal;
         return `<div class="order-item">
-            <div style="flex:1;min-width:0;">
-                <span class="order-item-name">${esc(i.name)}</span>
-                ${i.notes ? `<div style="font-size:0.7rem;color:var(--accent-amber,#f59e0b);margin-top:2px;">📝 ${esc(i.notes)}</div>` : ''}
+            <div class="order-item-top">
+                <div style="min-width:0;">
+                    <span class="order-item-name">${esc(i.name)}</span>
+                    ${i.notes ? `<div style="font-size:0.7rem;color:var(--accent-amber,#f59e0b);margin-top:2px;">📝 ${esc(i.notes)}</div>` : ''}
+                </div>
+                <button class="order-item-note-btn" onclick="addItemNote('${i.productId}')" title="Agregar nota">📝</button>
             </div>
-            <div class="order-item-qty">
-                <button class="qty-btn minus" onclick="changeQty('${i.productId}', -1)">−</button>
-                <span class="qty-num">${i.qty}</span>
-                <button class="qty-btn plus" onclick="changeQty('${i.productId}', 1)">+</button>
+            <div class="order-item-bottom">
+                <div class="order-item-qty">
+                    <button class="qty-btn minus" onclick="changeQty('${i.productId}', -1)">−</button>
+                    <span class="qty-num">${i.qty}</span>
+                    <button class="qty-btn plus" onclick="changeQty('${i.productId}', 1)">+</button>
+                </div>
+                <span class="order-item-price">${formatCurrency(subtotal)}</span>
+                <button class="btn-charge-item" onclick="payIndividualItem('${i.productId}')" title="Cobrar solo este producto">💰 Cobrar</button>
             </div>
-            <span class="order-item-price">${formatCurrency(subtotal)}</span>
-            <button onclick="payIndividualItem('${i.productId}')" style="background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);border-radius:6px;font-size:0.75rem;cursor:pointer;padding:4px 6px;color:#10b981;font-weight:700;" title="Cobrar este item">💰</button>
-            <button onclick="addItemNote('${i.productId}')" style="background:none;border:none;font-size:0.9rem;cursor:pointer;padding:4px;" title="Agregar nota">📝</button>
         </div>`;
     }).join('');
     
@@ -766,29 +770,112 @@ function splitBill() {
 // ==========================================
 // COBRO INDIVIDUAL (pagar un item de la mesa)
 // ==========================================
-async function payIndividualItem(productId) {
+function payIndividualItem(productId) {
+    const items = orders[currentMesaId];
+    if (!items) return;
+    const item = items.find(i => i.productId === productId);
+    if (!item) return;
+    openChargeItemModal(item, productId);
+}
+
+function openChargeItemModal(item, productId) {
+    const existing = document.getElementById('charge-item-overlay');
+    if (existing) existing.remove();
+
+    let qty = 1;
+    const maxQty = item.qty;
+    let method = selectedPayMethod || 'Efectivo';
+    const methods = [
+        { key: 'Efectivo', label: '💵 Efectivo' },
+        { key: 'Tarjeta', label: '💳 Tarjeta' },
+        { key: 'Transferencia', label: '🏦 Transf' }
+    ];
+
+    const overlay = document.createElement('div');
+    overlay.id = 'charge-item-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);';
+    overlay.innerHTML = `
+        <div style="background:var(--bg-card);border:1px solid var(--border-glass-strong);border-radius:var(--radius-lg);padding:22px;max-width:340px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                <h3 style="margin:0;font-size:1rem;color:var(--text-primary);">💰 Cobrar producto</h3>
+                <button id="charge-item-close" style="border:none;background:var(--bg-glass);color:var(--text-secondary);width:28px;height:28px;border-radius:50%;font-size:0.95rem;cursor:pointer;">✕</button>
+            </div>
+            <p style="color:var(--text-secondary);font-size:0.85rem;margin:6px 0 16px;">${esc(item.name)}</p>
+
+            ${maxQty > 1 ? `
+            <div style="margin-bottom:16px;">
+                <label style="display:block;font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Cantidad a cobrar (de ${maxQty})</label>
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <button id="charge-qty-minus" class="qty-btn minus" type="button">−</button>
+                    <span id="charge-qty-display" style="font-weight:800;font-size:1.1rem;min-width:24px;text-align:center;color:var(--text-primary);">1</span>
+                    <button id="charge-qty-plus" class="qty-btn plus" type="button">+</button>
+                </div>
+            </div>` : ''}
+
+            <div style="margin-bottom:16px;">
+                <label style="display:block;font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Método de pago</label>
+                <div id="charge-methods" style="display:flex;gap:6px;">
+                    ${methods.map(m => `<button type="button" class="pay-method-btn charge-method-btn${m.key === method ? ' active' : ''}" data-method="${m.key}">${m.label}</button>`).join('')}
+                </div>
+            </div>
+
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;margin-bottom:16px;background:linear-gradient(135deg, rgba(16,185,129,0.15), rgba(16,185,129,0.06));border:1px solid rgba(16,185,129,0.25);border-radius:var(--radius-sm);">
+                <span style="font-size:0.82rem;color:var(--text-secondary);">Total a cobrar</span>
+                <span id="charge-total-display" style="font-family:'JetBrains Mono',monospace;font-size:1.15rem;font-weight:800;color:var(--accent-green);">${formatCurrency(item.price)}</span>
+            </div>
+
+            <div style="display:flex;gap:8px;">
+                <button id="charge-item-cancel" type="button" style="flex:1;padding:12px;border-radius:var(--radius-sm);border:1px solid var(--border-glass-strong);background:var(--bg-glass);color:var(--text-secondary);font-weight:700;font-size:0.85rem;cursor:pointer;">Cancelar</button>
+                <button id="charge-item-confirm" type="button" style="flex:1.4;padding:12px;border-radius:var(--radius-sm);border:none;background:var(--accent-green);color:white;font-weight:700;font-size:0.85rem;cursor:pointer;">✓ Confirmar Cobro</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+
+    const updateTotal = () => {
+        document.getElementById('charge-total-display').textContent = formatCurrency(item.price * qty);
+    };
+
+    if (maxQty > 1) {
+        document.getElementById('charge-qty-minus').addEventListener('click', () => {
+            if (qty > 1) { qty--; document.getElementById('charge-qty-display').textContent = qty; updateTotal(); }
+        });
+        document.getElementById('charge-qty-plus').addEventListener('click', () => {
+            if (qty < maxQty) { qty++; document.getElementById('charge-qty-display').textContent = qty; updateTotal(); }
+        });
+    }
+
+    overlay.querySelectorAll('.charge-method-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            method = btn.dataset.method;
+            overlay.querySelectorAll('.charge-method-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        });
+    });
+
+    const close = () => overlay.remove();
+    document.getElementById('charge-item-close').addEventListener('click', close);
+    document.getElementById('charge-item-cancel').addEventListener('click', close);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+
+    document.getElementById('charge-item-confirm').addEventListener('click', () => {
+        close();
+        executeItemCharge(productId, qty, method);
+    });
+}
+
+async function executeItemCharge(productId, qtyToPay, payMethod) {
     const items = orders[currentMesaId];
     if (!items) return;
     const item = items.find(i => i.productId === productId);
     if (!item) return;
 
-    let qtyToPay = item.qty;
-
-    // Si tiene mas de 1, preguntar cuantas unidades cobrar
-    if (item.qty > 1) {
-        const input = prompt(`"${item.name}" tiene ${item.qty} unidades.\n¿Cuántas cobrar?`, '1');
-        if (!input) return;
-        qtyToPay = parseInt(input);
-        if (isNaN(qtyToPay) || qtyToPay <= 0) { showToast('Cantidad inválida', 'error'); return; }
-        if (qtyToPay > item.qty) qtyToPay = item.qty;
-    }
-
     const totalItem = item.price * qtyToPay;
-    const payMethod = selectedPayMethod || 'Efectivo';
     const mesa = mesas.find(m => m.id === currentMesaId);
 
     try {
         // Registrar venta individual
+
         const sale = {
             id: generateId(),
             productId: item.productId,

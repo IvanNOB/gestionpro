@@ -216,17 +216,28 @@
         .order-panel-header h3 { font-size: 0.85rem; color: var(--text-secondary); font-weight: 600; display: flex; align-items: center; gap: 6px; }
         .order-panel-header .badge { background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple)); color: white; border-radius: 8px; padding: 2px 8px; font-size: 0.68rem; font-weight: 800; }
 
-        .order-items-scroll { overflow-y: auto; max-height: 20vh; padding: 0 16px; }
-        .order-item { display: flex; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border-glass); gap: 8px; }
+        .order-items-scroll { overflow-y: auto; max-height: 26vh; padding: 0 16px; }
+        .order-item { display: flex; flex-direction: column; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--border-glass); }
         .order-item:last-child { border-bottom: none; }
-        .order-item-name { font-weight: 500; font-size: 0.8rem; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .order-item-qty { display: flex; align-items: center; gap: 4px; }
-        .qty-btn { width: 28px; height: 28px; border-radius: 8px; border: none; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+        .order-item-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+        .order-item-name { font-weight: 600; font-size: 0.84rem; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .order-item-note-btn { background: none; border: none; font-size: 0.9rem; cursor: pointer; padding: 2px 4px; opacity: 0.7; flex-shrink: 0; }
+        .order-item-note-btn:active { opacity: 1; transform: scale(0.9); }
+        .order-item-bottom { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .order-item-qty { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+        .qty-btn { width: 30px; height: 30px; border-radius: 8px; border: 1px solid transparent; font-size: 1.05rem; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: 700; }
         .qty-btn:active { transform: scale(0.85); }
-        .qty-btn.minus { background: rgba(239,68,68,0.15); color: var(--accent-red); }
-        .qty-btn.plus { background: rgba(16,185,129,0.15); color: var(--accent-green); }
-        .qty-num { font-weight: 800; min-width: 20px; text-align: center; font-size: 0.9rem; }
-        .order-item-price { font-weight: 700; min-width: 55px; text-align: right; font-size: 0.8rem; }
+        .qty-btn.minus { background: rgba(239,68,68,0.16); border-color: rgba(239,68,68,0.3); color: var(--accent-red); }
+        .qty-btn.plus { background: rgba(16,185,129,0.16); border-color: rgba(16,185,129,0.3); color: var(--accent-green); }
+        .qty-num { font-weight: 800; min-width: 18px; text-align: center; font-size: 0.9rem; }
+        .order-item-price { font-weight: 700; font-size: 0.84rem; font-family: 'JetBrains Mono', monospace; flex: 1; text-align: right; padding-right: 4px; }
+        .btn-charge-item {
+            display: flex; align-items: center; gap: 4px; flex-shrink: 0;
+            background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.35);
+            border-radius: 8px; padding: 6px 10px; font-size: 0.7rem; font-weight: 700;
+            color: var(--accent-green); cursor: pointer; white-space: nowrap;
+        }
+        .btn-charge-item:active { transform: scale(0.94); background: rgba(16,185,129,0.28); }
         .empty-order { text-align: center; padding: 20px; color: var(--text-muted); font-size: 0.82rem; }
 
         /* Order Footer */
