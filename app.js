@@ -1363,8 +1363,8 @@ function updateDashboardStats() {
     const cacheKey = 'stats_dashboard';
     const cached = AppCache.get(cacheKey);
 
-    const today = new Date().toISOString().split('T')[0];
-    const thisMonth = new Date().toISOString().slice(0,7);
+    const today = localDateStr(new Date());
+    const thisMonth = today.slice(0, 7);
 
     // Usar caché si está disponible y los datos no han cambiado
     let stats;
@@ -1377,10 +1377,10 @@ function updateDashboardStats() {
         const revenue = products.reduce((s,p) => s + (p.price * p.quantity), 0);
         const profit = revenue - investment;
 
-        const salesToday = sales.filter(s => s.date.startsWith(today));
+        const salesToday = sales.filter(s => localDateStr(s.date) === today);
         const salesTodayTotal = salesToday.reduce((s,v) => s + v.total, 0);
 
-        const salesMonth = sales.filter(s => s.date.startsWith(thisMonth));
+        const salesMonth = sales.filter(s => localDateStr(s.date).startsWith(thisMonth));
         const salesMonthTotal = salesMonth.reduce((s,v) => s + v.total, 0);
 
         const profitMonth = salesMonth.reduce((s,v) => s + v.profit, 0);
@@ -1513,9 +1513,9 @@ function renderSalesWeekChart() {
         const data = [];
         for (let i = 6; i >= 0; i--) {
             const d = new Date(); d.setDate(d.getDate() - i);
-            const key = d.toISOString().split('T')[0];
+            const key = localDateStr(d);
             const label = d.toLocaleDateString('es-MX', {weekday:'short', day:'numeric'});
-            const total = sales.filter(s => s.date.startsWith(key)).reduce((sum,s) => sum+s.total, 0);
+            const total = sales.filter(s => localDateStr(s.date) === key).reduce((sum,s) => sum+s.total, 0);
             data.push({label, total});
         }
         return data;
@@ -2276,11 +2276,11 @@ let cashCloseHistoryCache = [];
 function initCashClose() { renderCashClose(); loadCashCloseHistory(); }
 
 function getDailyData(dateStr) {
-    const daySales = (sales || []).filter(s => s && s.date && s.date.substring(0, 10) === dateStr);
+    const daySales = (sales || []).filter(s => s && s.date && localDateStr(s.date) === dateStr);
     let totalVentas = 0, totalGanancia = 0, totalUnidades = 0;
     const metodos = { Efectivo: 0, Tarjeta: 0, Transferencia: 0 };
     daySales.forEach(s => { totalVentas += (s.total||0); totalGanancia += (s.profit||0); totalUnidades += (s.quantity||0); metodos[s.method||'Efectivo'] = (metodos[s.method||'Efectivo']||0) + (s.total||0); });
-    const dayExp = (typeof expenses !== 'undefined' ? expenses : []).filter(e => e && e.date && e.date.substring(0, 10) === dateStr);
+    const dayExp = (typeof expenses !== 'undefined' ? expenses : []).filter(e => e && e.date && localDateStr(e.date) === dateStr);
     const totalGastos = dayExp.reduce((sum, e) => sum + (e.amount||0), 0);
     const pm = {}; daySales.forEach(s => { const n = s.productName||'?'; pm[n] = (pm[n]||0) + (s.quantity||0); });
     const top5 = Object.entries(pm).sort((a,b) => b[1]-a[1]).slice(0,5);
@@ -2289,12 +2289,12 @@ function getDailyData(dateStr) {
 
 function renderCashClose() {
     const container = document.getElementById('cashclose-container'); if (!container) return;
-    const hoy = new Date().toISOString().split('T')[0];
+    const hoy = localDateStr(new Date());
     const d = getDailyData(hoy);
     const fecha = new Date(hoy+'T12:00:00').toLocaleDateString('es-CO',{weekday:'long',day:'numeric',month:'long'});
     const totalMax = Math.max(d.totalVentas, 1);
     const pE = Math.round((d.metodos.Efectivo/totalMax)*100), pT = Math.round((d.metodos.Tarjeta/totalMax)*100), pTr = Math.round((d.metodos.Transferencia/totalMax)*100);
-    container.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;"><div><h2 style="font-size:1.15rem;font-weight:800;margin:0;">🧾 Cierre de Caja</h2><p style="font-size:0.7rem;color:var(--text-muted);margin:2px 0 0;text-transform:capitalize;">'+fecha+'</p></div></div>'
+    container.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;"><div><h2 style="font-size:1.15rem;font-weight:800;margin:0;">🧾 Cierre de Caja</h2><p style="font-size:0.7rem;color:var(--text-muted);margin:2px 0 0;text-transform:capitalize;">'+fecha+' · <span style="opacity:0.75;">se reinicia solo a medianoche</span></p></div></div>'
     +'<div style="background:linear-gradient(135deg,#4F46E5,#7C3AED,#9333EA);color:white;border-radius:14px;padding:20px;margin-bottom:12px;position:relative;overflow:hidden;"><div style="position:absolute;top:-20px;right:-20px;width:90px;height:90px;background:rgba(255,255,255,0.05);border-radius:50%;"></div><div style="font-size:0.58rem;font-weight:700;letter-spacing:1.5px;opacity:0.7;">TOTAL VENDIDO HOY</div><div style="font-family:\'JetBrains Mono\',monospace;font-size:2rem;font-weight:800;margin:4px 0;">'+formatCurrency(d.totalVentas)+'</div><div style="font-size:0.76rem;opacity:0.85;">📋 '+d.ventas+' pedidos · 📦 '+d.totalUnidades+' unidades</div></div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;"><div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;"><div style="font-size:1.4rem;">💰</div><div style="font-family:\'JetBrains Mono\',monospace;font-size:0.9rem;font-weight:800;color:var(--success);">'+formatCurrency(d.totalGanancia)+'</div><div style="font-size:0.6rem;color:var(--text-muted);margin-top:2px;">GANANCIA</div></div><div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;"><div style="font-size:1.4rem;">💸</div><div style="font-family:\'JetBrains Mono\',monospace;font-size:0.9rem;font-weight:800;color:var(--danger);">'+formatCurrency(d.totalGastos)+'</div><div style="font-size:0.6rem;color:var(--text-muted);margin-top:2px;">GASTOS</div></div><div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;"><div style="font-size:1.4rem;">📈</div><div style="font-family:\'JetBrains Mono\',monospace;font-size:0.9rem;font-weight:800;color:var(--primary);">'+formatCurrency(d.totalVentas-d.totalGastos)+'</div><div style="font-size:0.6rem;color:var(--text-muted);margin-top:2px;">NETO</div></div></div>'
     +'<div style="background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px;"><div style="font-size:0.8rem;font-weight:700;margin-bottom:10px;">💳 Metodos de pago</div><div style="margin-bottom:8px;"><div style="display:flex;justify-content:space-between;font-size:0.78rem;margin-bottom:3px;"><span>💵 Efectivo</span><b style="font-family:\'JetBrains Mono\',monospace;">'+formatCurrency(d.metodos.Efectivo)+'</b></div><div style="height:5px;background:var(--border);border-radius:3px;overflow:hidden;"><div style="height:100%;width:'+pE+'%;background:#10b981;border-radius:3px;transition:width 0.4s;"></div></div></div><div style="margin-bottom:8px;"><div style="display:flex;justify-content:space-between;font-size:0.78rem;margin-bottom:3px;"><span>💳 Tarjeta</span><b style="font-family:\'JetBrains Mono\',monospace;">'+formatCurrency(d.metodos.Tarjeta)+'</b></div><div style="height:5px;background:var(--border);border-radius:3px;overflow:hidden;"><div style="height:100%;width:'+pT+'%;background:#4F46E5;border-radius:3px;transition:width 0.4s;"></div></div></div><div><div style="display:flex;justify-content:space-between;font-size:0.78rem;margin-bottom:3px;"><span>🏦 Transferencia</span><b style="font-family:\'JetBrains Mono\',monospace;">'+formatCurrency(d.metodos.Transferencia)+'</b></div><div style="height:5px;background:var(--border);border-radius:3px;overflow:hidden;"><div style="height:100%;width:'+pTr+'%;background:#f59e0b;border-radius:3px;transition:width 0.4s;"></div></div></div></div>'
@@ -2316,14 +2316,14 @@ async function loadCashCloseHistory() {
 }
 
 async function realizarCierreDeCaja() {
-    const hoy = new Date().toISOString().split('T')[0];
+    const hoy = localDateStr(new Date());
     const d = getDailyData(hoy);
     const reg = { id: generateId(), date: hoy, shiftName: 'Cierre del dia', closedAt: new Date().toISOString(), closedBy: sessionStorage.getItem('activeEmployee')||'Dueño', total: formatCurrency(d.totalVentas), totalNum: d.totalVentas, profit: formatCurrency(d.totalGanancia), salesCount: String(d.ventas), units: String(d.totalUnidades), efectivo: formatCurrency(d.metodos.Efectivo), tarjeta: formatCurrency(d.metodos.Tarjeta), transferencia: formatCurrency(d.metodos.Transferencia), gastos: formatCurrency(d.totalGastos) };
     try { await firestoreOperation(() => userCollection('cashCloses').doc(reg.id).set(reg)); showToast('✅ Cierre guardado','success'); await loadCashCloseHistory(); renderCashClose(); } catch(e) { showToast('Error: '+(e.message||''),'error'); }
 }
 
 function printCashClose() {
-    const hoy = new Date().toISOString().split('T')[0]; const d = getDailyData(hoy);
+    const hoy = localDateStr(new Date()); const d = getDailyData(hoy);
     const win = window.open('','_blank','width=380,height=550'); if(!win){showToast('Permite ventanas emergentes','warning');return;}
     win.document.write('<html><head><title>Cierre</title><style>body{font-family:"Courier New",monospace;padding:16px;font-size:13px;}h2{text-align:center;}hr{border:none;border-top:1px dashed #000;margin:8px 0;}.r{display:flex;justify-content:space-between;margin:4px 0;}.b{font-weight:bold;font-size:15px;}</style></head><body><h2>'+esc(settings.businessName||'Negocio')+'</h2><div style="text-align:center;">CIERRE DE CAJA — '+hoy+'</div><hr><div class="r"><span>Pedidos:</span><span>'+d.ventas+'</span></div><div class="r"><span>Unidades:</span><span>'+d.totalUnidades+'</span></div><hr><div class="r"><span>Efectivo:</span><span>'+formatCurrency(d.metodos.Efectivo)+'</span></div><div class="r"><span>Tarjeta:</span><span>'+formatCurrency(d.metodos.Tarjeta)+'</span></div><div class="r"><span>Transferencia:</span><span>'+formatCurrency(d.metodos.Transferencia)+'</span></div><hr><div class="r b"><span>TOTAL:</span><span>'+formatCurrency(d.totalVentas)+'</span></div><div class="r"><span>Ganancia:</span><span>'+formatCurrency(d.totalGanancia)+'</span></div><div class="r"><span>Gastos:</span><span>'+formatCurrency(d.totalGastos)+'</span></div><hr><div style="text-align:center;font-size:11px;">'+new Date().toLocaleString('es-CO')+'</div><script>window.onload=function(){window.print();}<\/script></body></html>');
     win.document.close();
@@ -2339,11 +2339,11 @@ function renderGoalProgress() {
     const goal = settings.monthlyGoal || 0;
     if (goal <= 0) { container.style.display = 'none'; return; }
     container.style.display = 'block';
-    const thisMonth = new Date().toISOString().slice(0, 7);
+    const thisMonth = localDateStr(new Date()).slice(0, 7);
 
     // Cachear cálculo de ventas del mes (se invalida con cada venta nueva)
     const monthSales = AppCache.getOrSet('sales_month_total', () => {
-        return sales.filter(s => s.date.startsWith(thisMonth)).reduce((sum, s) => sum + s.total, 0);
+        return sales.filter(s => localDateStr(s.date).startsWith(thisMonth)).reduce((sum, s) => sum + s.total, 0);
     }, 30000);
 
     const pct = Math.min(100, (monthSales / goal) * 100);
@@ -2677,6 +2677,20 @@ function renderExpenses() {
 // UTILIDADES
 // ==========================================
 function generateId() { return 'id_' + Date.now() + '_' + Math.random().toString(36).substr(2,9); }
+
+// Convierte una fecha (Date, o string ISO con hora, o string "YYYY-MM-DD") a "YYYY-MM-DD"
+// usando la hora LOCAL del dispositivo, no UTC. Esto evita que el día cambie 5 horas antes
+// de medianoche en Colombia (que es lo que pasaba usando .toISOString().split('T')[0]).
+function localDateStr(d) {
+    if (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)) return d; // ya es solo fecha, sin hora que reinterpretar
+    const dt = (d instanceof Date) ? d : new Date(d);
+    if (isNaN(dt.getTime())) return '';
+    const y = dt.getFullYear();
+    const m = String(dt.getMonth() + 1).padStart(2, '0');
+    const day = String(dt.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+}
+
 
 // Hashear PIN con SHA-256 (nunca se guarda en texto plano)
 async function hashPin(pin) {
