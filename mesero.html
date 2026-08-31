@@ -149,7 +149,7 @@
         }
 
         /* ===== ORDER VIEW ===== */
-        .order-view { display: none; height: calc(100dvh - 49px); overflow: hidden; flex-direction: column; }
+        .order-view { display: none; height: calc(100dvh - 73px); overflow: hidden; flex-direction: column; }
         .order-view.active { display: flex; }
 
         .order-header {
@@ -294,6 +294,47 @@
         .toast.warning { background: rgba(245,158,11,0.92); }
         @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
 
+        /* ===== TANDAS (columna central) ===== */
+        .mesa-tandas-summary { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 10px 16px; font-size: 0.78rem; color: var(--text-secondary); border-bottom: 1px solid var(--border-glass); }
+        .mesa-tandas-summary .mesa-total-inline { margin-left: auto; color: var(--text-primary); }
+        .mesa-tandas-summary .mesa-total-inline b { font-family: 'JetBrains Mono', monospace; color: var(--accent-blue); }
+        .tandas-list { display: flex; flex-direction: column; gap: 10px; padding: 12px 16px; overflow-y: auto; flex: 1; }
+        .tanda-card { border: 1px solid var(--border-glass-strong); border-radius: var(--radius-sm); padding: 12px 14px; background: var(--bg-card); }
+        .tanda-card.sent { border-color: rgba(16,185,129,0.25); }
+        .tanda-card.pending { border-color: rgba(245,158,11,0.5); background: linear-gradient(180deg, rgba(245,158,11,0.06), var(--bg-card) 60%); }
+        .tanda-card-header { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+        .tanda-title { font-weight: 800; font-size: 0.8rem; letter-spacing: 0.3px; }
+        .tanda-card.sent .tanda-title { color: var(--accent-green); }
+        .tanda-card.pending .tanda-title { color: var(--accent-amber); }
+        .tanda-status-chip { font-size: 0.65rem; font-weight: 700; padding: 3px 9px; border-radius: 20px; }
+        .tanda-status-chip.pending-chip { background: rgba(245,158,11,0.15); color: var(--accent-amber); }
+        .tanda-time { font-size: 0.68rem; color: var(--text-muted); margin-left: auto; }
+        .tanda-items { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+        .tanda-item-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 0.8rem; color: var(--text-secondary); }
+        .tanda-item-row.editable { background: rgba(255,255,255,0.03); border-radius: 8px; padding: 4px 8px; }
+        .tanda-subtotal { display: flex; justify-content: space-between; padding-top: 8px; border-top: 1px dashed var(--border-glass); font-weight: 700; font-size: 0.82rem; font-family: 'JetBrains Mono', monospace; }
+        .btn-save-tanda { width: 100%; margin-top: 10px; padding: 10px; border: none; border-radius: 8px; background: var(--accent-purple); color: white; font-weight: 700; font-size: 0.78rem; cursor: pointer; }
+
+        .tandas-footer { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; margin: 0 16px 16px; background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(168,85,247,0.08)); border: 1px solid rgba(99,102,241,0.2); border-radius: var(--radius-sm); }
+        .tandas-footer span:first-child { font-size: 0.78rem; color: var(--text-secondary); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+        .tandas-footer span:last-child { font-family: 'JetBrains Mono', monospace; font-size: 1.15rem; font-weight: 800; color: var(--accent-blue); }
+
+        /* Banner de autorización */
+        .auth-banner { display: none; align-items: center; gap: 10px; padding: 12px 14px; margin-bottom: 10px; background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.25); border-radius: var(--radius-sm); font-size: 0.76rem; color: var(--text-secondary); }
+        .auth-banner .auth-icon { font-size: 1.1rem; }
+        .btn-request-auth { width: 100%; padding: 12px; border: none; border-radius: var(--radius-sm); background: var(--accent-purple); color: white; font-weight: 700; font-size: 0.78rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 6px; }
+
+        /* Leyenda de estados de tanda */
+        .tanda-legend { padding: 12px 14px; margin: 0 16px 16px; background: var(--bg-card); border: 1px solid var(--border-glass-strong); border-radius: var(--radius-sm); }
+        .tanda-legend h4 { font-size: 0.76rem; color: var(--text-secondary); margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+        .tanda-legend-item { display: flex; align-items: center; gap: 8px; font-size: 0.74rem; color: var(--text-muted); padding: 4px 0; }
+        .tanda-legend-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+
+        /* Barra inferior de info (solo escritorio) */
+        .order-bottom-bar { display: none; }
+        .tandas-column { display: none; }
+        .tanda-legend { display: none; }
+
         /* ===== SCROLLBAR ===== */
         ::-webkit-scrollbar { width: 3px; }
         ::-webkit-scrollbar-track { background: transparent; }
@@ -305,20 +346,43 @@
             .section-title { padding: 24px 24px 12px; }
             .products-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
 
-            .order-view .order-main-area { flex-direction: row; }
+            .order-view .order-main-area { flex-direction: row; min-height: 0; }
             .products-section { flex: 1; padding: 16px 20px; }
             .order-panel {
                 max-height: none; width: 320px; border-radius: 0;
                 border-left: 1px solid var(--border-glass); border-top: none;
+                min-height: 0; overflow: hidden;
             }
             .order-panel-header::before { display: none; }
-            .order-items-scroll { max-height: none; flex: 1; }
+            .order-items-scroll { max-height: none; flex: 1; min-height: 60px; }
         }
 
         @media (min-width: 1024px) {
             .mesas-grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); max-width: 1100px; margin: 0 auto; }
             .products-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
-            .order-panel { width: 360px; }
+            .order-panel { width: 380px; }
+
+            .order-main-area { align-items: stretch; }
+            .products-section { flex: 1.1; }
+
+            .tandas-column {
+                display: flex; flex-direction: column;
+                width: 340px; flex-shrink: 0; min-height: 0; overflow: hidden;
+                background: var(--bg-secondary);
+                border-left: 1px solid var(--border-glass);
+                border-right: 1px solid var(--border-glass);
+            }
+            .tandas-column-header { padding: 16px 16px 4px; }
+            .tandas-column-header h3 { font-size: 1rem; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+
+            .tanda-legend { display: block; }
+
+            .order-bottom-bar {
+                display: flex; align-items: center; gap: 24px; flex-wrap: wrap;
+                padding: 10px 24px; background: var(--bg-secondary); border-top: 1px solid var(--border-glass);
+                font-size: 0.74rem; color: var(--text-muted); flex-shrink: 0;
+            }
+            .order-bottom-bar strong { color: var(--text-secondary); }
         }
 
         /* Safe area */
@@ -343,9 +407,9 @@
             <div class="header-btn-group">
                 <button onclick="window.open('fichas-mesero.html','_blank')" title="Fichas"><span class="btn-icon">📖</span><span class="btn-label">Fichas</span></button>
                 <button onclick="openRecipeViewer()" title="Recetas"><span class="btn-icon">📝</span><span class="btn-label">Recetas</span></button>
-                <button id="btn-cocina-mesero" onclick="window.open('cocina.html','_blank')" title="Cocina" style="display:none;"><span class="btn-icon">🍳</span><span class="btn-label">Cocina</span></button>
+                <button id="btn-cocina-mesero" onclick="window.open('cocina.html','_blank')" title="Cocina" style="display:none;position:relative;"><span class="btn-icon">🍳</span><span class="btn-label">Cocina</span><span id="cocina-badge" style="display:none;position:absolute;top:2px;right:2px;background:var(--accent-red);color:white;font-size:0.6rem;font-weight:800;min-width:16px;height:16px;border-radius:8px;align-items:center;justify-content:center;padding:0 3px;">0</span></button>
                 <button id="btn-delivery-mesero" onclick="openDeliveryPanel()" title="Delivery" style="display:none;"><span class="btn-icon">🏍️</span><span class="btn-label">Delivery</span></button>
-                <button id="btn-home-mesero" onclick="window.location.href='index.html'" title="Inicio" style="display:none;"><span class="btn-icon">🏠</span><span class="btn-label">Inicio</span></button>
+                <button id="btn-home-mesero" onclick="window.location.href='index.html'" title="Configuración" style="display:none;"><span class="btn-icon">⚙️</span><span class="btn-label">Config</span></button>
             </div>
             <div class="header-divider"></div>
             <div class="header-btn-group">
@@ -380,13 +444,45 @@
                 <div class="products-grid" id="products-grid"></div>
             </div>
 
+            <!-- Columna central: todas las tandas de la mesa (solo escritorio) -->
+            <div class="tandas-column" id="tandas-column">
+                <div class="tandas-column-header">
+                    <h3 id="tandas-mesa-title">🪑 Mesa</h3>
+                </div>
+                <div class="mesa-tandas-summary" id="mesa-tandas-summary"></div>
+                <div class="tandas-list" id="tandas-list"></div>
+                <div class="tandas-footer">
+                    <span>Total mesa</span>
+                    <span id="tandas-total-mesa">$0</span>
+                </div>
+            </div>
+
             <div class="order-panel">
                 <div class="order-panel-header">
-                    <h3>🧾 Pedido <span class="badge" id="order-count">0</span></h3>
+                    <h3 id="pending-tanda-header">🧾 Nuevo pedido</h3>
+                    <span class="badge" id="order-count">0</span>
+                </div>
+                <div id="pending-tanda-sub" style="padding:0 16px;font-size:0.68rem;color:var(--accent-amber);font-weight:700;margin:-6px 0 4px;"></div>
+
+                <div class="auth-banner" id="auth-banner">
+                    <span class="auth-icon">ℹ️</span>
+                    <div style="flex:1;">
+                        Los productos de tandas enviadas no se pueden modificar o eliminar. Solicita autorización del dueño.
+                        <button class="btn-request-auth" onclick="requestAuthorization()">🔒 Solicitar autorización</button>
+                    </div>
                 </div>
 
                 <div class="order-items-scroll" id="order-items-list">
                     <p class="empty-order">Toca un producto para agregarlo</p>
+                </div>
+
+                <!-- Leyenda de estados (solo escritorio) -->
+                <div class="tanda-legend" id="tanda-legend">
+                    <h4>📊 Estados de tanda</h4>
+                    <div class="tanda-legend-item"><span class="tanda-legend-dot" style="background:var(--accent-green)"></span> Enviada a cocina — En preparación</div>
+                    <div class="tanda-legend-item"><span class="tanda-legend-dot" style="background:var(--accent-amber)"></span> Pendiente — Aún no enviada</div>
+                    <div class="tanda-legend-item"><span class="tanda-legend-dot" style="background:#3b82f6"></span> Lista — Lista para servir</div>
+                    <div class="tanda-legend-item"><span class="tanda-legend-dot" style="background:var(--accent-purple)"></span> Entregada — Servida al cliente</div>
                 </div>
 
                 <div class="order-footer">
@@ -406,7 +502,7 @@
                     <!-- Acciones - Fila 1: Enviar y Cambiar mesa -->
                     <div class="order-actions-row">
                         <button class="btn-delete" onclick="clearCurrentOrder()">🗑️</button>
-                        <button class="btn-send" onclick="sendOrder()">📤 Enviar a cocina</button>
+                        <button class="btn-send" onclick="sendOrder()">🍳 Enviar nueva tanda a cocina</button>
                         <button class="btn-transfer" onclick="transferOrder()">🔄 Cambiar mesa</button>
                     </div>
 
@@ -418,6 +514,13 @@
                     </div>
                 </div>
             </div>
+        </div>
+
+        <!-- Barra inferior de info (solo escritorio) -->
+        <div class="order-bottom-bar" id="order-bottom-bar">
+            <div class="bottom-bar-item">🛡️ <strong>Protegido</strong> — Las eliminaciones y modificaciones requieren autorización del dueño</div>
+            <div class="bottom-bar-item">🕐 <strong>Última acción:</strong> <span id="last-action-text">Sesión iniciada</span></div>
+            <div class="bottom-bar-item">⌨️ <strong>Atajos:</strong> F2 Nueva tanda · F3 Enviar a cocina · F4 Cobrar</div>
         </div>
     </div>
 

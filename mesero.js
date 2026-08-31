@@ -79,7 +79,9 @@ let orders = {};
 let currentMesaId = null;
 let insumos = [];
 let recipes = [];
+let employees = [];
 let settings = { businessName: 'Mi Negocio', customization: {} };
+let lastActionLog = 'Sesión iniciada';
 
 // ==========================================
 // INICIALIZACIÓN
@@ -100,35 +102,59 @@ document.addEventListener('DOMContentLoaded', () => {
             renderMesas();
             // Aplicar restricciones según rol
             applyMeseroRoleRestrictions(activeRole);
+            listenKitchenBadge();
         } else {
             window.location.href = 'login.html';
         }
     });
 });
 
+// ==========================================
+// BADGE EN VIVO DEL BOTÓN COCINA (pedidos activos/en preparación)
+// ==========================================
+function listenKitchenBadge() {
+    const hoy = new Date().toISOString().split('T')[0];
+    userCollection('orders').onSnapshot((snapshot) => {
+        const pendingCount = snapshot.docs.filter(doc => {
+            const d = doc.data();
+            const isToday = !d.createdAt || d.createdAt.substring(0, 10) === hoy;
+            return isToday && (d.status === 'active' || d.status === 'preparing');
+        }).length;
+        const badge = document.getElementById('cocina-badge');
+        if (badge) {
+            if (pendingCount > 0) { badge.textContent = pendingCount; badge.style.display = 'flex'; }
+            else { badge.style.display = 'none'; }
+        }
+    }, () => { /* silencioso si falla (ej. sin conexión) */ });
+}
+
 function userDoc() { return db.collection('users').doc(currentUser.uid); }
 function userCollection(name) { return userDoc().collection(name); }
 
 async function loadData() {
-    const [productsSnap, mesasSnap, ordersSnap, insumosSnap, recipesSnap, userDocSnap] = await Promise.all([
+    const [productsSnap, mesasSnap, ordersSnap, insumosSnap, recipesSnap, employeesSnap, userDocSnap] = await Promise.all([
         userCollection('products').get(),
         userCollection('mesas').get(),
         userCollection('orders').get(),
         userCollection('insumos').get(),
         userCollection('recipes').get(),
+        userCollection('employees').get(),
         userDoc().get()
     ]);
     products = productsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     mesas = mesasSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     insumos = insumosSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     recipes = recipesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    employees = employeesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     
     if (userDocSnap.exists && userDocSnap.data().settings) {
         settings = { ...settings, ...userDocSnap.data().settings };
     }
     
-    // Cargar pedidos activos del DIA ACTUAL (no arrastrar de dias anteriores)
+    // Cargar pedidos activos del DIA ACTUAL, agrupados por mesa en TANDAS
+    // (cada tanda = una ronda enviada a cocina; varias tandas pueden pertenecer a la misma mesa)
     const hoy = new Date().toISOString().split('T')[0];
+    orders = {};
     ordersSnap.docs.forEach(doc => {
         const data = doc.data();
         if (data.status && data.status !== 'completed') {
@@ -138,9 +164,18 @@ async function loadData() {
                 userCollection('orders').doc(doc.id).delete().catch(() => {});
                 return;
             }
-            orders[data.mesaId] = data.items || [];
+            if (!orders[data.mesaId]) orders[data.mesaId] = { pending: [], tandas: [] };
+            orders[data.mesaId].tandas.push({
+                docId: doc.id,
+                tandaNumber: data.tandaNumber || 1,
+                items: data.items || [],
+                status: data.status || 'active',
+                createdAt: data.createdAt,
+                unlocked: false
+            });
         }
     });
+    Object.values(orders).forEach(o => o.tandas.sort((a, b) => a.tandaNumber - b.tandaNumber));
 
     // Si no hay mesas, crear unas por defecto
     if (mesas.length === 0) {
@@ -153,6 +188,45 @@ async function loadData() {
         }
     }
 }
+
+// ==========================================
+// HELPERS DE TANDAS
+// ==========================================
+function ensureMesaOrder(mesaId) {
+    if (!orders[mesaId]) orders[mesaId] = { pending: [], tandas: [] };
+    return orders[mesaId];
+}
+
+// Todos los items de la mesa (tandas enviadas + pendiente), para totales/badges
+function getMesaAllItems(mesaId) {
+    const o = orders[mesaId];
+    if (!o) return [];
+    const all = [...o.pending];
+    o.tandas.forEach(t => { if (t.status !== 'completed') all.push(...t.items); });
+    return all;
+}
+
+function getMesaTotal(mesaId) {
+    return getMesaAllItems(mesaId).reduce((s, i) => s + (i.price * i.qty), 0);
+}
+
+function getMesaItemCount(mesaId) {
+    return getMesaAllItems(mesaId).reduce((s, i) => s + i.qty, 0);
+}
+
+function getMesaTandaCount(mesaId) {
+    const o = orders[mesaId];
+    if (!o) return 0;
+    return o.tandas.length + (o.pending.length > 0 ? 1 : 0);
+}
+
+const TANDA_STATUS_LABELS = {
+    active: { label: 'Enviada a cocina', color: 'var(--accent-green)' },
+    preparing: { label: 'En preparación', color: 'var(--accent-amber)' },
+    ready: { label: 'Lista', color: '#3b82f6' },
+    delivered: { label: 'Entregada', color: 'var(--accent-purple)' }
+};
+
 
 // ==========================================
 // VISTA DE MESAS - FLOOR PLAN
@@ -291,7 +365,7 @@ function renderMesas() {
         const llevarKeys = Object.keys(orders).filter(k => k.startsWith('llevar_'));
         let llevarHTML = '';
         llevarKeys.forEach(key => {
-            const items = orders[key];
+            const items = getMesaAllItems(key);
             if (!items || items.length === 0) return;
             const total = items.reduce((s, i) => s + (i.price * i.qty), 0);
             const count = items.reduce((s, i) => s + i.qty, 0);
@@ -328,9 +402,11 @@ function renderMesas() {
         mesasGrid.style.minHeight = maxY + 'px';
         
         mesasGrid.innerHTML = mesas.map(m => {
-            const hasOrder = orders[m.id] && orders[m.id].length > 0;
-            const total = hasOrder ? orders[m.id].reduce((s, i) => s + (i.price * i.qty), 0) : 0;
-            const itemCount = hasOrder ? orders[m.id].reduce((s, i) => s + i.qty, 0) : 0;
+            const mesaItems = getMesaAllItems(m.id);
+            const hasOrder = mesaItems.length > 0;
+            const total = hasOrder ? getMesaTotal(m.id) : 0;
+            const itemCount = hasOrder ? getMesaItemCount(m.id) : 0;
+            const tandaCount = hasOrder ? getMesaTandaCount(m.id) : 0;
             const statusClass = hasOrder ? 'ocupada' : 'libre';
             const capacity = m.capacity || 4;
             const tableSVG = generateTableSVG(capacity, hasOrder, m.shape);
@@ -351,9 +427,11 @@ function renderMesas() {
         mesasGrid.style.minHeight = '';
         
         mesasGrid.innerHTML = mesas.map(m => {
-            const hasOrder = orders[m.id] && orders[m.id].length > 0;
-            const total = hasOrder ? orders[m.id].reduce((s, i) => s + (i.price * i.qty), 0) : 0;
-            const itemCount = hasOrder ? orders[m.id].reduce((s, i) => s + i.qty, 0) : 0;
+            const mesaItems = getMesaAllItems(m.id);
+            const hasOrder = mesaItems.length > 0;
+            const total = hasOrder ? getMesaTotal(m.id) : 0;
+            const itemCount = hasOrder ? getMesaItemCount(m.id) : 0;
+            const tandaCount = hasOrder ? getMesaTandaCount(m.id) : 0;
             const statusClass = hasOrder ? 'ocupada' : 'libre';
             const capacity = m.capacity || 4;
             const tableSVG = generateTableSVG(capacity, hasOrder, m.shape);
@@ -385,6 +463,8 @@ function openMesa(mesaId) {
     if (mesaId === 'delivery_1') mesaName = '🏍️ Delivery';
     if (mesaId.startsWith('llevar_')) mesaName = '🛍️ ' + mesaId.replace('llevar_', '').replace(/_/g, ' ');
     document.getElementById('order-mesa-name').textContent = mesaName;
+    setText('tandas-mesa-title', '🪑 ' + mesaName);
+    ensureMesaOrder(mesaId);
     
     document.getElementById('mesas-view').style.display = 'none';
     document.getElementById('order-view').classList.add('active');
@@ -456,47 +536,45 @@ function renderProducts(category = '', search = '') {
 // ==========================================
 // GESTIÓN DEL PEDIDO
 // ==========================================
+// ==========================================
+// GESTIÓN DEL PEDIDO (tanda pendiente = borrador local, aún no enviado)
+// ==========================================
 function addToOrder(productId) {
-    if (!orders[currentMesaId]) orders[currentMesaId] = [];
-    
+    const o = ensureMesaOrder(currentMesaId);
     const product = products.find(p => p.id === productId);
     if (!product) return;
-    
-    // Validar stock disponible
-    const currentInOrder = orders[currentMesaId].find(i => i.productId === productId);
-    const qtyInOrder = currentInOrder ? currentInOrder.qty : 0;
-    if (qtyInOrder >= product.quantity) {
+
+    // Validar stock disponible contra TODO lo que ya está en la mesa (pendiente + tandas enviadas)
+    const qtyInMesa = getMesaAllItems(currentMesaId).filter(i => i.productId === productId).reduce((s, i) => s + i.qty, 0);
+    if (qtyInMesa >= product.quantity) {
         showToast(`Sin stock de ${product.name}`, 'error');
         return;
     }
-    
-    if (currentInOrder) {
-        currentInOrder.qty++;
+
+    const currentInPending = o.pending.find(i => i.productId === productId);
+    if (currentInPending) {
+        currentInPending.qty++;
     } else {
-        orders[currentMesaId].push({
-            productId: product.id,
-            name: product.name,
-            price: product.price,
-            cost: product.cost,
-            qty: 1
-        });
+        o.pending.push({ productId: product.id, name: product.name, price: product.price, cost: product.cost, qty: 1 });
     }
     renderOrderItems();
     showToast(`+ ${product.name}`, 'info');
 }
 
 function changeQty(productId, delta) {
-    const item = orders[currentMesaId]?.find(i => i.productId === productId);
+    const o = ensureMesaOrder(currentMesaId);
+    const item = o.pending.find(i => i.productId === productId);
     if (!item) return;
     item.qty += delta;
     if (item.qty <= 0) {
-        orders[currentMesaId] = orders[currentMesaId].filter(i => i.productId !== productId);
+        o.pending = o.pending.filter(i => i.productId !== productId);
     }
     renderOrderItems();
 }
 
 function addItemNote(productId) {
-    const item = orders[currentMesaId]?.find(i => i.productId === productId);
+    const o = ensureMesaOrder(currentMesaId);
+    const item = o.pending.find(i => i.productId === productId);
     if (!item) return;
     const note = prompt(`Nota para "${item.name}":`, item.notes || '');
     if (note !== null) {
@@ -505,25 +583,100 @@ function addItemNote(productId) {
     }
 }
 
+// ==========================================
+// RENDER PRINCIPAL: columna de Tandas + panel de tanda pendiente
+// (misma función alimenta tanto la vista móvil como la de escritorio)
+// ==========================================
 function renderOrderItems() {
-    const items = orders[currentMesaId] || [];
+    const o = ensureMesaOrder(currentMesaId);
+    const pending = o.pending;
+    const tandas = o.tandas;
+    const allItems = getMesaAllItems(currentMesaId);
+    const grandTotal = allItems.reduce((s, i) => s + (i.price * i.qty), 0);
+    const totalItems = allItems.reduce((s, i) => s + i.qty, 0);
+    const pendingNumber = tandas.length + 1;
+
+    setText('order-count', totalItems);
+    setText('order-total-value', formatCurrency(grandTotal));
+    setText('tandas-total-mesa', formatCurrency(grandTotal));
+
+    // Resumen de mesa (columna central, escritorio)
+    const tandaCount = tandas.length + (pending.length > 0 ? 1 : 0);
+    const summaryEl = document.getElementById('mesa-tandas-summary');
+    if (summaryEl) {
+        summaryEl.innerHTML = `<span>🧾 ${tandaCount} tanda${tandaCount === 1 ? '' : 's'}</span><span>📦 ${totalItems} producto${totalItems === 1 ? '' : 's'}</span><span class="mesa-total-inline">Total mesa <b>${formatCurrency(grandTotal)}</b></span>`;
+    }
+
+    // Lista de tandas (columna central, escritorio): enviadas (bloqueadas) + la pendiente al final
+    const tandasListEl = document.getElementById('tandas-list');
+    if (tandasListEl) {
+        let html = '';
+        tandas.forEach(t => {
+            const st = TANDA_STATUS_LABELS[t.status] || TANDA_STATUS_LABELS.active;
+            const subtotal = t.items.reduce((s, i) => s + (i.price * i.qty), 0);
+            const time = t.createdAt ? new Date(t.createdAt).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }) : '';
+            html += `<div class="tanda-card ${t.status === 'active' || t.status === 'preparing' ? 'sent' : 'sent'}">
+                <div class="tanda-card-header">
+                    <span class="tanda-title">TANDA #${String(t.tandaNumber).padStart(3, '0')} ${t.unlocked ? '🔓' : '🔒'}</span>
+                    <span class="tanda-status-chip" style="background:${st.color}22;color:${st.color};">${st.label}</span>
+                    <span class="tanda-time">${time}</span>
+                </div>
+                <div class="tanda-items">
+                    ${t.items.map(i => t.unlocked ? `
+                        <div class="tanda-item-row editable">
+                            <span>${esc(i.name)}</span>
+                            <div class="order-item-qty">
+                                <button class="qty-btn minus" onclick="changeTandaQty('${t.docId}','${i.productId}',-1)">−</button>
+                                <span class="qty-num">${i.qty}</span>
+                                <button class="qty-btn plus" onclick="changeTandaQty('${t.docId}','${i.productId}',1)">+</button>
+                            </div>
+                            <span>${formatCurrency(i.price * i.qty)}</span>
+                        </div>` : `
+                        <div class="tanda-item-row"><span>${i.qty} × ${esc(i.name)}</span><span>${formatCurrency(i.price * i.qty)}</span></div>`
+                    ).join('')}
+                </div>
+                <div class="tanda-subtotal"><span>Subtotal</span><span>${formatCurrency(subtotal)}</span></div>
+                ${t.unlocked ? `<button class="btn-save-tanda" onclick="saveTandaChanges('${t.docId}')">💾 Guardar cambios en esta tanda</button>` : ''}
+            </div>`;
+        });
+        if (pending.length > 0) {
+            const subtotalP = pending.reduce((s, i) => s + (i.price * i.qty), 0);
+            html += `<div class="tanda-card pending">
+                <div class="tanda-card-header">
+                    <span class="tanda-title">TANDA #${String(pendingNumber).padStart(3, '0')} ⏳</span>
+                    <span class="tanda-status-chip pending-chip">Pendiente</span>
+                </div>
+                <div class="tanda-items">
+                    ${pending.map(i => `<div class="tanda-item-row"><span>${i.qty} × ${esc(i.name)}</span><span>${formatCurrency(i.price * i.qty)}</span></div>`).join('')}
+                </div>
+                <div class="tanda-subtotal"><span>Subtotal</span><span>${formatCurrency(subtotalP)}</span></div>
+            </div>`;
+        }
+        tandasListEl.innerHTML = html || '<p class="empty-order">Toca un producto para iniciar el pedido</p>';
+    }
+
+    // Banner para solicitar autorización (si hay tandas ya enviadas y ninguna desbloqueada)
+    const authBanner = document.getElementById('auth-banner');
+    if (authBanner) {
+        const anyLocked = tandas.some(t => !t.unlocked);
+        authBanner.style.display = (tandas.length > 0 && anyLocked) ? 'flex' : 'none';
+    }
+
+    // Encabezado del panel de tanda pendiente (columna derecha / panel móvil)
+    setText('pending-tanda-header', pending.length > 0
+        ? `TANDA #${String(pendingNumber).padStart(3, '0')}`
+        : (tandas.length > 0 ? 'Agrega productos para la siguiente tanda' : 'Nuevo pedido'));
+    setText('pending-tanda-sub', pending.length > 0 ? 'Pendiente de enviar' : '');
+
     const list = document.getElementById('order-items-list');
-    const totalEl = document.getElementById('order-total-value');
-    const countEl = document.getElementById('order-count');
-    
-    const totalItems = items.reduce((s, i) => s + i.qty, 0);
-    if (countEl) countEl.textContent = totalItems;
-    
-    if (items.length === 0) {
+    if (!list) return;
+    if (pending.length === 0) {
         list.innerHTML = '<p class="empty-order">Toca un producto para agregarlo</p>';
-        totalEl.textContent = '$0';
         return;
     }
-    
-    let total = 0;
-    list.innerHTML = items.map(i => {
+
+    list.innerHTML = pending.map(i => {
         const subtotal = i.price * i.qty;
-        total += subtotal;
         return `<div class="order-item">
             <div class="order-item-top">
                 <div style="min-width:0;">
@@ -543,16 +696,20 @@ function renderOrderItems() {
             </div>
         </div>`;
     }).join('');
-    
-    totalEl.textContent = formatCurrency(total);
+}
+
+function setText(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
 }
 
 // ==========================================
 // ACCIONES DE PEDIDO
 // ==========================================
 async function sendOrder() {
-    const items = orders[currentMesaId];
-    if (!items || items.length === 0) { showToast('El pedido está vacío', 'error'); return; }
+    const o = ensureMesaOrder(currentMesaId);
+    const items = o.pending;
+    if (!items || items.length === 0) { showToast('No hay productos para enviar', 'error'); return; }
 
     const btnSend = document.querySelector('.btn-send');
     if (btnSend) { btnSend.disabled = true; btnSend.textContent = '⏳ Enviando...'; }
@@ -560,14 +717,17 @@ async function sendOrder() {
     const mesa = mesas.find(m => m.id === currentMesaId);
     let mesaName = mesa?.name || 'Mesa';
     if (currentMesaId === 'delivery_1') mesaName = '🏍️ Delivery';
-    if (currentMesaId === 'llevar_1') mesaName = '🛍️ Para Llevar';
+    if (currentMesaId.startsWith('llevar_')) mesaName = '🛍️ ' + currentMesaId.replace('llevar_', '').replace(/_/g, ' ');
+
+    const tandaNumber = o.tandas.length + 1;
+    const docId = generateId();
 
     try {
-        // Guardar pedido en Firestore
         const orderDoc = {
-            id: 'order_' + currentMesaId,
+            id: docId,
             mesaId: currentMesaId,
             mesaName: mesaName,
+            tandaNumber: tandaNumber,
             items: items,
             total: items.reduce((s, i) => s + (i.price * i.qty), 0),
             status: 'active',
@@ -576,45 +736,48 @@ async function sendOrder() {
             updatedAt: new Date().toISOString()
         };
 
-        await userCollection('orders').doc(orderDoc.id).set(orderDoc);
+        await userCollection('orders').doc(docId).set(orderDoc);
 
-        // Imprimir ticket de cocina automáticamente
-        printKitchenTicket(mesaName, items);
+        o.tandas.push({ docId, tandaNumber, items, status: 'active', createdAt: orderDoc.createdAt, unlocked: false });
+        o.pending = [];
 
-        showToast('✅ Pedido enviado a cocina', 'success');
-        showMesas();
+        printKitchenTicket(mesaName + ' · Tanda #' + String(tandaNumber).padStart(3, '0'), items);
+        logLastAction(`Tanda #${tandaNumber} enviada a cocina por ${sessionStorage.getItem('activeEmployee') || '—'}`);
+
+        showToast(`✅ Tanda #${tandaNumber} enviada a cocina`, 'success');
+        renderOrderItems();
+        renderMesas();
     } catch (error) {
         console.error('Error enviando pedido:', error);
         if (error?.code === 'unavailable' || error?.code === 'failed-precondition') {
-            showToast('📡 Sin conexión. El pedido se enviará al reconectar.', 'warning');
-            showMesas(); // Igual navegar — el pedido está en memoria
+            showToast('📡 Sin conexión. La tanda se enviará al reconectar.', 'warning');
         } else if (error?.code === 'permission-denied') {
             showToast('❌ Sin permisos. Verifica tu sesión.', 'error');
         } else {
-            showToast('⚠️ Error enviando pedido. Intenta de nuevo.', 'warning');
+            showToast('⚠️ Error enviando la tanda. Intenta de nuevo.', 'warning');
         }
     } finally {
-        if (btnSend) { btnSend.disabled = false; btnSend.innerHTML = '📤 Enviar a cocina'; }
+        if (btnSend) { btnSend.disabled = false; btnSend.innerHTML = '🍳 Enviar nueva tanda a cocina'; }
     }
 }
 
 async function payOrder() {
-    const items = orders[currentMesaId];
-    if (!items || items.length === 0) { showToast('No hay pedido para cobrar', 'error'); return; }
+    const o = ensureMesaOrder(currentMesaId);
+    const allItems = getMesaAllItems(currentMesaId);
+    if (allItems.length === 0) { showToast('No hay pedido para cobrar', 'error'); return; }
 
-    const total = items.reduce((s, i) => s + (i.price * i.qty), 0);
+    const total = allItems.reduce((s, i) => s + (i.price * i.qty), 0);
     const mesa = mesas.find(m => m.id === currentMesaId);
     const payMethod = selectedPayMethod || 'Efectivo';
 
-    // Deshabilitar botón para evitar doble cobro
     const btnPay = document.getElementById('btn-cobrar');
     if (btnPay) { btnPay.disabled = true; btnPay.textContent = '⏳ Cobrando...'; }
 
     showToast('💳 Procesando cobro...', 'info');
 
     try {
-        // Registrar cada item como venta
-        for (const item of items) {
+        // Registrar cada item (de todas las tandas + lo pendiente) como venta
+        for (const item of allItems) {
             const sale = {
                 id: generateId(),
                 productId: item.productId,
@@ -634,26 +797,25 @@ async function payOrder() {
             };
             await userCollection('sales').doc(sale.id).set(sale);
 
-            // Descontar stock del producto
             const product = products.find(p => p.id === item.productId);
             if (product) {
                 product.quantity = Math.max(0, product.quantity - item.qty);
                 await userCollection('products').doc(product.id).set(product);
             }
-
-            // Descontar insumos
             deductInsumos(item.productId, item.qty);
         }
 
-        // Imprimir ticket de venta
-        printTableBillTicket(mesa?.name || 'Mesa', items, total, payMethod);
+        printTableBillTicket(mesa?.name || 'Mesa', allItems, total, payMethod);
 
-        // Limpiar pedido (solo si todo lo anterior fue exitoso)
+        // Marcar todas las tandas enviadas como completadas (quedan en el historial, no se borran)
+        for (const t of o.tandas) {
+            await userCollection('orders').doc(t.docId).set({ status: 'completed', updatedAt: new Date().toISOString() }, { merge: true });
+        }
         delete orders[currentMesaId];
-        await userCollection('orders').doc('order_' + currentMesaId).delete();
 
         showToast(`💰 Cobrado ${formatCurrency(total)}`, 'success');
         if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+        logLastAction(`Mesa cobrada: ${formatCurrency(total)} (${payMethod})`);
         showMesas();
         renderProducts();
     } catch (error) {
@@ -665,7 +827,6 @@ async function payOrder() {
         } else {
             showToast('⚠️ Error al cobrar. Intenta de nuevo.', 'error');
         }
-        // No limpiar el pedido si falló — para que pueda reintentar
     } finally {
         if (btnPay) { btnPay.disabled = false; btnPay.innerHTML = '💰 Cobrar'; }
     }
@@ -740,40 +901,39 @@ function renderRecipeViewerList(query) {
 }
 
 function clearCurrentOrder() {
-    if (!orders[currentMesaId] || orders[currentMesaId].length === 0) return;
-    delete orders[currentMesaId];
-    userCollection('orders').doc('order_' + currentMesaId).delete();
+    const o = orders[currentMesaId];
+    if (!o || o.pending.length === 0) { showToast('No hay productos pendientes para quitar', 'info'); return; }
+    o.pending = [];
     renderOrderItems();
-    showToast('Pedido eliminado', 'info');
+    showToast('Productos pendientes eliminados', 'info');
 }
 
 // Dividir cuenta (por cantidad de personas)
 function splitBill() {
-    const items = orders[currentMesaId];
-    if (!items || items.length === 0) { showToast('No hay pedido para dividir', 'error'); return; }
+    const allItems = getMesaAllItems(currentMesaId);
+    if (allItems.length === 0) { showToast('No hay pedido para dividir', 'error'); return; }
 
-    const total = items.reduce((s, i) => s + (i.price * i.qty), 0);
+    const total = allItems.reduce((s, i) => s + (i.price * i.qty), 0);
     const people = prompt('¿Entre cuántas personas dividir la cuenta?', '2');
     if (!people || parseInt(people) <= 0) return;
 
     const perPerson = total / parseInt(people);
     showToast(`💰 Cada persona paga: ${formatCurrency(perPerson)} (${people} personas)`, 'success');
 
-    // Mostrar en la lista como referencia
     const list = document.getElementById('order-items-list');
-    list.innerHTML += `<div style="margin-top:12px;padding:12px;background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.3);border-radius:10px;text-align:center;">
+    if (list) list.innerHTML += `<div style="margin-top:12px;padding:12px;background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.3);border-radius:10px;text-align:center;">
         <div style="font-size:0.85rem;color:#8b5cf6;font-weight:600;">➗ Cuenta dividida entre ${people} personas</div>
         <div style="font-size:1.3rem;font-weight:800;color:#8b5cf6;margin-top:4px;">${formatCurrency(perPerson)} c/u</div>
     </div>`;
 }
 
 // ==========================================
-// COBRO INDIVIDUAL (pagar un item de la mesa)
+// COBRO INDIVIDUAL (pagar un item de la tanda pendiente)
 // ==========================================
 function payIndividualItem(productId) {
-    const items = orders[currentMesaId];
-    if (!items) return;
-    const item = items.find(i => i.productId === productId);
+    const o = orders[currentMesaId];
+    if (!o) return;
+    const item = o.pending.find(i => i.productId === productId);
     if (!item) return;
     openChargeItemModal(item, productId);
 }
@@ -865,17 +1025,15 @@ function openChargeItemModal(item, productId) {
 }
 
 async function executeItemCharge(productId, qtyToPay, payMethod) {
-    const items = orders[currentMesaId];
-    if (!items) return;
-    const item = items.find(i => i.productId === productId);
+    const o = orders[currentMesaId];
+    if (!o) return;
+    const item = o.pending.find(i => i.productId === productId);
     if (!item) return;
 
     const totalItem = item.price * qtyToPay;
     const mesa = mesas.find(m => m.id === currentMesaId);
 
     try {
-        // Registrar venta individual
-
         const sale = {
             id: generateId(),
             productId: item.productId,
@@ -895,45 +1053,25 @@ async function executeItemCharge(productId, qtyToPay, payMethod) {
         };
         await userCollection('sales').doc(sale.id).set(sale);
 
-        // Descontar stock
         const product = products.find(p => p.id === item.productId);
         if (product) {
             product.quantity = Math.max(0, product.quantity - qtyToPay);
             await userCollection('products').doc(product.id).set(product);
         }
-
-        // Descontar insumos
         deductInsumos(item.productId, qtyToPay);
 
-        // Quitar del pedido o reducir cantidad
         if (qtyToPay >= item.qty) {
-            orders[currentMesaId] = items.filter(i => i.productId !== productId);
+            o.pending = o.pending.filter(i => i.productId !== productId);
         } else {
             item.qty -= qtyToPay;
         }
 
-        // Actualizar pedido en Firebase
-        if (orders[currentMesaId].length === 0) {
-            delete orders[currentMesaId];
-            await userCollection('orders').doc('order_' + currentMesaId).delete();
-        } else {
-            await userCollection('orders').doc('order_' + currentMesaId).set({
-                id: 'order_' + currentMesaId,
-                mesaId: currentMesaId,
-                mesaName: mesa?.name || 'Mesa',
-                items: orders[currentMesaId],
-                total: orders[currentMesaId].reduce((s, i) => s + (i.price * i.qty), 0),
-                status: 'active',
-                type: 'mesa',
-                updatedAt: new Date().toISOString()
-            }, { merge: true });
-        }
-
         showToast(`💰 Cobrado: ${item.name} x${qtyToPay} = ${formatCurrency(totalItem)} (${payMethod})`, 'success');
         if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
+        logLastAction(`Cobro individual: ${item.name} x${qtyToPay}`);
 
-        // Si ya no quedan items, volver a mesas
-        if (!orders[currentMesaId] || orders[currentMesaId].length === 0) {
+        if (getMesaAllItems(currentMesaId).length === 0) {
+            delete orders[currentMesaId];
             showMesas();
         } else {
             renderOrderItems();
@@ -945,34 +1083,34 @@ async function executeItemCharge(productId, qtyToPay, payMethod) {
 }
 
 // ==========================================
-// CAMBIAR DE MESA (Transferir pedido)
+// CAMBIAR DE MESA (Transferir SOLO la tanda pendiente, aún no enviada)
 // ==========================================
 function transferOrder() {
-    const items = orders[currentMesaId];
-    if (!items || items.length === 0) { showToast('No hay pedido para transferir', 'error'); return; }
-    
-    // Obtener mesas disponibles (excluir la actual)
+    const o = orders[currentMesaId];
+    if (!o || o.pending.length === 0) { showToast('No hay productos pendientes para transferir', 'error'); return; }
+    if (o.tandas.length > 0) { showToast('⚠️ Esta mesa ya tiene tandas enviadas a cocina — cóbrala o pide autorización antes de cambiarla de mesa.', 'warning'); return; }
+
+    const items = o.pending;
     const availableMesas = mesas.filter(m => m.id !== currentMesaId);
     if (availableMesas.length === 0) { showToast('No hay otras mesas disponibles', 'error'); return; }
-    
-    // Crear overlay de selección
+
     const overlay = document.createElement('div');
     overlay.id = 'transfer-overlay';
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
-    
+
     const mesasHTML = availableMesas.map(m => {
-        const hasOrder = orders[m.id] && orders[m.id].length > 0;
+        const hasOrder = getMesaAllItems(m.id).length > 0;
         const statusLabel = hasOrder ? '⚠️ Ocupada' : '✅ Libre';
         const statusColor = hasOrder ? 'color:#f59e0b' : 'color:#10b981';
         return `<div class="transfer-mesa-option" onclick="confirmTransfer('${m.id}')" style="display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--bg-card,#1a2332);border:1px solid var(--border-glass-strong,rgba(255,255,255,0.1));border-radius:12px;cursor:pointer;transition:all 0.2s;">
-            <div style="font-size:1.5rem;">${generateTableSVG(m.capacity || 4, hasOrder, m.shape) ? '🪑' : '🪑'}</div>
+            <div style="font-size:1.5rem;">🪑</div>
             <div style="flex:1;">
                 <div style="font-weight:700;color:var(--text-primary,#f1f5f9);font-size:0.95rem;">${esc(m.name)}</div>
                 <div style="font-size:0.75rem;${statusColor};font-weight:600;">${statusLabel} • ${m.capacity || 4} personas</div>
             </div>
         </div>`;
     }).join('');
-    
+
     const currentMesa = mesas.find(m => m.id === currentMesaId);
     overlay.innerHTML = `
         <div style="background:var(--bg-secondary,#131c31);border:1px solid var(--border-glass,rgba(255,255,255,0.06));border-radius:20px;padding:24px;max-width:420px;width:100%;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
@@ -987,8 +1125,7 @@ function transferOrder() {
         </div>
     `;
     document.body.appendChild(overlay);
-    
-    // Hover effect
+
     overlay.querySelectorAll('.transfer-mesa-option').forEach(opt => {
         opt.addEventListener('mouseenter', () => { opt.style.borderColor = 'var(--accent-blue,#635bff)'; opt.style.background = 'var(--bg-glass-hover,rgba(35,48,68,0.9))'; });
         opt.addEventListener('mouseleave', () => { opt.style.borderColor = 'var(--border-glass-strong,rgba(255,255,255,0.1))'; opt.style.background = 'var(--bg-card,#1a2332)'; });
@@ -996,63 +1133,151 @@ function transferOrder() {
 }
 
 async function confirmTransfer(targetMesaId) {
-    const items = orders[currentMesaId];
+    const o = orders[currentMesaId];
+    const items = o?.pending;
     if (!items || items.length === 0) return;
-    
+
     const targetMesa = mesas.find(m => m.id === targetMesaId);
-    const sourceMesa = mesas.find(m => m.id === currentMesaId);
-    
-    // Si la mesa destino ya tiene pedido, combinar
-    if (orders[targetMesaId] && orders[targetMesaId].length > 0) {
-        // Combinar items
-        items.forEach(item => {
-            const existing = orders[targetMesaId].find(i => i.productId === item.productId);
-            if (existing) {
-                existing.qty += item.qty;
-            } else {
-                orders[targetMesaId].push({ ...item });
-            }
-        });
-    } else {
-        orders[targetMesaId] = [...items];
-    }
-    
-    // Eliminar pedido de la mesa origen
+    const targetOrder = ensureMesaOrder(targetMesaId);
+
+    items.forEach(item => {
+        const existing = targetOrder.pending.find(i => i.productId === item.productId);
+        if (existing) existing.qty += item.qty;
+        else targetOrder.pending.push({ ...item });
+    });
+
     delete orders[currentMesaId];
-    
-    // Actualizar en Firebase
-    try {
-        // Guardar pedido en la nueva mesa
-        const orderDoc = {
-            id: 'order_' + targetMesaId,
-            mesaId: targetMesaId,
-            mesaName: targetMesa?.name || 'Mesa',
-            items: orders[targetMesaId],
-            total: orders[targetMesaId].reduce((s, i) => s + (i.price * i.qty), 0),
-            status: 'active',
-            type: 'mesa',
-            updatedAt: new Date().toISOString()
-        };
-        await userCollection('orders').doc(orderDoc.id).set(orderDoc, { merge: true });
-        
-        // Eliminar pedido de la mesa origen
-        await userCollection('orders').doc('order_' + currentMesaId).delete();
-    } catch (e) {
-        console.error('Error al transferir pedido:', e);
-    }
-    
-    // Cerrar overlay y volver a mesas
+
     const overlay = document.getElementById('transfer-overlay');
     if (overlay) overlay.remove();
-    
+
     showToast(`✅ Pedido movido a ${targetMesa?.name || 'otra mesa'}`, 'success');
     if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
+    logLastAction(`Pedido transferido a ${targetMesa?.name || 'otra mesa'}`);
     showMesas();
 }
 
 // ==========================================
+// AUTORIZACIÓN DEL DUEÑO (para editar tandas ya enviadas)
+// ==========================================
+function requestAuthorization() {
+    const existing = document.getElementById('auth-pin-overlay');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'auth-pin-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);';
+    overlay.innerHTML = `
+        <div style="background:var(--bg-card);border:1px solid var(--border-glass-strong);border-radius:var(--radius-lg);padding:24px;max-width:320px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.5);text-align:center;">
+            <div style="font-size:2rem;margin-bottom:8px;">🔒</div>
+            <h3 style="margin:0 0 6px;color:var(--text-primary);font-size:1rem;">Autorización del dueño</h3>
+            <p style="color:var(--text-secondary);font-size:0.82rem;margin-bottom:16px;">Ingresa el PIN del dueño para modificar tandas ya enviadas.</p>
+            <input type="password" id="auth-pin-input" inputmode="numeric" maxlength="6" placeholder="PIN" style="width:100%;padding:14px;text-align:center;font-size:1.3rem;letter-spacing:6px;border-radius:10px;border:1px solid var(--border-glass-strong);background:var(--bg-glass);color:var(--text-primary);outline:none;margin-bottom:14px;box-sizing:border-box;">
+            <div id="auth-pin-error" style="color:var(--accent-red);font-size:0.78rem;margin-bottom:10px;display:none;">PIN incorrecto</div>
+            <div style="display:flex;gap:8px;">
+                <button onclick="document.getElementById('auth-pin-overlay').remove()" style="flex:1;padding:12px;border-radius:10px;border:1px solid var(--border-glass-strong);background:var(--bg-glass);color:var(--text-secondary);font-weight:700;cursor:pointer;">Cancelar</button>
+                <button onclick="submitAuthPin()" style="flex:1.3;padding:12px;border-radius:10px;border:none;background:var(--accent-purple);color:white;font-weight:700;cursor:pointer;">Desbloquear</button>
+            </div>
+        </div>`;
+    document.body.appendChild(overlay);
+    setTimeout(() => document.getElementById('auth-pin-input')?.focus(), 50);
+    document.getElementById('auth-pin-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') submitAuthPin(); });
+}
+
+async function hashPinMesero(pin) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(pin + '_gestionpro_salt');
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function submitAuthPin() {
+    const input = document.getElementById('auth-pin-input');
+    const pin = input.value.trim();
+    if (!pin) return;
+    const hashed = await hashPinMesero(pin);
+    const owner = employees.find(e => e.role === 'owner' && e.pin === hashed);
+    if (!owner) {
+        const err = document.getElementById('auth-pin-error');
+        if (err) err.style.display = 'block';
+        input.value = '';
+        return;
+    }
+    document.getElementById('auth-pin-overlay').remove();
+    const o = orders[currentMesaId];
+    if (o) o.tandas.forEach(t => { t.unlocked = true; });
+    showToast('🔓 Tandas desbloqueadas — ya puedes modificarlas', 'success');
+    logLastAction('Autorización del dueño usada para modificar tandas enviadas');
+    renderOrderItems();
+}
+
+function changeTandaQty(tandaDocId, productId, delta) {
+    const o = orders[currentMesaId];
+    if (!o) return;
+    const t = o.tandas.find(t => t.docId === tandaDocId);
+    if (!t || !t.unlocked) return;
+    const item = t.items.find(i => i.productId === productId);
+    if (!item) return;
+    item.qty += delta;
+    if (item.qty <= 0) t.items = t.items.filter(i => i.productId !== productId);
+    renderOrderItems();
+}
+
+async function saveTandaChanges(tandaDocId) {
+    const o = orders[currentMesaId];
+    if (!o) return;
+    const t = o.tandas.find(t => t.docId === tandaDocId);
+    if (!t) return;
+    try {
+        if (t.items.length === 0) {
+            await userCollection('orders').doc(t.docId).delete();
+            o.tandas = o.tandas.filter(x => x.docId !== tandaDocId);
+        } else {
+            await userCollection('orders').doc(t.docId).set({
+                items: t.items,
+                total: t.items.reduce((s, i) => s + (i.price * i.qty), 0),
+                updatedAt: new Date().toISOString()
+            }, { merge: true });
+            t.unlocked = false;
+        }
+        showToast('💾 Cambios guardados', 'success');
+        logLastAction(`Tanda #${t.tandaNumber} modificada con autorización`);
+        renderOrderItems();
+        renderMesas();
+    } catch (e) {
+        console.error('Error guardando cambios de tanda:', e);
+        showToast('⚠️ Error al guardar. Intenta de nuevo.', 'error');
+    }
+}
+
+// ==========================================
+// BITÁCORA DE ÚLTIMA ACCIÓN (barra inferior, escritorio)
+// ==========================================
+function logLastAction(text) {
+    const time = new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+    lastActionLog = `${time} - ${text}`;
+    setText('last-action-text', lastActionLog);
+}
+
+
+// ==========================================
 // UTILIDADES
 // ==========================================
+// ==========================================
+// ATAJOS DE TECLADO (solo dentro de una mesa abierta)
+// ==========================================
+document.addEventListener('keydown', (e) => {
+    if (!document.getElementById('order-view')?.classList.contains('active')) return;
+    // No interceptar si el foco está en un input/textarea (para no romper la escritura)
+    const tag = document.activeElement?.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA') {
+        if (e.key !== 'F2' && e.key !== 'F3' && e.key !== 'F4') return;
+    }
+    if (e.key === 'F2') { e.preventDefault(); document.getElementById('product-search')?.focus(); }
+    else if (e.key === 'F3') { e.preventDefault(); sendOrder(); }
+    else if (e.key === 'F4') { e.preventDefault(); payOrder(); }
+});
+
 function generateId() { return 'id_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9); }
 function formatCurrency(amount) {
     return '$' + Math.round(amount || 0).toLocaleString('es-CO');
@@ -1071,7 +1296,7 @@ function showToast(msg, type) {
 
 // Imprimir pre-cuenta de la mesa actual
 function printPreBill() {
-    const items = orders[currentMesaId];
+    const items = getMesaAllItems(currentMesaId);
     if (!items || items.length === 0) { showToast('No hay pedido', 'error'); return; }
     const mesa = mesas.find(m => m.id === currentMesaId);
     const total = items.reduce((s, i) => s + (i.price * i.qty), 0);
@@ -1272,7 +1497,7 @@ function confirmLlevarOrder() {
     }
     
     const key = 'llevar_' + nombre.replace(/\s+/g, '_');
-    if (!orders[key]) orders[key] = [];
+    if (!orders[key]) orders[key] = { pending: [], tandas: [] };
     
     // Guardar datos del cliente en sessionStorage para usarlos al cobrar
     sessionStorage.setItem('llevar_data_' + key, JSON.stringify({ nombre, telefono, nota }));

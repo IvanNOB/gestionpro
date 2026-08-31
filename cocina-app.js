@@ -151,7 +151,7 @@ function renderOrderCard(order, status) {
 
     return `<div class="order-card ${status === 'new' ? 'new' : status === 'preparing' ? 'preparing' : 'ready'}">
         <div class="order-card-header">
-            <div class="order-mesa">🪑 ${esc(order.mesaName || 'Mesa')}</div>
+            <div class="order-mesa">🪑 ${esc(order.mesaName || 'Mesa')}${order.tandaNumber ? ` <span style="font-size:0.7rem;font-weight:700;opacity:0.75;">· Tanda #${String(order.tandaNumber).padStart(3,'0')}</span>` : ''}</div>
             <div class="order-timer" data-created="${order.createdAt || ''}" id="timer-${order.id}">
                 <span>⏱</span> ${time}
             </div>
