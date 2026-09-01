@@ -701,8 +701,15 @@ function initNavigation() {
 
     if (sidebarToggle) {
         sidebarToggle.addEventListener('click', () => {
-            sidebar.classList.toggle('open');
-            toggleSidebarOverlay(sidebar.classList.contains('open'));
+            sidebar.classList.remove('open');
+            toggleSidebarOverlay(false);
+        });
+    }
+    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+    if (mobileMenuBtn) {
+        mobileMenuBtn.addEventListener('click', () => {
+            sidebar.classList.add('open');
+            toggleSidebarOverlay(true);
         });
     }
 }

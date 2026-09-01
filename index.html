@@ -32,11 +32,17 @@
     </div>
 
     <div class="app-layout">
+        <!-- Barra superior móvil (fuera del sidebar, siempre alcanzable) -->
+        <div class="mobile-topbar" id="mobile-topbar">
+            <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Abrir menú">☰</button>
+            <span class="mobile-topbar-title">📦 GestiónPro</span>
+        </div>
+
         <!-- Sidebar / Navegación -->
         <nav class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <h1>📦 GestiónPro</h1>
-                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Abrir menú">☰</button>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Cerrar menú">✕</button>
             </div>
             <div id="sidebar-slogan" style="display:none;padding:0 20px 8px;font-size:0.75rem;color:#94a3b8;"></div>
             <div class="user-info-bar">
