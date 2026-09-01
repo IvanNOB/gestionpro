@@ -4113,22 +4113,22 @@ const PLANS = {
     trial: {
         name: 'Prueba Gratis',
         days: 3,
-        features: ['inventory', 'sales', 'cashclose', 'clients', 'suppliers', 'expenses', 'insumos', 'recipes', 'calculator', 'reports', 'alerts', 'history', 'settings', 'mesas', 'dashboard']
+        features: ['inventory', 'sales', 'pos', 'cashclose', 'clients', 'suppliers', 'expenses', 'insumos', 'recipes', 'calculator', 'reports', 'alerts', 'history', 'settings', 'mesas', 'dashboard']
     },
     basic: {
         name: 'Básico',
         price: 25000,
-        features: ['inventory', 'sales', 'cashclose', 'clients', 'suppliers', 'expenses', 'calculator', 'reports', 'alerts', 'history', 'settings', 'dashboard']
+        features: ['inventory', 'sales', 'pos', 'cashclose', 'clients', 'suppliers', 'expenses', 'calculator', 'reports', 'alerts', 'history', 'settings', 'dashboard']
     },
     restaurant: {
         name: 'Restaurante',
         price: 45000,
-        features: ['inventory', 'sales', 'cashclose', 'clients', 'suppliers', 'expenses', 'insumos', 'recipes', 'calculator', 'reports', 'alerts', 'history', 'settings', 'mesas', 'dashboard']
+        features: ['inventory', 'sales', 'pos', 'cashclose', 'clients', 'suppliers', 'expenses', 'insumos', 'recipes', 'calculator', 'reports', 'alerts', 'history', 'settings', 'mesas', 'dashboard']
     },
     premium: {
         name: 'Premium',
         price: 65000,
-        features: ['inventory', 'sales', 'cashclose', 'clients', 'suppliers', 'expenses', 'insumos', 'recipes', 'calculator', 'reports', 'alerts', 'history', 'settings', 'mesas', 'dashboard']
+        features: ['inventory', 'sales', 'pos', 'cashclose', 'clients', 'suppliers', 'expenses', 'insumos', 'recipes', 'calculator', 'reports', 'alerts', 'history', 'settings', 'mesas', 'dashboard']
     }
 };
 
