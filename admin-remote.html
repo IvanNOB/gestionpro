@@ -108,6 +108,8 @@ tr.low-stock td:first-child { border-left: 2px solid var(--accent-amber); }
         <div class="tab active" onclick="showTab('overview')">📊 Resumen</div>
         <div class="tab" onclick="showTab('products')">📦 Productos</div>
         <div class="tab" onclick="showTab('sales')">💰 Ventas</div>
+        <div class="tab" onclick="showTab('expenses')">💸 Gastos</div>
+        <div class="tab" onclick="showTab('mesas')">🪑 Mesas</div>
         <div class="tab" onclick="showTab('employees')">👥 Empleados</div>
         <div class="tab" onclick="showTab('settings')">⚙️ Config</div>
         <div class="tab demo-tab" onclick="showTab('demo')">🧪 Demo</div>
@@ -133,6 +135,7 @@ let sales = [];
 let employees = [];
 let mesas = [];
 let expenses = [];
+let orders = [];
 
 auth.onAuthStateChanged(async (user) => {
     if (!user || !ADMIN_EMAILS.includes(user.email.toLowerCase())) {
@@ -158,12 +161,13 @@ async function loadUserData() {
         planChip.className = 'plan-chip ' + (['premium','restaurant'].includes(planValue) ? planValue : 'free');
         planChip.style.display = 'inline-block';
 
-        const [prodSnap, salesSnap, empSnap, mesasSnap, expSnap] = await Promise.all([
+        const [prodSnap, salesSnap, empSnap, mesasSnap, expSnap, ordersSnap] = await Promise.all([
             db.collection('users').doc(targetUid).collection('products').get(),
             db.collection('users').doc(targetUid).collection('sales').get(),
             db.collection('users').doc(targetUid).collection('employees').get(),
             db.collection('users').doc(targetUid).collection('mesas').get(),
-            db.collection('users').doc(targetUid).collection('expenses').get()
+            db.collection('users').doc(targetUid).collection('expenses').get(),
+            db.collection('users').doc(targetUid).collection('orders').get()
         ]);
 
         products = prodSnap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -172,6 +176,7 @@ async function loadUserData() {
         employees = empSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         mesas = mesasSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         expenses = expSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        orders = ordersSnap.docs.map(d => ({ id: d.id, ...d.data() })).filter(o => o.status !== 'completed');
 
         showTab('overview');
     } catch (e) {
@@ -232,7 +237,16 @@ function showTab(tab) {
                 <div class="info-row"><span class="info-label">Email</span><span class="info-value">${esc(userData.email || '-')}</span></div>
                 <div class="info-row"><span class="info-label">Negocio</span><span class="info-value">${esc(userData.settings?.businessName || '-')}</span></div>
                 <div class="info-row"><span class="info-label">Moneda</span><span class="info-value">${esc(userData.settings?.currency || 'COP')}</span></div>
+                <div class="info-row"><span class="info-label">Estado de cuenta</span><span class="info-value">
+                    ${userData.blocked ? '<span style="color:var(--accent-red);">🔒 Bloqueada</span>' : '<span style="color:var(--accent-green);">✅ Activa</span>'}
+                    <button class="copy-btn" onclick="toggleBlockAccount()">${userData.blocked ? 'Desbloquear' : 'Bloquear'}</button>
+                </span></div>
                 <div class="info-row"><span class="info-label">UID</span><span class="info-value"><code style="font-size:0.75rem;color:var(--text-muted);">${targetUid}</code><button class="copy-btn" onclick="copyUid()">📋 Copiar</button></span></div>
+            </div>
+
+            <div class="card"><h3>📝 Notas internas (solo tú las ves)</h3>
+                <textarea id="admin-notes-input" placeholder="Ej: reportó bug con impresora el 3/sep, pidió factura..." style="width:100%;min-height:90px;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--bg-card-soft);color:var(--text-primary);font-family:inherit;font-size:0.85rem;resize:vertical;margin-bottom:10px;">${esc(userData.adminNotes || '')}</textarea>
+                <button class="btn-action btn-edit" onclick="saveAdminNotes()">💾 Guardar nota</button>
             </div>`;
     } else if (tab === 'products') {
         content.innerHTML = `<div class="card"><h3>📦 Productos (${products.length})</h3>
@@ -246,8 +260,36 @@ function showTab(tab) {
                 <td>${esc(p.name)}</td><td>${esc(p.category || '-')}</td><td>${p.quantity}${(p.quantity ?? 0) <= (p.minStock ?? 0) ? ' ⚠️' : ''}</td>
                 <td>$${Math.round(p.cost || 0).toLocaleString('es-CO')}</td>
                 <td>$${Math.round(p.price || 0).toLocaleString('es-CO')}</td>
-                <td><button class="btn-action btn-delete" onclick="deleteRemoteDoc('products','${p.id}','${esc(p.name)}')">🗑️</button></td>
+                <td><button class="btn-action btn-edit" onclick="openEditProduct('${p.id}')">✏️</button> <button class="btn-action btn-delete" onclick="deleteRemoteDoc('products','${p.id}','${esc(p.name)}')">🗑️</button></td>
             </tr>`).join('')}</tbody></table></div>`;
+    } else if (tab === 'expenses') {
+        const totalExp = expenses.reduce((s, e) => s + (e.amount || 0), 0);
+        content.innerHTML = `<div class="card"><h3>💸 Gastos (${expenses.length}) — Total: $${Math.round(totalExp).toLocaleString('es-CO')}</h3>
+            <table><thead><tr><th>Concepto</th><th>Categoría</th><th>Monto</th><th>Fecha</th><th>Acción</th></tr></thead>
+            <tbody>${expenses.map(e => `<tr>
+                <td>${esc(e.concept || '-')}</td><td>${esc(e.category || '-')}</td>
+                <td>$${Math.round(e.amount || 0).toLocaleString('es-CO')}</td>
+                <td>${esc(e.date || '-')}</td>
+                <td><button class="btn-action btn-delete" onclick="deleteRemoteDoc('expenses','${e.id}','${esc(e.concept || 'gasto')}')">🗑️</button></td>
+            </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);">Sin gastos registrados</td></tr>'}</tbody></table></div>`;
+    } else if (tab === 'mesas') {
+        content.innerHTML = `<div class="card"><h3>🪑 Mesas (${mesas.length}) y pedidos activos (${orders.length})</h3>
+            <table><thead><tr><th>Mesa</th><th>Estado</th><th>Capacidad</th></tr></thead>
+            <tbody>${mesas.map(m => {
+                const mesaOrders = orders.filter(o => o.mesaId === m.id);
+                const total = mesaOrders.reduce((s,o) => s + (o.items||[]).reduce((s2,i)=>s2+(i.price*i.qty),0), 0);
+                const ocupada = mesaOrders.length > 0;
+                return `<tr class="${ocupada ? 'low-stock' : ''}">
+                <td>${esc(m.name)}</td>
+                <td>${ocupada ? `🟠 Ocupada — ${mesaOrders.length} tanda${mesaOrders.length===1?'':'s'} — $${Math.round(total).toLocaleString('es-CO')}` : '🟢 Libre'}</td>
+                <td>${m.capacity || '-'} personas</td>
+            </tr>`;}).join('') || '<tr><td colspan="3" style="text-align:center;color:var(--text-muted);">Sin mesas configuradas</td></tr>'}</tbody></table>
+            ${orders.length ? `<h3 style="margin-top:20px;">🧾 Detalle de pedidos activos</h3>${orders.map(o => `
+                <div class="insight-card" style="margin-bottom:10px;">
+                    <div class="insight-title">${esc(o.mesaName || o.mesaId)} ${o.tandaNumber ? '· Tanda #'+o.tandaNumber : ''} — ${esc(o.status)}</div>
+                    <div class="insight-sub">${(o.items||[]).map(i => `${i.qty}× ${esc(i.name)}`).join(', ')}</div>
+                </div>`).join('')}` : ''}
+            </div>`;
     } else if (tab === 'sales') {
         const today = new Date().toISOString().split('T')[0];
         content.innerHTML = `<div class="card"><h3>💰 Ventas (${sales.length} total)</h3>
@@ -259,22 +301,66 @@ function showTab(tab) {
             <div id="admin-sales-table"></div></div>`;
         filterAdminSales();
     } else if (tab === 'employees') {
-        content.innerHTML = `<div class="card"><h3>👥 Empleados (${employees.length})</h3>
-            <table><thead><tr><th>Nombre</th><th>Rol</th><th>PIN (hash)</th><th>Activo</th><th>Acción</th></tr></thead>
+        content.innerHTML = `<div class="card"><h3>➕ Agregar empleado</h3>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+                <div><label style="display:block;font-size:0.7rem;color:var(--text-muted);margin-bottom:4px;">Nombre</label>
+                    <input id="new-emp-name" placeholder="Ej: Laura" style="padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card-soft);color:var(--text-primary);font-size:0.85rem;"></div>
+                <div><label style="display:block;font-size:0.7rem;color:var(--text-muted);margin-bottom:4px;">Rol</label>
+                    <select id="new-emp-role" style="padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card-soft);color:var(--text-primary);font-size:0.85rem;">
+                        <option value="owner">Dueño</option><option value="caja" selected>Caja</option><option value="waiter">Mesero</option>
+                    </select></div>
+                <div><label style="display:block;font-size:0.7rem;color:var(--text-muted);margin-bottom:4px;">PIN (4 dígitos)</label>
+                    <input id="new-emp-pin" placeholder="1234" maxlength="6" style="padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card-soft);color:var(--text-primary);font-size:0.85rem;width:90px;"></div>
+                <button class="btn-action btn-edit" onclick="addRemoteEmployee()">➕ Agregar</button>
+            </div>
+        </div>
+        <div class="card"><h3>👥 Empleados (${employees.length})</h3>
+            <table><thead><tr><th>Nombre</th><th>Rol</th><th>Activo</th><th>Acción</th></tr></thead>
             <tbody>${employees.map(e => `<tr>
                 <td>${esc(e.name)}</td><td>${esc(e.role)}</td>
-                <td style="font-size:0.7rem;color:#64748b;">${e.pin ? e.pin.substring(0,8) + '...' : 'Sin PIN'}</td>
                 <td>${e.active !== false ? '✅' : '❌'}</td>
-                <td><button class="btn-action btn-delete" onclick="deleteRemoteDoc('employees','${e.id}','${esc(e.name)}')">🗑️</button></td>
+                <td>
+                    <button class="btn-action btn-edit" onclick="toggleEmployeeActive('${e.id}', ${e.active === false})">${e.active === false ? '✅ Activar' : '⛔ Desactivar'}</button>
+                    <button class="btn-action btn-edit" onclick="resetEmployeePin('${e.id}','${esc(e.name)}')">🔑 Resetear PIN</button>
+                    <button class="btn-action btn-delete" onclick="deleteRemoteDoc('employees','${e.id}','${esc(e.name)}')">🗑️</button>
+                </td>
             </tr>`).join('')}</tbody></table></div>`;
     } else if (tab === 'settings') {
         const s = userData.settings || {};
-        content.innerHTML = `<div class="card"><h3>⚙️ Configuración</h3>
-            <pre style="background:#0f172a;padding:16px;border-radius:10px;font-size:0.8rem;overflow:auto;color:#94a3b8;">${JSON.stringify(s, null, 2)}</pre></div>
-            <div class="card"><h3>🔧 Acciones Remotas</h3>
-                <button class="btn-action btn-edit" onclick="resetUserSettings()">🔄 Resetear Settings</button>
-                <button class="btn-action btn-edit" onclick="fixUserPlan()">💳 Activar Plan Restaurant</button>
-                <button class="btn-action btn-delete" onclick="clearUserSales()">🗑️ Borrar Ventas</button>
+        const currentPlan = (userData.plan || s.plan || 'free');
+        content.innerHTML = `<div class="card"><h3>⚙️ Datos del negocio</h3>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+                    <div><label style="display:block;font-size:0.7rem;color:var(--text-muted);margin-bottom:4px;">Nombre del negocio</label>
+                        <input id="cfg-business-name" value="${esc(s.businessName || '')}" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card-soft);color:var(--text-primary);font-size:0.85rem;box-sizing:border-box;"></div>
+                    <div><label style="display:block;font-size:0.7rem;color:var(--text-muted);margin-bottom:4px;">Moneda</label>
+                        <input id="cfg-currency" value="${esc(s.currency || 'COP')}" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card-soft);color:var(--text-primary);font-size:0.85rem;box-sizing:border-box;"></div>
+                    <div><label style="display:block;font-size:0.7rem;color:var(--text-muted);margin-bottom:4px;">IVA por defecto (%)</label>
+                        <input id="cfg-tax" type="number" value="${s.defaultTax ?? 19}" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card-soft);color:var(--text-primary);font-size:0.85rem;box-sizing:border-box;"></div>
+                    <div><label style="display:block;font-size:0.7rem;color:var(--text-muted);margin-bottom:4px;">Margen por defecto (%)</label>
+                        <input id="cfg-margin" type="number" value="${s.defaultMargin ?? 30}" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card-soft);color:var(--text-primary);font-size:0.85rem;box-sizing:border-box;"></div>
+                    <div><label style="display:block;font-size:0.7rem;color:var(--text-muted);margin-bottom:4px;">Meta de ventas mensual ($)</label>
+                        <input id="cfg-goal" type="number" value="${s.monthlyGoal ?? 0}" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card-soft);color:var(--text-primary);font-size:0.85rem;box-sizing:border-box;"></div>
+                    <div><label style="display:block;font-size:0.7rem;color:var(--text-muted);margin-bottom:4px;">Tipo de negocio</label>
+                        <input id="cfg-biztype" value="${esc(s.businessType || 'general')}" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card-soft);color:var(--text-primary);font-size:0.85rem;box-sizing:border-box;"></div>
+                </div>
+                <button class="btn-action" style="background:var(--accent-blue);color:white;" onclick="saveBusinessSettings()">💾 Guardar cambios</button>
+            </div>
+            <div class="card"><h3>⭐ Plan de suscripción</h3>
+                <p style="color:var(--text-secondary);font-size:0.82rem;margin-bottom:12px;">Plan actual: <strong style="text-transform:capitalize;color:var(--text-primary);">${esc(currentPlan)}</strong></p>
+                <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                    <select id="cfg-plan-select" style="padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card-soft);color:var(--text-primary);font-size:0.85rem;">
+                        <option value="free" ${currentPlan==='free'?'selected':''}>Free</option>
+                        <option value="trial" ${currentPlan==='trial'?'selected':''}>Prueba Gratis</option>
+                        <option value="basic" ${currentPlan==='basic'?'selected':''}>Básico</option>
+                        <option value="restaurant" ${currentPlan==='restaurant'?'selected':''}>Restaurante</option>
+                        <option value="premium" ${currentPlan==='premium'?'selected':''}>Premium</option>
+                    </select>
+                    <button class="btn-action btn-edit" onclick="changeUserPlan()">Cambiar plan</button>
+                </div>
+            </div>
+            <div class="card"><h3>🔧 Acciones remotas (con confirmación)</h3>
+                <button class="btn-action btn-edit" onclick="resetUserSettings()">🔄 Resetear Settings a valores por defecto</button>
+                <button class="btn-action btn-delete" onclick="clearUserSales()">🗑️ Borrar todas las ventas</button>
             </div>`;
     } else if (tab === 'demo') {
         const businessName = userData.settings?.businessName || userData.businessName || 'Este negocio';
@@ -310,6 +396,7 @@ async function deleteRemoteDoc(collection, docId, name) {
 }
 
 async function resetUserSettings() {
+    if (!confirm('¿Resetear TODOS los ajustes de este negocio a los valores por defecto? Esto no se puede deshacer.')) return;
     try {
         await db.collection('users').doc(targetUid).update({
             settings: { businessName: userData.settings?.businessName || 'Mi Negocio', currency: 'COP', defaultTax: 19, defaultMargin: 30, theme: 'light', monthlyGoal: 0 }
@@ -319,11 +406,124 @@ async function resetUserSettings() {
     } catch (e) { showNotice('Error: ' + e.message); }
 }
 
-async function fixUserPlan() {
+async function changeUserPlan() {
+    const plan = document.getElementById('cfg-plan-select').value;
+    if (!confirm(`¿Cambiar el plan de este negocio a "${plan}"?`)) return;
     try {
-        await db.collection('users').doc(targetUid).update({ plan: 'restaurant', 'settings.plan': 'restaurant' });
-        showNotice('Plan activado: Restaurant');
+        await db.collection('users').doc(targetUid).update({ plan: plan, 'settings.plan': plan });
+        showNotice('Plan actualizado a: ' + plan);
         await loadUserData();
+    } catch (e) { showNotice('Error: ' + e.message); }
+}
+
+async function saveBusinessSettings() {
+    try {
+        await db.collection('users').doc(targetUid).update({
+            'settings.businessName': document.getElementById('cfg-business-name').value.trim(),
+            'settings.currency': document.getElementById('cfg-currency').value.trim() || 'COP',
+            'settings.defaultTax': parseFloat(document.getElementById('cfg-tax').value) || 0,
+            'settings.defaultMargin': parseFloat(document.getElementById('cfg-margin').value) || 0,
+            'settings.monthlyGoal': parseFloat(document.getElementById('cfg-goal').value) || 0,
+            'settings.businessType': document.getElementById('cfg-biztype').value.trim() || 'general'
+        });
+        showNotice('✅ Datos del negocio guardados');
+        await loadUserData();
+    } catch (e) { showNotice('Error: ' + e.message); }
+}
+
+async function toggleBlockAccount() {
+    const willBlock = !userData.blocked;
+    if (!confirm(willBlock ? '¿Bloquear esta cuenta? El negocio no podrá usar la app hasta que la desbloquees.' : '¿Desbloquear esta cuenta?')) return;
+    try {
+        await db.collection('users').doc(targetUid).update({ blocked: willBlock });
+        showNotice(willBlock ? '🔒 Cuenta bloqueada' : '🔓 Cuenta desbloqueada');
+        await loadUserData();
+    } catch (e) { showNotice('Error: ' + e.message); }
+}
+
+async function saveAdminNotes() {
+    try {
+        const notes = document.getElementById('admin-notes-input').value;
+        await db.collection('users').doc(targetUid).update({ adminNotes: notes });
+        userData.adminNotes = notes;
+        showNotice('📝 Nota guardada');
+    } catch (e) { showNotice('Error: ' + e.message); }
+}
+
+function openEditProduct(productId) {
+    const p = products.find(x => x.id === productId);
+    if (!p) return;
+    const overlay = document.createElement('div');
+    overlay.id = 'edit-product-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;';
+    overlay.innerHTML = `<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:22px;max-width:360px;width:100%;">
+        <h3 style="margin-bottom:14px;">✏️ Editar producto</h3>
+        <label style="display:block;font-size:0.7rem;color:var(--text-muted);margin-bottom:4px;">Nombre</label>
+        <input id="edit-prod-name" value="${esc(p.name)}" style="width:100%;padding:9px 12px;margin-bottom:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card-soft);color:var(--text-primary);box-sizing:border-box;">
+        <label style="display:block;font-size:0.7rem;color:var(--text-muted);margin-bottom:4px;">Stock</label>
+        <input id="edit-prod-qty" type="number" value="${p.quantity ?? 0}" style="width:100%;padding:9px 12px;margin-bottom:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card-soft);color:var(--text-primary);box-sizing:border-box;">
+        <label style="display:block;font-size:0.7rem;color:var(--text-muted);margin-bottom:4px;">Costo</label>
+        <input id="edit-prod-cost" type="number" value="${p.cost ?? 0}" style="width:100%;padding:9px 12px;margin-bottom:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card-soft);color:var(--text-primary);box-sizing:border-box;">
+        <label style="display:block;font-size:0.7rem;color:var(--text-muted);margin-bottom:4px;">Precio</label>
+        <input id="edit-prod-price" type="number" value="${p.price ?? 0}" style="width:100%;padding:9px 12px;margin-bottom:16px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card-soft);color:var(--text-primary);box-sizing:border-box;">
+        <div style="display:flex;gap:8px;">
+            <button onclick="document.getElementById('edit-product-overlay').remove()" style="flex:1;padding:11px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card-soft);color:var(--text-secondary);cursor:pointer;">Cancelar</button>
+            <button onclick="saveEditedProduct('${p.id}')" style="flex:1.3;padding:11px;border-radius:8px;border:none;background:var(--accent-blue);color:white;font-weight:700;cursor:pointer;">💾 Guardar</button>
+        </div>
+    </div>`;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+}
+
+async function saveEditedProduct(productId) {
+    try {
+        await db.collection('users').doc(targetUid).collection('products').doc(productId).set({
+            name: document.getElementById('edit-prod-name').value.trim(),
+            quantity: parseFloat(document.getElementById('edit-prod-qty').value) || 0,
+            cost: parseFloat(document.getElementById('edit-prod-cost').value) || 0,
+            price: parseFloat(document.getElementById('edit-prod-price').value) || 0,
+            updatedAt: new Date().toISOString()
+        }, { merge: true });
+        document.getElementById('edit-product-overlay').remove();
+        showNotice('✅ Producto actualizado');
+        await loadUserData();
+        showTab('products');
+    } catch (e) { showNotice('Error: ' + e.message); }
+}
+
+async function addRemoteEmployee() {
+    const name = document.getElementById('new-emp-name').value.trim();
+    const role = document.getElementById('new-emp-role').value;
+    const pin = document.getElementById('new-emp-pin').value.trim();
+    if (!name || !pin) { showNotice('Falta el nombre o el PIN'); return; }
+    try {
+        const id = generateId();
+        const hashedPin = await hashPinAdmin(pin);
+        await db.collection('users').doc(targetUid).collection('employees').doc(id).set({
+            id, name, role, pin: hashedPin, active: true, createdAt: new Date().toISOString()
+        });
+        showNotice(`✅ ${name} agregado con PIN ${pin} (avísale)`);
+        await loadUserData();
+        showTab('employees');
+    } catch (e) { showNotice('Error: ' + e.message); }
+}
+
+async function toggleEmployeeActive(empId, makeActive) {
+    try {
+        await db.collection('users').doc(targetUid).collection('employees').doc(empId).set({ active: makeActive }, { merge: true });
+        showNotice(makeActive ? '✅ Empleado activado' : '⛔ Empleado desactivado');
+        await loadUserData();
+        showTab('employees');
+    } catch (e) { showNotice('Error: ' + e.message); }
+}
+
+async function resetEmployeePin(empId, name) {
+    const newPin = prompt(`Nuevo PIN para ${name} (4 dígitos):`, '0000');
+    if (!newPin) return;
+    try {
+        const hashedPin = await hashPinAdmin(newPin);
+        await db.collection('users').doc(targetUid).collection('employees').doc(empId).set({ pin: hashedPin }, { merge: true });
+        showNotice(`🔑 PIN de ${name} actualizado a ${newPin} (avísale)`);
     } catch (e) { showNotice('Error: ' + e.message); }
 }
 
