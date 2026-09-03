@@ -761,7 +761,113 @@ async function sendOrder() {
     }
 }
 
-async function payOrder() {
+function payOrder() {
+    const allItems = getMesaAllItems(currentMesaId);
+    if (allItems.length === 0) { showToast('No hay pedido para cobrar', 'error'); return; }
+    const total = allItems.reduce((s, i) => s + (i.price * i.qty), 0);
+    const payMethod = selectedPayMethod || 'Efectivo';
+
+    if (payMethod === 'Efectivo') {
+        openCashReceivedModal(total, () => executeMesaPayment());
+    } else {
+        executeMesaPayment();
+    }
+}
+
+// Modal: cuánto recibe el cajero en efectivo y cuánto cambio debe devolver
+function openCashReceivedModal(total, onConfirm) {
+    const existing = document.getElementById('cash-received-overlay');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'cash-received-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);';
+    overlay.innerHTML = `
+        <div style="background:var(--bg-card);border:1px solid var(--border-glass-strong);border-radius:var(--radius-lg);padding:22px;max-width:340px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                <h3 style="margin:0;font-size:1rem;color:var(--text-primary);">💵 Cobro en efectivo</h3>
+                <button id="cash-received-close" style="border:none;background:var(--bg-glass);color:var(--text-secondary);width:28px;height:28px;border-radius:50%;font-size:0.95rem;cursor:pointer;">✕</button>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;margin-bottom:14px;border-bottom:1px solid var(--border-glass);">
+                <span style="font-size:0.82rem;color:var(--text-secondary);">Total a cobrar</span>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:1.1rem;font-weight:800;color:var(--text-primary);">${formatCurrency(total)}</span>
+            </div>
+
+            <label style="display:block;font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">¿Cuánto recibe?</label>
+            <input type="number" id="cash-received-input" placeholder="0" inputmode="decimal" style="width:100%;padding:14px;font-size:1.2rem;font-weight:700;border-radius:10px;border:1px solid var(--border-glass-strong);background:var(--bg-glass);color:var(--text-primary);outline:none;margin-bottom:10px;box-sizing:border-box;">
+
+            <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;" id="cash-quick-amounts"></div>
+
+            <div id="cash-change-display" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;margin-bottom:16px;border-radius:var(--radius-sm);background:var(--bg-glass);border:1px solid var(--border-glass-strong);">
+                <span style="font-size:0.82rem;color:var(--text-secondary);">Cambio a devolver</span>
+                <span id="cash-change-value" style="font-family:'JetBrains Mono',monospace;font-size:1.15rem;font-weight:800;color:var(--text-muted);">$0</span>
+            </div>
+
+            <div style="display:flex;gap:8px;">
+                <button id="cash-received-cancel" type="button" style="flex:1;padding:12px;border-radius:var(--radius-sm);border:1px solid var(--border-glass-strong);background:var(--bg-glass);color:var(--text-secondary);font-weight:700;font-size:0.85rem;cursor:pointer;">Cancelar</button>
+                <button id="cash-received-confirm" type="button" disabled style="flex:1.4;padding:12px;border-radius:var(--radius-sm);border:none;background:var(--accent-green);color:white;font-weight:700;font-size:0.85rem;cursor:pointer;opacity:0.5;">✓ Confirmar Cobro</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+
+    // Montos rápidos: el total redondeado y algunos billetes comunes por encima del total
+    const quickAmounts = [...new Set([total, ...[10000, 20000, 50000, 100000].filter(v => v >= total)])].slice(0, 4);
+    document.getElementById('cash-quick-amounts').innerHTML = quickAmounts.map(v =>
+        `<button type="button" class="cash-quick-btn" data-v="${v}" style="flex:1;min-width:70px;padding:9px 6px;border-radius:8px;border:1px solid var(--border-glass-strong);background:var(--bg-glass);color:var(--text-secondary);font-size:0.76rem;font-weight:700;cursor:pointer;">${formatCurrency(v)}</button>`
+    ).join('');
+
+    const input = document.getElementById('cash-received-input');
+    const changeDisplay = document.getElementById('cash-change-display');
+    const changeValue = document.getElementById('cash-change-value');
+    const confirmBtn = document.getElementById('cash-received-confirm');
+
+    const updateChange = () => {
+        const received = parseFloat(input.value) || 0;
+        const change = received - total;
+        if (received <= 0) {
+            changeValue.textContent = '$0';
+            changeValue.style.color = 'var(--text-muted)';
+            changeDisplay.style.borderColor = 'var(--border-glass-strong)';
+            confirmBtn.disabled = true;
+            confirmBtn.style.opacity = '0.5';
+        } else if (change < 0) {
+            changeValue.textContent = 'Faltan ' + formatCurrency(Math.abs(change));
+            changeValue.style.color = 'var(--accent-red)';
+            changeDisplay.style.borderColor = 'rgba(239,68,68,0.4)';
+            confirmBtn.disabled = true;
+            confirmBtn.style.opacity = '0.5';
+        } else {
+            changeValue.textContent = formatCurrency(change);
+            changeValue.style.color = 'var(--accent-green)';
+            changeDisplay.style.borderColor = 'rgba(16,185,129,0.4)';
+            confirmBtn.disabled = false;
+            confirmBtn.style.opacity = '1';
+        }
+    };
+
+    input.addEventListener('input', updateChange);
+    overlay.querySelectorAll('.cash-quick-btn').forEach(btn => {
+        btn.addEventListener('click', () => { input.value = btn.dataset.v; updateChange(); });
+    });
+
+    const close = () => overlay.remove();
+    document.getElementById('cash-received-close').addEventListener('click', close);
+    document.getElementById('cash-received-cancel').addEventListener('click', close);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+
+    confirmBtn.addEventListener('click', () => {
+        if (confirmBtn.disabled) return;
+        const received = parseFloat(input.value) || 0;
+        const change = received - total;
+        close();
+        onConfirm(received, change);
+    });
+
+    setTimeout(() => input.focus(), 50);
+}
+
+async function executeMesaPayment(received, change) {
     const o = ensureMesaOrder(currentMesaId);
     const allItems = getMesaAllItems(currentMesaId);
     if (allItems.length === 0) { showToast('No hay pedido para cobrar', 'error'); return; }
@@ -805,7 +911,7 @@ async function payOrder() {
             deductInsumos(item.productId, item.qty);
         }
 
-        printTableBillTicket(mesa?.name || 'Mesa', allItems, total, payMethod);
+        printTableBillTicket(mesa?.name || 'Mesa', allItems, total, payMethod, received, change);
 
         // Marcar todas las tandas enviadas como completadas (quedan en el historial, no se borran)
         for (const t of o.tandas) {
@@ -813,9 +919,9 @@ async function payOrder() {
         }
         delete orders[currentMesaId];
 
-        showToast(`💰 Cobrado ${formatCurrency(total)}`, 'success');
+        showToast(received != null ? `💰 Cobrado ${formatCurrency(total)} · Cambio: ${formatCurrency(change)}` : `💰 Cobrado ${formatCurrency(total)}`, 'success');
         if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-        logLastAction(`Mesa cobrada: ${formatCurrency(total)} (${payMethod})`);
+        logLastAction(`Mesa cobrada: ${formatCurrency(total)} (${payMethod})${received != null ? ' · Recibido ' + formatCurrency(received) + ' · Cambio ' + formatCurrency(change) : ''}`);
         showMesas();
         renderProducts();
     } catch (error) {
@@ -823,6 +929,7 @@ async function payOrder() {
         if (error?.code === 'unavailable' || error?.code === 'failed-precondition') {
             showToast('📡 Sin conexión. Verifica la red e intenta de nuevo.', 'warning');
         } else if (error?.code === 'permission-denied') {
+
             showToast('❌ Sin permisos para cobrar. Verifica tu sesión.', 'error');
         } else {
             showToast('⚠️ Error al cobrar. Intenta de nuevo.', 'error');
@@ -984,6 +1091,15 @@ function openChargeItemModal(item, productId) {
                 <span id="charge-total-display" style="font-family:'JetBrains Mono',monospace;font-size:1.15rem;font-weight:800;color:var(--accent-green);">${formatCurrency(item.price)}</span>
             </div>
 
+            <div id="charge-cash-section" style="margin-bottom:16px; ${method === 'Efectivo' ? '' : 'display:none;'}">
+                <label style="display:block;font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">¿Cuánto recibe?</label>
+                <input type="number" id="charge-received-input" placeholder="0" inputmode="decimal" style="width:100%;padding:12px;font-size:1.05rem;font-weight:700;border-radius:8px;border:1px solid var(--border-glass-strong);background:var(--bg-glass);color:var(--text-primary);outline:none;margin-bottom:10px;box-sizing:border-box;">
+                <div id="charge-change-display" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-radius:8px;background:var(--bg-glass);border:1px solid var(--border-glass-strong);">
+                    <span style="font-size:0.8rem;color:var(--text-secondary);">Cambio a devolver</span>
+                    <span id="charge-change-value" style="font-family:'JetBrains Mono',monospace;font-size:1.05rem;font-weight:800;color:var(--text-muted);">$0</span>
+                </div>
+            </div>
+
             <div style="display:flex;gap:8px;">
                 <button id="charge-item-cancel" type="button" style="flex:1;padding:12px;border-radius:var(--radius-sm);border:1px solid var(--border-glass-strong);background:var(--bg-glass);color:var(--text-secondary);font-weight:700;font-size:0.85rem;cursor:pointer;">Cancelar</button>
                 <button id="charge-item-confirm" type="button" style="flex:1.4;padding:12px;border-radius:var(--radius-sm);border:none;background:var(--accent-green);color:white;font-weight:700;font-size:0.85rem;cursor:pointer;">✓ Confirmar Cobro</button>
@@ -994,7 +1110,32 @@ function openChargeItemModal(item, productId) {
 
     const updateTotal = () => {
         document.getElementById('charge-total-display').textContent = formatCurrency(item.price * qty);
+        updateChargeChange();
     };
+
+    const receivedInput = document.getElementById('charge-received-input');
+    const changeVal = document.getElementById('charge-change-value');
+    const changeBox = document.getElementById('charge-change-display');
+    const confirmBtn = document.getElementById('charge-item-confirm');
+
+    function updateChargeChange() {
+        if (method !== 'Efectivo') { confirmBtn.disabled = false; confirmBtn.style.opacity = '1'; return; }
+        const received = parseFloat(receivedInput.value) || 0;
+        const totalNow = item.price * qty;
+        const change = received - totalNow;
+        if (received <= 0) {
+            changeVal.textContent = '$0'; changeVal.style.color = 'var(--text-muted)'; changeBox.style.borderColor = 'var(--border-glass-strong)';
+            confirmBtn.disabled = true; confirmBtn.style.opacity = '0.5';
+        } else if (change < 0) {
+            changeVal.textContent = 'Faltan ' + formatCurrency(Math.abs(change)); changeVal.style.color = 'var(--accent-red)'; changeBox.style.borderColor = 'rgba(239,68,68,0.4)';
+            confirmBtn.disabled = true; confirmBtn.style.opacity = '0.5';
+        } else {
+            changeVal.textContent = formatCurrency(change); changeVal.style.color = 'var(--accent-green)'; changeBox.style.borderColor = 'rgba(16,185,129,0.4)';
+            confirmBtn.disabled = false; confirmBtn.style.opacity = '1';
+        }
+    }
+    if (receivedInput) receivedInput.addEventListener('input', updateChargeChange);
+    updateChargeChange();
 
     if (maxQty > 1) {
         document.getElementById('charge-qty-minus').addEventListener('click', () => {
@@ -1010,6 +1151,8 @@ function openChargeItemModal(item, productId) {
             method = btn.dataset.method;
             overlay.querySelectorAll('.charge-method-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
+            document.getElementById('charge-cash-section').style.display = method === 'Efectivo' ? 'block' : 'none';
+            updateChargeChange();
         });
     });
 
@@ -1018,13 +1161,16 @@ function openChargeItemModal(item, productId) {
     document.getElementById('charge-item-cancel').addEventListener('click', close);
     overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
 
-    document.getElementById('charge-item-confirm').addEventListener('click', () => {
+    confirmBtn.addEventListener('click', () => {
+        if (confirmBtn.disabled) return;
+        const received = method === 'Efectivo' ? (parseFloat(receivedInput.value) || 0) : null;
+        const change = received != null ? received - (item.price * qty) : null;
         close();
-        executeItemCharge(productId, qty, method);
+        executeItemCharge(productId, qty, method, received, change);
     });
 }
 
-async function executeItemCharge(productId, qtyToPay, payMethod) {
+async function executeItemCharge(productId, qtyToPay, payMethod, received, change) {
     const o = orders[currentMesaId];
     if (!o) return;
     const item = o.pending.find(i => i.productId === productId);
@@ -1066,9 +1212,9 @@ async function executeItemCharge(productId, qtyToPay, payMethod) {
             item.qty -= qtyToPay;
         }
 
-        showToast(`💰 Cobrado: ${item.name} x${qtyToPay} = ${formatCurrency(totalItem)} (${payMethod})`, 'success');
+        showToast(received != null ? `💰 ${item.name} x${qtyToPay} = ${formatCurrency(totalItem)} · Cambio: ${formatCurrency(change)}` : `💰 Cobrado: ${item.name} x${qtyToPay} = ${formatCurrency(totalItem)} (${payMethod})`, 'success');
         if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
-        logLastAction(`Cobro individual: ${item.name} x${qtyToPay}`);
+        logLastAction(`Cobro individual: ${item.name} x${qtyToPay}${received != null ? ' · Recibido ' + formatCurrency(received) + ' · Cambio ' + formatCurrency(change) : ''}`);
 
         if (getMesaAllItems(currentMesaId).length === 0) {
             delete orders[currentMesaId];

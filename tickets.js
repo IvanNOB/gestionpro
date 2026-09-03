@@ -85,7 +85,7 @@ function printSaleTicket(sale) {
 // ==========================================
 // 2. TICKET DE VENTA MÚLTIPLE (mesa completa)
 // ==========================================
-function printTableBillTicket(mesaName, items, total, method) {
+function printTableBillTicket(mesaName, items, total, method, received, change) {
     const fecha = new Date().toLocaleString('es-CO', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
 
     let itemsHtml = items.map(i => `
@@ -118,6 +118,8 @@ function printTableBillTicket(mesaName, items, total, method) {
         <div class="double-line"></div>
         <div class="row"><span>Artículos:</span><span>${items.reduce((s,i) => s+i.qty, 0)}</span></div>
         ${method ? `<div class="row"><span>Pago:</span><span>${esc(method)}</span></div>` : ''}
+        ${received != null ? `<div class="row"><span>Recibido:</span><span>$${Math.round(received).toLocaleString('es-CO')}</span></div>` : ''}
+        ${change != null ? `<div class="row bold"><span>Cambio:</span><span>$${Math.round(change).toLocaleString('es-CO')}</span></div>` : ''}
         <div class="line"></div>
         <div class="center small">¡Gracias por su visita!</div>
         <div class="center small">${esc(settings.businessName || '')}</div>
