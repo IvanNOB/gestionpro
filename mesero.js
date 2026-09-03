@@ -100,7 +100,6 @@ document.addEventListener('DOMContentLoaded', () => {
             await loadData();
             document.getElementById('loading-screen').style.display = 'none';
             renderMesas();
-            renderMesasStatsBar();
             // Aplicar restricciones según rol
             applyMeseroRoleRestrictions(activeRole);
             listenKitchenBadge();
@@ -171,7 +170,6 @@ async function loadData() {
                 tandaNumber: data.tandaNumber || 1,
                 items: data.items || [],
                 status: data.status || 'active',
-                sentBy: data.sentBy || null,
                 createdAt: data.createdAt,
                 unlocked: false
             });
@@ -228,35 +226,6 @@ const TANDA_STATUS_LABELS = {
     ready: { label: 'Lista', color: '#3b82f6' },
     delivered: { label: 'Entregada', color: 'var(--accent-purple)' }
 };
-
-// Estado de mesa para el dashboard de escritorio: disponible | ocupada | en_cocina | cuenta_pendiente
-function getMesaStatus(mesaId) {
-    const o = orders[mesaId];
-    if (!o || (o.pending.length === 0 && o.tandas.length === 0)) return 'disponible';
-    if (o.pending.length > 0) return 'ocupada';
-    const cocinando = o.tandas.some(t => t.status === 'active' || t.status === 'preparing');
-    if (cocinando) return 'en_cocina';
-    return 'cuenta_pendiente';
-}
-
-const MESA_STATUS_LABELS = {
-    disponible: 'Disponible',
-    ocupada: 'Ocupada',
-    en_cocina: 'En cocina',
-    cuenta_pendiente: 'Cuenta pendiente'
-};
-
-// Info de la mesa para el panel de detalle: mesero y hora en que se envió la última tanda
-function getMesaSessionInfo(mesaId) {
-    const o = orders[mesaId];
-    if (!o) return { mesero: sessionStorage.getItem('activeEmployee') || '—', time: '' };
-    const lastTanda = o.tandas[o.tandas.length - 1];
-    if (lastTanda) {
-        const time = lastTanda.createdAt ? new Date(lastTanda.createdAt).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }) : '';
-        return { mesero: lastTanda.sentBy || sessionStorage.getItem('activeEmployee') || '—', time };
-    }
-    return { mesero: sessionStorage.getItem('activeEmployee') || '—', time: '' };
-}
 
 
 // ==========================================
@@ -439,20 +408,17 @@ function renderMesas() {
             const itemCount = hasOrder ? getMesaItemCount(m.id) : 0;
             const tandaCount = hasOrder ? getMesaTandaCount(m.id) : 0;
             const statusClass = hasOrder ? 'ocupada' : 'libre';
-            const mstatus = getMesaStatus(m.id);
-            const info = getMesaSessionInfo(m.id);
             const capacity = m.capacity || 4;
             const tableSVG = generateTableSVG(capacity, hasOrder, m.shape);
             const posX = m.posX != null ? m.posX : 0;
             const posY = m.posY != null ? m.posY : 0;
             
-            return `<div class="mesa-fp-card ${statusClass}" onclick="handleMesaClick('${m.id}')" style="position:absolute;left:${posX}px;top:${posY}px;width:auto;min-width:100px;">
+            return `<div class="mesa-fp-card ${statusClass}" onclick="openMesa('${m.id}')" style="position:absolute;left:${posX}px;top:${posY}px;width:auto;min-width:100px;">
                 ${hasOrder ? `<div class="mesa-fp-badge">${itemCount}</div>` : ''}
                 <div class="mesa-fp-visual">${tableSVG}</div>
                 <div class="mesa-fp-name">${esc(m.name)}</div>
                 <div class="mesa-fp-status ${statusClass}">${hasOrder ? 'Ocupada' : 'Libre'}</div>
                 ${hasOrder ? `<div class="mesa-fp-total">${formatCurrency(total)}</div>` : `<div class="mesa-fp-capacity">${capacity} personas</div>`}
-                ${mesaDesktopExtraHTML(mstatus, tandaCount, total, info, hasOrder)}
             </div>`;
         }).join('');
     } else {
@@ -467,241 +433,25 @@ function renderMesas() {
             const itemCount = hasOrder ? getMesaItemCount(m.id) : 0;
             const tandaCount = hasOrder ? getMesaTandaCount(m.id) : 0;
             const statusClass = hasOrder ? 'ocupada' : 'libre';
-            const mstatus = getMesaStatus(m.id);
-            const info = getMesaSessionInfo(m.id);
             const capacity = m.capacity || 4;
             const tableSVG = generateTableSVG(capacity, hasOrder, m.shape);
             
-            return `<div class="mesa-fp-card ${statusClass}" onclick="handleMesaClick('${m.id}')" data-mesa-status="${mstatus}">
+            return `<div class="mesa-fp-card ${statusClass}" onclick="openMesa('${m.id}')">
                 ${hasOrder ? `<div class="mesa-fp-badge">${itemCount}</div>` : ''}
                 <div class="mesa-fp-visual">${tableSVG}</div>
                 <div class="mesa-fp-name">${esc(m.name)}</div>
                 <div class="mesa-fp-status ${statusClass}">${hasOrder ? 'Ocupada' : 'Libre'}</div>
                 ${hasOrder ? `<div class="mesa-fp-total">${formatCurrency(total)}</div>` : `<div class="mesa-fp-capacity">${capacity} personas</div>`}
-                ${mesaDesktopExtraHTML(mstatus, tandaCount, total, info, hasOrder)}
             </div>`;
         }).join('');
     }
 }
 
 function showMesas() {
-    document.getElementById('mesas-view').classList.remove('hidden-view');
+    document.getElementById('mesas-view').style.display = 'block';
     document.getElementById('order-view').classList.remove('active');
     renderMesas();
-    renderMesasStatsBar();
 }
-
-// Bloque extra de la tarjeta de mesa, SOLO visible en escritorio (CSS lo oculta en móvil)
-function mesaDesktopExtraHTML(mstatus, tandaCount, total, info, hasOrder) {
-    const label = MESA_STATUS_LABELS[mstatus];
-    return `<div class="mesa-desktop-extra">
-        <span class="mesa-status-badge ${mstatus}">${label}</span>
-        ${hasOrder ? `<div class="mesa-desktop-meta">${tandaCount} tanda${tandaCount === 1 ? '' : 's'} · ${formatCurrency(total)}<br>${esc(info.mesero)}${info.time ? ' · ' + info.time : ''}</div>` : ''}
-        <div class="mesa-desktop-btn">${hasOrder ? 'Ver detalles' : 'Abrir mesa'} →</div>
-    </div>`;
-}
-
-// Clic en una tarjeta de mesa: mesas vacías siempre van directo a agregar productos.
-// Mesas ocupadas: en escritorio abren el panel lateral; en móvil navegan a pantalla completa (igual que antes).
-function handleMesaClick(mesaId) {
-    if (!mesaId) return;
-    const hasOrder = getMesaAllItems(mesaId).length > 0;
-    if (hasOrder && window.innerWidth >= 1024) {
-        showMesaDetailPanel(mesaId);
-    } else {
-        openMesa(mesaId);
-    }
-}
-
-// ==========================================
-// STATS BAR (dashboard de escritorio)
-// ==========================================
-function renderMesasStatsBar() {
-    const bar = document.getElementById('mesas-stats-bar');
-    if (!bar) return;
-    let disponibles = 0, ocupadas = 0, enCocina = 0, cuentaPendiente = 0;
-    mesas.forEach(m => {
-        const st = getMesaStatus(m.id);
-        if (st === 'disponible') disponibles++;
-        else if (st === 'ocupada') ocupadas++;
-        else if (st === 'en_cocina') enCocina++;
-        else if (st === 'cuenta_pendiente') cuentaPendiente++;
-    });
-    bar.innerHTML = `
-        <div class="mesa-stat-chip"><span class="num">${mesas.length}</span><span class="lbl">Total mesas</span></div>
-        <div class="mesa-stat-chip ocupadas"><span class="num">${ocupadas}</span><span class="lbl">Ocupadas</span></div>
-        <div class="mesa-stat-chip en_cocina"><span class="num">${enCocina}</span><span class="lbl">En cocina</span></div>
-        <div class="mesa-stat-chip cuenta_pendiente"><span class="num">${cuentaPendiente}</span><span class="lbl">Cuentas pendientes</span></div>
-        <div class="mesa-stat-chip disponibles"><span class="num">${disponibles}</span><span class="lbl">Disponibles</span></div>
-    `;
-}
-
-// ==========================================
-// VISTA CUADRÍCULA / LISTA (toolbar de escritorio)
-// ==========================================
-function setMesasViewMode(mode) {
-    const grid = document.getElementById('mesas-grid');
-    const llevar = document.getElementById('llevar-grid');
-    document.getElementById('btn-grid-view').classList.toggle('active', mode === 'grid');
-    document.getElementById('btn-list-view').classList.toggle('active', mode === 'list');
-    [grid, llevar].forEach(g => { if (g) g.classList.toggle('list-mode', mode === 'list'); });
-}
-
-function toggleMesasFilter() {
-    const dd = document.getElementById('mesas-filter-dropdown');
-    if (dd) dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
-}
-
-function applyMesasFilter(filter) {
-    document.querySelectorAll('.filter-opt').forEach(b => b.classList.toggle('active', b.dataset.f === filter));
-    document.querySelectorAll('#mesas-grid .mesa-fp-card').forEach(card => {
-        const st = card.dataset.mesaStatus;
-        card.style.display = (filter === 'all' || st === filter) ? '' : 'none';
-    });
-    toggleMesasFilter();
-}
-
-// ==========================================
-// PANEL DE DETALLE DE MESA (solo escritorio)
-// ==========================================
-let detailPanelMesaId = null;
-let detailPanelTab = 'tandas';
-
-function showMesaDetailPanel(mesaId) {
-    detailPanelMesaId = mesaId;
-    detailPanelTab = 'tandas';
-    ensureMesaOrder(mesaId);
-    document.getElementById('mesa-detail-empty').style.display = 'none';
-    document.getElementById('mesa-detail-content').style.display = 'flex';
-    renderMesaDetailPanel();
-}
-
-function closeMesaDetailPanel() {
-    detailPanelMesaId = null;
-    document.getElementById('mesa-detail-empty').style.display = 'flex';
-    document.getElementById('mesa-detail-content').style.display = 'none';
-}
-
-function switchDetailTab(tab) {
-    detailPanelTab = tab;
-    renderMesaDetailPanel();
-}
-
-function renderMesaDetailPanel() {
-    const mesaId = detailPanelMesaId;
-    if (!mesaId) return;
-    const mesa = mesas.find(m => m.id === mesaId);
-    const mesaName = mesa ? mesa.name : (mesaId.startsWith('llevar_') ? '🛍️ ' + mesaId.replace('llevar_', '').replace(/_/g, ' ') : 'Mesa');
-    const st = getMesaStatus(mesaId);
-    const o = ensureMesaOrder(mesaId);
-    const allItems = getMesaAllItems(mesaId);
-    const total = getMesaTotal(mesaId);
-    const tandaCount = getMesaTandaCount(mesaId);
-    const info = getMesaSessionInfo(mesaId);
-
-    const content = document.getElementById('mesa-detail-content');
-    content.innerHTML = `
-        <div class="mesa-detail-header">
-            <h3>${esc(mesaName)}</h3>
-            <span class="mesa-status-badge ${st}">${MESA_STATUS_LABELS[st]}</span>
-            ${allItems.length ? `<div style="margin-top:8px;font-size:0.78rem;color:var(--text-secondary);">Mesero: ${esc(info.mesero)}${info.time ? ' · Apertura: ' + info.time : ''}</div>` : ''}
-        </div>
-        <div class="mesa-detail-tabs">
-            <div class="mesa-detail-tab ${detailPanelTab === 'tandas' ? 'active' : ''}" onclick="switchDetailTab('tandas')">Tandas</div>
-            <div class="mesa-detail-tab ${detailPanelTab === 'info' ? 'active' : ''}" onclick="switchDetailTab('info')">Información</div>
-            <div class="mesa-detail-tab ${detailPanelTab === 'historial' ? 'active' : ''}" onclick="switchDetailTab('historial')">Historial</div>
-        </div>
-        <div class="mesa-detail-body" id="mesa-detail-body"></div>
-        <div class="mesa-detail-footer">
-            <button class="btn-add-tanda-panel" onclick="openMesa('${mesaId}')">➕ Agregar nueva tanda (más productos)</button>
-            <div class="mesa-detail-actions">
-                <button class="btn-panel-send" onclick="currentMesaId='${mesaId}'; sendOrder().then(()=>renderMesaDetailPanel());" ${o.pending.length === 0 ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''}>🍳 Enviar a cocina</button>
-                <button class="btn-panel-pay" onclick="currentMesaId='${mesaId}'; payOrder().then(()=>{closeMesaDetailPanel();renderMesas();renderMesasStatsBar();});" ${allItems.length === 0 ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''}>💰 Cobrar mesa ${allItems.length ? formatCurrency(total) : ''}</button>
-            </div>
-        </div>
-    `;
-
-    const body = document.getElementById('mesa-detail-body');
-    if (detailPanelTab === 'tandas') {
-        let html = '';
-        o.tandas.forEach(t => {
-            const tst = TANDA_STATUS_LABELS[t.status] || TANDA_STATUS_LABELS.active;
-            const subtotal = t.items.reduce((s, i) => s + (i.price * i.qty), 0);
-            const time = t.createdAt ? new Date(t.createdAt).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }) : '';
-            html += `<div class="tanda-card sent">
-                <div class="tanda-card-header">
-                    <span class="tanda-title">TANDA #${String(t.tandaNumber).padStart(3, '0')} 🔒</span>
-                    <span class="tanda-status-chip" style="background:${tst.color}22;color:${tst.color};">${tst.label}</span>
-                    <span class="tanda-time">${time}</span>
-                </div>
-                <div class="tanda-items">${t.items.map(i => `<div class="tanda-item-row"><span>${i.qty} × ${esc(i.name)}</span><span>${formatCurrency(i.price * i.qty)}</span></div>`).join('')}</div>
-                <div class="tanda-subtotal"><span>Subtotal</span><span>${formatCurrency(subtotal)}</span></div>
-            </div>`;
-        });
-        if (o.pending.length > 0) {
-            const subtotalP = o.pending.reduce((s, i) => s + (i.price * i.qty), 0);
-            html += `<div class="tanda-card pending">
-                <div class="tanda-card-header">
-                    <span class="tanda-title">TANDA #${String(o.tandas.length + 1).padStart(3, '0')} ⏳</span>
-                    <span class="tanda-status-chip pending-chip">Pendiente</span>
-                </div>
-                <div class="tanda-items">${o.pending.map(i => `<div class="tanda-item-row"><span>${i.qty} × ${esc(i.name)}</span><span>${formatCurrency(i.price * i.qty)}</span></div>`).join('')}</div>
-                <div class="tanda-subtotal"><span>Subtotal</span><span>${formatCurrency(subtotalP)}</span></div>
-            </div>`;
-        }
-        body.innerHTML = html || '<p class="empty-order">Esta mesa no tiene pedido activo</p>';
-    } else if (detailPanelTab === 'info') {
-        body.innerHTML = `
-            <div class="info-row-panel"><span>Mesero</span><strong>${esc(info.mesero)}</strong></div>
-            <div class="info-row-panel"><span>Hora de apertura</span><strong>${info.time || '—'}</strong></div>
-            <div class="info-row-panel"><span>Capacidad</span><strong>${mesa?.capacity || '-'} personas</strong></div>
-            <div class="info-row-panel"><span>Tandas enviadas</span><strong>${o.tandas.length}</strong></div>
-            <div class="info-row-panel"><span>Total acumulado</span><strong>${formatCurrency(total)}</strong></div>
-        `;
-    } else if (detailPanelTab === 'historial') {
-        body.innerHTML = '<p class="empty-order">Cargando historial...</p>';
-        userCollection('orders').get().then(snap => {
-            const hoy = new Date().toISOString().split('T')[0];
-            const past = snap.docs.map(d => d.data()).filter(d => d.mesaId === mesaId && d.status === 'completed' && d.createdAt && d.createdAt.startsWith(hoy));
-            if (detailPanelTab !== 'historial' || detailPanelMesaId !== mesaId) return;
-            if (past.length === 0) { body.innerHTML = '<p class="empty-order">Sin tandas cerradas hoy en esta mesa</p>'; return; }
-            body.innerHTML = past.map(t => {
-                const subtotal = (t.items || []).reduce((s, i) => s + (i.price * i.qty), 0);
-                const time = t.createdAt ? new Date(t.createdAt).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }) : '';
-                return `<div class="tanda-card sent" style="opacity:0.75;">
-                    <div class="tanda-card-header"><span class="tanda-title">Tanda #${t.tandaNumber || 1} ✓</span><span class="tanda-time">${time}</span></div>
-                    <div class="tanda-items">${(t.items || []).map(i => `<div class="tanda-item-row"><span>${i.qty} × ${esc(i.name)}</span><span>${formatCurrency(i.price * i.qty)}</span></div>`).join('')}</div>
-                    <div class="tanda-subtotal"><span>Subtotal</span><span>${formatCurrency(subtotal)}</span></div>
-                </div>`;
-            }).join('');
-        }).catch(() => { body.innerHTML = '<p class="empty-order">No se pudo cargar el historial</p>'; });
-    }
-}
-
-// ==========================================
-// NUEVA MESA
-// ==========================================
-function openNewMesaModal() {
-    const name = prompt('Nombre de la nueva mesa (ej: "Mesa 11" o "Terraza 3"):');
-    if (!name || !name.trim()) return;
-    const capacity = prompt('Capacidad (número de personas):', '4');
-    createNewMesa(name.trim(), parseInt(capacity) || 4);
-}
-
-async function createNewMesa(name, capacity) {
-    try {
-        const id = generateId();
-        const mesa = { id, name, capacity, shape: 'round', status: 'libre' };
-        await userCollection('mesas').doc(id).set(mesa);
-        mesas.push(mesa);
-        renderMesas();
-        renderMesasStatsBar();
-        showToast(`✅ ${name} creada`, 'success');
-    } catch (e) {
-        showToast('⚠️ Error al crear la mesa', 'error');
-    }
-}
-
 
 // ==========================================
 // VISTA DE PEDIDO
@@ -716,7 +466,7 @@ function openMesa(mesaId) {
     setText('tandas-mesa-title', '🪑 ' + mesaName);
     ensureMesaOrder(mesaId);
     
-    document.getElementById('mesas-view').classList.add('hidden-view');
+    document.getElementById('mesas-view').style.display = 'none';
     document.getElementById('order-view').classList.add('active');
     
     renderCategories();
@@ -982,14 +732,13 @@ async function sendOrder() {
             total: items.reduce((s, i) => s + (i.price * i.qty), 0),
             status: 'active',
             type: currentMesaId.startsWith('delivery') ? 'delivery' : currentMesaId.startsWith('llevar') ? 'para_llevar' : 'mesa',
-            sentBy: sessionStorage.getItem('activeEmployee') || 'Dueño',
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
         };
 
         await userCollection('orders').doc(docId).set(orderDoc);
 
-        o.tandas.push({ docId, tandaNumber, items, status: 'active', sentBy: orderDoc.sentBy, createdAt: orderDoc.createdAt, unlocked: false });
+        o.tandas.push({ docId, tandaNumber, items, status: 'active', createdAt: orderDoc.createdAt, unlocked: false });
         o.pending = [];
 
         printKitchenTicket(mesaName + ' · Tanda #' + String(tandaNumber).padStart(3, '0'), items);
@@ -998,7 +747,6 @@ async function sendOrder() {
         showToast(`✅ Tanda #${tandaNumber} enviada a cocina`, 'success');
         renderOrderItems();
         renderMesas();
-        renderMesasStatsBar();
     } catch (error) {
         console.error('Error enviando pedido:', error);
         if (error?.code === 'unavailable' || error?.code === 'failed-precondition') {
@@ -1496,7 +1244,6 @@ async function saveTandaChanges(tandaDocId) {
         logLastAction(`Tanda #${t.tandaNumber} modificada con autorización`);
         renderOrderItems();
         renderMesas();
-        renderMesasStatsBar();
     } catch (e) {
         console.error('Error guardando cambios de tanda:', e);
         showToast('⚠️ Error al guardar. Intenta de nuevo.', 'error');
@@ -1529,20 +1276,6 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'F2') { e.preventDefault(); document.getElementById('product-search')?.focus(); }
     else if (e.key === 'F3') { e.preventDefault(); sendOrder(); }
     else if (e.key === 'F4') { e.preventDefault(); payOrder(); }
-});
-
-// Atajos de teclado del dashboard de Mesas (solo escritorio, cuando la vista de mesas está activa)
-document.addEventListener('keydown', (e) => {
-    if (window.innerWidth < 1024) return;
-    const mesasView = document.getElementById('mesas-view');
-    if (!mesasView || mesasView.classList.contains('hidden-view')) return;
-    const tag = document.activeElement?.tagName;
-    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
-
-    if (e.key === 'Escape') { e.preventDefault(); closeMesaDetailPanel(); }
-    else if (e.key === 'F2' && detailPanelMesaId) { e.preventDefault(); openMesa(detailPanelMesaId); }
-    else if (e.key === 'F4' && detailPanelMesaId) { e.preventDefault(); currentMesaId = detailPanelMesaId; sendOrder().then(() => renderMesaDetailPanel()); }
-    else if (e.key === 'F5' && detailPanelMesaId) { e.preventDefault(); currentMesaId = detailPanelMesaId; payOrder().then(() => { closeMesaDetailPanel(); renderMesas(); renderMesasStatsBar(); }); }
 });
 
 function generateId() { return 'id_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9); }
